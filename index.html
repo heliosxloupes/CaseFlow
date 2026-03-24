@@ -299,7 +299,7 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="caseflow-data.js"></script>
+<script src="caseflow-data.js" defer></script>
 <script defer>
 // CPT_DB and KW_MAP loaded from caseflow-data.js — 4761 ACGME Plastic Surgery codes
 // Build lookup index
@@ -977,24 +977,53 @@ function launchApp(){
   const email = profile.email;
   document.getElementById('hdr-u').textContent = email.split('@')[0];
   document.getElementById('hdr-n').textContent = cases.length;
-  // Show specialty badge in header
-  const specialtyLabel = document.querySelector('#p-specialty option[value="'+profile.specialty+'"]');
-  const specialtyName = specialtyLabel ? specialtyLabel.textContent : profile.specialty;
-  document.getElementById('hdr-specialty').textContent = specialtyName || '';
-  document.getElementById('hdr-specialty').style.display = specialtyName ? '' : 'none';
+  // Specialty display name lookup from static map — no DOM dependency
+  const SPECIALTY_NAMES = {
+    'allergy-immunology':'Allergy & Immunology','anesthesiology':'Anesthesiology',
+    'colon-rectal-surgery':'Colon & Rectal Surgery','dermatology':'Dermatology',
+    'emergency-medicine':'Emergency Medicine','family-medicine':'Family Medicine',
+    'internal-medicine':'Internal Medicine','neurological-surgery':'Neurological Surgery',
+    'neurology':'Neurology','nuclear-medicine':'Nuclear Medicine',
+    'obstetrics-gynecology':'OB/GYN','ophthalmology':'Ophthalmology',
+    'orthopaedic-surgery':'Orthopaedic Surgery','otolaryngology':'Otolaryngology',
+    'pathology':'Pathology','pediatrics':'Pediatrics',
+    'physical-medicine':'Physical Medicine','plastic-surgery':'Plastic Surgery',
+    'preventive-medicine':'Preventive Medicine','psychiatry':'Psychiatry',
+    'radiation-oncology':'Radiation Oncology','radiology':'Radiology',
+    'general-surgery':'General Surgery','thoracic-surgery':'Thoracic Surgery',
+    'urology':'Urology'
+  };
+  const specialtyName = SPECIALTY_NAMES[profile.specialty] || '';
+  const hdrSpec = document.getElementById('hdr-specialty');
+  if(hdrSpec){
+    hdrSpec.textContent = specialtyName;
+    hdrSpec.style.display = specialtyName ? '' : 'none';
+  }
   showPage('pg-app');
   startOrb();
   renderHistory();
 }
 function showProfileMenu(){
   const profile = getProfile();
-  const specialtyLabel = document.querySelector('#p-specialty option[value="'+profile.specialty+'"]');
-  const specialtyName = specialtyLabel ? specialtyLabel.textContent : profile.specialty || 'No specialty set';
-  const action = confirm(`Signed in as ${profile.email}\nSpecialty: ${specialtyName}\nYear: PGY-${profile.year}\n\nTap OK to change specialty · Cancel to sign out`);
+  const SPECIALTY_NAMES = {
+    'allergy-immunology':'Allergy & Immunology','anesthesiology':'Anesthesiology',
+    'colon-rectal-surgery':'Colon & Rectal Surgery','dermatology':'Dermatology',
+    'emergency-medicine':'Emergency Medicine','family-medicine':'Family Medicine',
+    'internal-medicine':'Internal Medicine','neurological-surgery':'Neurological Surgery',
+    'neurology':'Neurology','nuclear-medicine':'Nuclear Medicine',
+    'obstetrics-gynecology':'OB/GYN','ophthalmology':'Ophthalmology',
+    'orthopaedic-surgery':'Orthopaedic Surgery','otolaryngology':'Otolaryngology',
+    'pathology':'Pathology','pediatrics':'Pediatrics',
+    'physical-medicine':'Physical Medicine','plastic-surgery':'Plastic Surgery',
+    'preventive-medicine':'Preventive Medicine','psychiatry':'Psychiatry',
+    'radiation-oncology':'Radiation Oncology','radiology':'Radiology',
+    'general-surgery':'General Surgery','thoracic-surgery':'Thoracic Surgery',
+    'urology':'Urology'
+  };
+  const specialtyName = SPECIALTY_NAMES[profile.specialty] || 'Not set';
+  const action = confirm(`Signed in as ${profile.email}\nSpecialty: ${specialtyName}\nYear: PGY-${profile.year||'?'}\n\nTap OK to change specialty · Cancel to sign out`);
   if(action){
-    // Go to profile setup to change specialty
     showPage('pg-profile');
-    // Pre-select current values
     if(profile.specialty) document.getElementById('p-specialty').value = profile.specialty;
     if(profile.year) document.getElementById('p-year').value = profile.year;
     document.getElementById('p-btn').textContent = 'Save Changes';
