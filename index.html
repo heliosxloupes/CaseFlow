@@ -129,6 +129,8 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .add-more-btn:active{background:var(--bg3)}
 .add-more-btn svg{width:16px;height:16px;fill:currentColor;flex-shrink:0}
 .add-more-skip{width:100%;padding:11px;background:transparent;border:1px solid var(--line2);border-radius:var(--r);color:var(--text3);font-family:'Sora',sans-serif;font-size:13px;cursor:pointer;transition:color .15s}
+.done-btn{width:100%;padding:16px;background:var(--green);border:none;border-radius:var(--r);color:#071a10;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s,transform .1s;letter-spacing:-.2px}
+.done-btn:active{opacity:.85;transform:scale(.98)}
 .codes-review{background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
 .codes-review-item{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
 .codes-review-item:last-child{border-bottom:none}
@@ -519,34 +521,46 @@ function areSimilar(procs){
 
 // Plain-English explanations for common similar code pairs
 const CPT_NOTES = {
-  '15847': 'Full tummy tuck — includes muscle tightening (rectus plication), belly button repositioning. Cosmetic/aesthetic.',
-  '15830': 'Panniculectomy — removes hanging skin apron only, no muscle work. Usually reconstructive/post-weight loss.',
-  '19325': 'Breast augmentation — implant placement in a patient without prior mastectomy. Aesthetic.',
-  '19340': 'Immediate implant after mastectomy — implant placed at same time as mastectomy. Reconstructive.',
-  '19342': 'Delayed implant after mastectomy — implant placed in a separate later surgery. Reconstructive.',
-  '19357': 'Tissue expander — first stage of two-stage reconstruction. Expander placed, later swapped for implant.',
-  '15822': 'Upper eyelid blepharoplasty — removes excess skin from upper lid.',
-  '15823': 'Upper eyelid blepharoplasty with significant excess skin — more extensive upper lid work.',
-  '15824': 'Forehead/brow lift only — no cheek or neck work.',
-  '15825': 'Neck lift with platysmal tightening — neck and lower face, no upper face.',
-  '15828': 'Full facelift — cheek, chin, and neck. Most comprehensive.',
-  '30400': 'Primary rhinoplasty, tip only — cartilage and tip reshaping, no bone work.',
-  '30410': 'Primary rhinoplasty, complete — includes bony pyramid (osteotomies).',
-  '30420': 'Primary rhinoplasty with major septal repair — includes significant septoplasty.',
-  '30430': 'Revision rhinoplasty, minor — small secondary touch-up.',
-  '30450': 'Revision rhinoplasty, major — extensive redo of prior nose job.',
-  '19318': 'Breast reduction — removes breast tissue and skin, reshapes breast.',
-  '19316': 'Mastopexy — breast lift only, no significant tissue removal.',
-  '15832': 'Thigh lift — inner or outer thigh skin excision.',
-  '15835': 'Brachioplasty — upper arm skin excision.',
-  '15834': 'Hip/lateral thigh skin excision.',
-  '15877': 'Liposuction, trunk — abdomen, flanks, back.',
-  '15878': 'Liposuction, upper extremity — arms.',
-  '15879': 'Liposuction, lower extremity — thighs, knees.',
-  '19364': 'Free flap breast reconstruction — DIEP, SIEA, or similar. Microvascular.',
-  '19367': 'TRAM flap, single pedicle — pedicled TRAM, one blood supply kept.',
-  '19368': 'TRAM flap, double pedicle — both blood supplies kept for larger flap.',
-  '19369': 'TRAM flap with microvascular — free TRAM.',
+  '15847': 'Excision, excessive skin and subcutaneous tissue (includes lipectomy), abdomen (eg, abdominoplasty)',
+  '15830': 'Excision, excessive skin and subcutaneous tissue (includes lipectomy); abdomen, infraumbilical',
+  '19325': 'Breast augmentation with implant',
+  '19340': 'Insertion of breast implant on same day of mastectomy (ie, immediate)',
+  '19342': 'Insertion or replacement of breast implant on separate day from mastectomy',
+  '19357': 'Tissue expander placement in breast reconstruction, including subsequent expansion(s)',
+  '15822': 'Blepharoplasty, upper eyelid;',
+  '15823': 'Blepharoplasty, upper eyelid; with excessive skin weighting down lid',
+  '15824': 'Rhytidectomy; forehead',
+  '15825': 'Rhytidectomy; neck with platysmal tightening (platysmal flap, P-flap)',
+  '15828': 'Rhytidectomy; cheek, chin, and neck',
+  '15829': 'Rhytidectomy; superficial musculoaponeurotic system (SMAS) flap',
+  '30400': 'Rhinoplasty, primary; lateral and alar cartilages and/or elevation of nasal tip',
+  '30410': 'Rhinoplasty, primary; complete, external parts including bony pyramid, lateral and alar cartilages, and/or',
+  '30420': 'Rhinoplasty, primary; including major septal repair',
+  '30430': 'Rhinoplasty, secondary; minor revision (small amount of nasal tip work)',
+  '30450': 'Rhinoplasty, secondary; major revision (nasal tip work and osteotomies)',
+  '19318': 'Breast reduction',
+  '19316': 'Mastopexy',
+  '15832': 'Excision, excessive skin and subcutaneous tissue (includes lipectomy); thigh',
+  '15835': 'Excision, excessive skin and subcutaneous tissue (includes lipectomy); buttock',
+  '15834': 'Excision, excessive skin and subcutaneous tissue (includes lipectomy); hip',
+  '15877': 'Suction assisted lipectomy; trunk',
+  '15878': 'Suction assisted lipectomy; upper extremity',
+  '15879': 'Suction assisted lipectomy; lower extremity',
+  '19364': 'Breast reconstruction; with free flap (eg, fTRAM, DIEP, SIEA, GAP flap)',
+  '19367': 'Breast reconstruction; with single-pedicled transverse rectus abdominis myocutaneous (TRAM) flap',
+  '19368': 'Breast reconstruction; with single-pedicled transverse rectus abdominis myocutaneous (TRAM) flap,',
+  '19369': 'Breast reconstruction; with bipedicled transverse rectus abdominis myocutaneous (TRAM) flap',
+  '15756': 'Free muscle or myocutaneous flap with microvascular anastomosis',
+  '15734': 'Muscle, myocutaneous, or fasciocutaneous flap; trunk',
+  '21120': 'Genioplasty; augmentation (autograft, allograft, prosthetic material)',
+  '64721': 'Neuroplasty and/or transposition; median nerve at carpal tunnel',
+  '64718': 'Neuroplasty and/or transposition; ulnar nerve at elbow',
+  '19328': 'Removal of intact breast implant',
+  '19330': 'Removal of ruptured breast implant, including implant contents (eg, saline, silicone gel)',
+  '19350': 'Nipple/areola reconstruction',
+  '19370': 'Revision of peri-implant capsule, breast, including capsulotomy, capsulorrhaphy, and/or partial capsulectomy',
+  '19371': 'Peri-implant capsulectomy, breast, complete, including removal of all intracapsular contents',
+  '19380': 'Revision of reconstructed breast (eg, significant removal of tissue, re-advancement and/or re-inset of flaps'
 };
 
 function getCptNote(code){
@@ -626,12 +640,10 @@ function showAddMoreScreen(){
   showCptFound(caseData.procedures);
   const box = document.getElementById('add-more-box');
   box.innerHTML = `
-    <div class="add-more-head">Do you need to add more codes?</div>
-    <div class="codes-review" id="codes-review-list"></div>
     <div class="add-more-row">
       <button class="add-more-btn" id="add-voice-btn" onclick="startAddMoreVoice()">
         <svg viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 14.9A7.002 7.002 0 0 1 5 9H3a9 9 0 0 0 8 8.94V20H8v2h8v-2h-3v-2.06A9 9 0 0 0 21 9h-2a7 7 0 0 1-5.5 6.9z"/></svg>
-        Speak a code
+        Find more codes
       </button>
       <button class="add-more-btn" onclick="startAddMoreSearch()">
         <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -645,12 +657,14 @@ function showAddMoreScreen(){
       </div>
       <div class="srch-results" id="add-more-results"></div>
     </div>
-    <div id="add-voice-status" style="font-size:13px;color:var(--red);min-height:18px;margin-bottom:8px;text-align:center"></div>
-    <button class="add-more-skip" onclick="doneAddingCodes()">Done adding codes</button>
+    <div id="add-voice-status" style="font-size:13px;color:var(--red);min-height:18px;margin-bottom:10px;text-align:center"></div>
+    <button class="done-btn" onclick="doneAddingCodes()">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      Done
+    </button>
   `;
-  renderCodesReview();
   box.classList.add('show');
-  setStateLabel('Add more codes or tap done');
+  setStateLabel('');
 }
 
 function renderCodesReview(){
@@ -693,7 +707,6 @@ function addMoreCode(code, desc, area){
   if(!caseData.procedures.find(p=>p.c===code)){
     caseData.procedures.push({c:code, d:desc, a:area});
     showCptFound(caseData.procedures);
-    renderCodesReview();
     toast('Code added','ok');
   } else {
     toast('Already added','');
@@ -703,9 +716,13 @@ function addMoreCode(code, desc, area){
 }
 
 async function startAddMoreVoice(){
-  const btn = document.getElementById('add-voice-btn');
-  const status = document.getElementById('add-voice-status');
   if(addMoreRecOn){ stopAddMoreVoice(); return; }
+
+  // Reactivate the main orb with a new prompt
+  document.getElementById('add-more-box').classList.remove('show');
+  document.getElementById('cpt-found-box').classList.remove('show');
+  showBubble('Tell me the procedures you performed.');
+  document.getElementById('q-bubble').classList.add('show');
 
   try{
     const stream = await navigator.mediaDevices.getUserMedia({audio:true});
@@ -722,42 +739,45 @@ async function startAddMoreVoice(){
           else addMoreInt+=e.results[i][0].transcript;
         }
         const d=(addMoreFinal+' '+addMoreInt).trim();
-        if(status) status.textContent = d || 'Listening…';
+        showBubble(d || 'Tell me the procedures you performed.');
       },
       ()=>{ if(addMoreRecOn) addMoreRec.start(); }
     );
   }
   if(!addMoreRec){ toast('Speech not available','err'); return; }
   addMoreRecOn=true; addMoreRec.start();
-  btn.style.borderColor='var(--red)'; btn.style.color='var(--red)';
-  status.textContent = 'Listening… tap again to stop';
+  orbState='listening';
+  document.getElementById('orb-hint').classList.add('hide');
+  setStateLabel('Tap orb to stop');
 }
 
 function stopAddMoreVoice(){
   addMoreRecOn=false; if(addMoreRec) addMoreRec.stop(); stopMic();
-  const btn = document.getElementById('add-voice-btn');
-  const status = document.getElementById('add-voice-status');
-  if(btn){ btn.style.borderColor=''; btn.style.color=''; }
+  orbState='idle';
+  document.getElementById('q-bubble').classList.remove('show');
+  document.getElementById('q-bubble').textContent='';
+  document.getElementById('orb-hint').classList.remove('hide');
+  setStateLabel('');
   const text = (addMoreFinal+' '+addMoreInt).trim();
-  if(!text){ if(status) status.textContent=''; return; }
-  if(status) status.textContent = 'Finding codes…';
-  // Search for codes from the spoken text
+  addMoreFinal=''; addMoreInt='';
+
+  // Rebuild the add-more screen
+  showAddMoreScreen();
+
+  if(!text) return;
+  // Try to find codes from spoken text
   buildIndex();
   const matched = kwMatch(text);
   if(matched.length){
     matched.forEach(e => {
-      const c=e.c||e[0], d=e.d||e[1], a=e.a||e[2];
-      if(!caseData.procedures.find(p=>p.c===c)){
-        caseData.procedures.push({c,d,a});
-      }
+      const code=e.c||e[0], desc=e.d||e[1], area=e.a||e[2];
+      if(!caseData.procedures.find(p=>p.c===code))
+        caseData.procedures.push({c:code, d:desc, a:area});
     });
     showCptFound(caseData.procedures);
-    renderCodesReview();
-    if(status) status.textContent='';
     toast(`${matched.length} code${matched.length>1?'s':''} added`,'ok');
   } else {
-    // No match — show search populated with their text
-    if(status) status.textContent='';
+    // No keyword match — open search pre-filled with their text
     const searchEl = document.getElementById('add-more-search');
     const searchInput = document.getElementById('add-more-search-input');
     if(searchEl && searchInput){
@@ -765,9 +785,8 @@ function stopAddMoreVoice(){
       searchInput.value = text;
       addMoreSearch(text);
     }
-    toast('Try selecting from search results below','');
+    toast('No exact match — try the search results below','');
   }
-  addMoreFinal=''; addMoreInt='';
 }
 
 function doneAddingCodes(){
