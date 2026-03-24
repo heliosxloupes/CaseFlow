@@ -55,6 +55,7 @@ body{min-height:100%;font-family:'Sora',sans-serif;color:var(--text);background:
 .voice-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 112px);padding:24px 24px 40px}
 .orb-wrap{position:relative;width:240px;height:240px;margin-bottom:32px;cursor:pointer;flex-shrink:0;transition:transform .2s}
 .orb-wrap:active{transform:scale(.96)}
+.orb-wrap.inactive{opacity:.35;pointer-events:none}
 canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:50%}
 .orb-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:7px;pointer-events:none;transition:opacity .3s}
 .orb-hint.hide{opacity:0}
@@ -188,12 +189,66 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
     <div class="login-note">Sign in with your ACGME credentials.<br>Your session is stored locally on this device.</div>
   </div>
 </div>
+<div class="page" id="pg-profile">
+  <div class="login-wrap">
+    <div class="brand">
+      <div class="brand-name">Case<em>Flow</em></div>
+      <div class="brand-tag">One-time setup</div>
+    </div>
+    <p style="font-size:14px;color:var(--text2);margin-bottom:28px;line-height:1.6">Select your specialty so CaseFlow shows you the right CPT codes.</p>
+    <label class="lbl">Specialty</label>
+    <select class="ifield" id="p-specialty" style="cursor:pointer;-webkit-appearance:none;appearance:none">
+      <option value="" disabled selected>Select your specialty…</option>
+      <option value="allergy-immunology">Allergy and Immunology</option>
+      <option value="anesthesiology">Anesthesiology</option>
+      <option value="colon-rectal-surgery">Colon and Rectal Surgery</option>
+      <option value="dermatology">Dermatology</option>
+      <option value="emergency-medicine">Emergency Medicine</option>
+      <option value="family-medicine">Family Medicine</option>
+      <option value="internal-medicine">Internal Medicine</option>
+      <option value="neurological-surgery">Neurological Surgery</option>
+      <option value="neurology">Neurology</option>
+      <option value="nuclear-medicine">Nuclear Medicine</option>
+      <option value="obstetrics-gynecology">Obstetrics and Gynecology</option>
+      <option value="ophthalmology">Ophthalmology</option>
+      <option value="orthopaedic-surgery">Orthopaedic Surgery</option>
+      <option value="otolaryngology">Otolaryngology – Head and Neck Surgery</option>
+      <option value="pathology">Pathology</option>
+      <option value="pediatrics">Pediatrics</option>
+      <option value="physical-medicine">Physical Medicine and Rehabilitation</option>
+      <option value="plastic-surgery">Plastic Surgery</option>
+      <option value="preventive-medicine">Preventive Medicine</option>
+      <option value="psychiatry">Psychiatry</option>
+      <option value="radiation-oncology">Radiation Oncology</option>
+      <option value="radiology">Radiology</option>
+      <option value="general-surgery">Surgery (General)</option>
+      <option value="thoracic-surgery">Thoracic Surgery</option>
+      <option value="urology">Urology</option>
+    </select>
+    <label class="lbl" style="margin-top:16px">Residency Year</label>
+    <select class="ifield" id="p-year" style="cursor:pointer;-webkit-appearance:none;appearance:none">
+      <option value="" disabled selected>Select your year…</option>
+      <option value="1">PGY-1</option>
+      <option value="2">PGY-2</option>
+      <option value="3">PGY-3</option>
+      <option value="4">PGY-4</option>
+      <option value="5">PGY-5</option>
+      <option value="6">PGY-6</option>
+      <option value="7">PGY-7</option>
+    </select>
+    <button class="btn-main" id="p-btn" onclick="saveProfile()" style="margin-top:8px">Get Started</button>
+    <div class="login-err" id="p-err"></div>
+    <div class="login-note" style="margin-top:24px">You can update this anytime in your profile settings.</div>
+  </div>
+</div>
+
 <div class="page" id="pg-app">
   <div class="app-bar">
     <div class="app-logo">Case<em>Flow</em></div>
     <div class="bar-right">
+      <div class="chip" id="hdr-specialty" style="display:none"></div>
       <div class="chip"><b id="hdr-n">0</b> cases</div>
-      <div class="user-chip" onclick="doLogout()"><div class="udot"></div><span id="hdr-u">&#8212;</span></div>
+      <div class="user-chip" onclick="showProfileMenu()"><div class="udot"></div><span id="hdr-u">&#8212;</span></div>
     </div>
   </div>
   <div class="tabs">
@@ -379,7 +434,11 @@ const QUESTIONS=[
   {key:'patientType',isEmpty:()=>!caseData.patientType,question:'Was this an adult or pediatric patient?',type:'chips',options:['Adult','Pediatric']},
   {key:'caseYear',isEmpty:()=>!caseData.caseYear,question:'What year of residency are you in?',type:'chips',options:['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6']},
 ];
-async function handleOrbTap(){if(orbState==='idle')await startInitialListening();else if(orbState==='listening')stopInitialListening()}
+async function handleOrbTap(){
+  if(document.getElementById('add-more-box').classList.contains('show')) return;
+  if(orbState==='idle') await startInitialListening();
+  else if(orbState==='listening') stopInitialListening();
+}
 async function startInitialListening(){
   try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});await startMic(stream)}
   catch(e){toast('Microphone access required — allow mic and try again','err');return}
@@ -401,7 +460,11 @@ function stopInitialListening(){
 async function processDescription(text){
   caseData.description=text;caseData.date=isoToday();buildIndex();
   let extracted=null;
-  try{const res=await fetch('/api/parse-case',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text})});if(!res.ok)throw new Error();extracted=await res.json()}
+  try{
+    const profile=getProfile();
+    const res=await fetch('/api/parse-case',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:profile.specialty||'plastic-surgery',year:profile.year||'4'})});
+    if(!res.ok)throw new Error();extracted=await res.json()
+  }
   catch(e){extracted=localExtract(text)}
   if(extracted.role)caseData.role=extracted.role;
   if(extracted.patientType)caseData.patientType=extracted.patientType;
@@ -637,6 +700,16 @@ function confirmCptSelection(){
 let addMoreRec = null, addMoreRecOn = false, addMoreFinal = '', addMoreInt = '';
 
 function showAddMoreScreen(){
+  // Fully quiet the orb and clear all active UI
+  orbState='idle';
+  stopMic();
+  document.getElementById('orb-hint').classList.remove('hide');
+  document.getElementById('q-bubble').classList.remove('show');
+  document.getElementById('q-bubble').textContent='';
+  setStateLabel('');
+  hideAnswerUI();
+  document.getElementById('orb-wrap').classList.add('inactive');
+
   showCptFound(caseData.procedures);
   const box = document.getElementById('add-more-box');
   box.innerHTML = `
@@ -718,7 +791,7 @@ function addMoreCode(code, desc, area){
 async function startAddMoreVoice(){
   if(addMoreRecOn){ stopAddMoreVoice(); return; }
 
-  // Reactivate the main orb with a new prompt
+  // Hide add-more and found boxes, activate orb
   document.getElementById('add-more-box').classList.remove('show');
   document.getElementById('cpt-found-box').classList.remove('show');
   showBubble('Tell me the procedures you performed.');
@@ -747,24 +820,32 @@ async function startAddMoreVoice(){
   if(!addMoreRec){ toast('Speech not available','err'); return; }
   addMoreRecOn=true; addMoreRec.start();
   orbState='listening';
+  document.getElementById('orb-wrap').classList.remove('inactive');
   document.getElementById('orb-hint').classList.add('hide');
   setStateLabel('Tap orb to stop');
 }
 
+
 function stopAddMoreVoice(){
-  addMoreRecOn=false; if(addMoreRec) addMoreRec.stop(); stopMic();
+  addMoreRecOn=false;
+  if(addMoreRec) addMoreRec.stop();
+  stopMic();
+
+  // Return orb to fully idle/quiet state
   orbState='idle';
   document.getElementById('q-bubble').classList.remove('show');
   document.getElementById('q-bubble').textContent='';
   document.getElementById('orb-hint').classList.remove('hide');
   setStateLabel('');
+
   const text = (addMoreFinal+' '+addMoreInt).trim();
   addMoreFinal=''; addMoreInt='';
 
-  // Rebuild the add-more screen
+  // Rebuild quiet add-more screen
   showAddMoreScreen();
 
   if(!text) return;
+
   // Try to find codes from spoken text
   buildIndex();
   const matched = kwMatch(text);
@@ -777,7 +858,7 @@ function stopAddMoreVoice(){
     showCptFound(caseData.procedures);
     toast(`${matched.length} code${matched.length>1?'s':''} added`,'ok');
   } else {
-    // No keyword match — open search pre-filled with their text
+    // No match — open search pre-filled
     const searchEl = document.getElementById('add-more-search');
     const searchInput = document.getElementById('add-more-search-input');
     if(searchEl && searchInput){
@@ -792,6 +873,11 @@ function stopAddMoreVoice(){
 function doneAddingCodes(){
   document.getElementById('add-more-box').classList.remove('show');
   document.getElementById('add-more-box').innerHTML='';
+  document.getElementById('orb-wrap').classList.remove('inactive');
+  pendingQs = QUESTIONS.filter(q => q.key!=='procedures' && q.isEmpty());
+  currentQ = -1;
+  setTimeout(()=>nextQuestion(), 400);
+}
   // Continue with remaining questions (skip procedures since we have them)
   pendingQs = QUESTIONS.filter(q => q.key!=='procedures' && q.isEmpty());
   currentQ = -1;
@@ -829,6 +915,7 @@ function resetFlow(){
   orbState='idle';hideAll();
   document.getElementById('cpt-select-box').innerHTML='';
   document.getElementById('add-more-box').innerHTML='';
+  document.getElementById('orb-wrap').classList.remove('inactive');
   document.getElementById('q-bubble').classList.remove('show');document.getElementById('q-bubble').textContent='';
   document.getElementById('orb-hint').classList.remove('hide');setStateLabel('');
 }
@@ -838,20 +925,100 @@ function renderHistory(){
   list.innerHTML=cases.map(c=>{const procs=c.procs?.length?c.procs.map(p=>p.d).join(', '):'No procedures listed';const d=new Date(c.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});return`<div class="hist-item"><div style="flex:1;min-width:0"><div class="hprocs">${procs}</div><div class="hmeta">${d} &#183; ${c.role} &#183; Year ${c.yr}</div><div class="hmeta">${c.site} &#183; ${c.att}</div></div><div class="spill s-${c.status}">${c.status}</div></div>`}).join('');
 }
 function doLogin(){
-  const email=document.getElementById('l-email').value.trim();const pass=document.getElementById('l-pass').value.trim();const err=document.getElementById('l-err');
+  const email=document.getElementById('l-email').value.trim();
+  const pass=document.getElementById('l-pass').value.trim();
+  const err=document.getElementById('l-err');
   if(!email||!pass){err.textContent='Please enter your email and password.';return}
   if(!email.includes('@')){err.textContent='Please enter a valid email address.';return}
-  err.textContent='';const btn=document.getElementById('l-btn');
-  btn.innerHTML='<span class="spin"></span>Signing in&#8230;';btn.classList.add('busy');
-  setTimeout(()=>{localStorage.setItem('cf5-email',email);document.getElementById('hdr-u').textContent=email.split('@')[0];document.getElementById('hdr-n').textContent=cases.length;btn.innerHTML='Sign In';btn.classList.remove('busy');showPage('pg-app');startOrb();renderHistory();},700);
+  err.textContent='';
+  const btn=document.getElementById('l-btn');
+  btn.innerHTML='<span class="spin"></span>Signing in…';btn.classList.add('busy');
+  setTimeout(()=>{
+    localStorage.setItem('cf5-email',email);
+    localStorage.setItem('cf5-pass',pass);
+    btn.innerHTML='Sign In';btn.classList.remove('busy');
+    // First time? Go to profile setup. Otherwise go straight to app.
+    const profile = getProfile();
+    if(!profile.specialty){
+      showPage('pg-profile');
+    } else {
+      launchApp();
+    }
+  },700);
 }
-function doLogout(){if(!confirm('Sign out?'))return;resetFlow();showPage('pg-login')}
+
+function saveProfile(){
+  const specialty = document.getElementById('p-specialty').value;
+  const year = document.getElementById('p-year').value;
+  const err = document.getElementById('p-err');
+  if(!specialty){err.textContent='Please select your specialty.';return}
+  if(!year){err.textContent='Please select your residency year.';return}
+  err.textContent='';
+  const btn = document.getElementById('p-btn');
+  btn.innerHTML='<span class="spin"></span>Saving…';btn.classList.add('busy');
+  setTimeout(()=>{
+    localStorage.setItem('cf5-specialty', specialty);
+    localStorage.setItem('cf5-year', year);
+    btn.innerHTML='Get Started';btn.classList.remove('busy');
+    launchApp();
+  }, 400);
+}
+
+function getProfile(){
+  return {
+    email:     localStorage.getItem('cf5-email') || '',
+    specialty: localStorage.getItem('cf5-specialty') || '',
+    year:      localStorage.getItem('cf5-year') || '4',
+  };
+}
+
+function launchApp(){
+  const profile = getProfile();
+  const email = profile.email;
+  document.getElementById('hdr-u').textContent = email.split('@')[0];
+  document.getElementById('hdr-n').textContent = cases.length;
+  // Show specialty badge in header
+  const specialtyLabel = document.querySelector('#p-specialty option[value="'+profile.specialty+'"]');
+  const specialtyName = specialtyLabel ? specialtyLabel.textContent : profile.specialty;
+  document.getElementById('hdr-specialty').textContent = specialtyName || '';
+  document.getElementById('hdr-specialty').style.display = specialtyName ? '' : 'none';
+  showPage('pg-app');
+  startOrb();
+  renderHistory();
+}
+function showProfileMenu(){
+  const profile = getProfile();
+  const specialtyLabel = document.querySelector('#p-specialty option[value="'+profile.specialty+'"]');
+  const specialtyName = specialtyLabel ? specialtyLabel.textContent : profile.specialty || 'No specialty set';
+  const action = confirm(`Signed in as ${profile.email}\nSpecialty: ${specialtyName}\nYear: PGY-${profile.year}\n\nTap OK to change specialty · Cancel to sign out`);
+  if(action){
+    // Go to profile setup to change specialty
+    showPage('pg-profile');
+    // Pre-select current values
+    if(profile.specialty) document.getElementById('p-specialty').value = profile.specialty;
+    if(profile.year) document.getElementById('p-year').value = profile.year;
+    document.getElementById('p-btn').textContent = 'Save Changes';
+  } else {
+    doLogout();
+  }
+}
+function doLogout(){
+  if(!confirm('Sign out of CaseFlow?'))return;
+  resetFlow();showPage('pg-login');
+}
 function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));document.getElementById(id).classList.add('on')}
 function goTab(n){document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));document.getElementById('tb-'+n).classList.add('on');document.getElementById('pn-'+n).classList.add('on');if(n==='history')renderHistory()}
 document.addEventListener('DOMContentLoaded',()=>{
-  const saved=localStorage.getItem('cf5-email');if(saved)document.getElementById('l-email').value=saved;
+  const saved=localStorage.getItem('cf5-email');
+  if(saved) document.getElementById('l-email').value=saved;
+  // Pre-fill profile if values exist
+  const savedSpecialty=localStorage.getItem('cf5-specialty');
+  const savedYear=localStorage.getItem('cf5-year');
+  if(savedSpecialty) document.getElementById('p-specialty').value=savedSpecialty;
+  if(savedYear) document.getElementById('p-year').value=savedYear;
   document.getElementById('l-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
   document.getElementById('l-email').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('l-pass').focus()});
+  document.getElementById('p-specialty').addEventListener('change',()=>document.getElementById('p-err').textContent='');
   startOrb();
   function tryBuildIndex(){
     if(typeof CPT_DB!=='undefined'){buildIndex();}
