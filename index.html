@@ -52,15 +52,15 @@ body{min-height:100%;font-family:'Sora',sans-serif;color:var(--text);background:
 .tab.on{color:var(--text);border-bottom-color:var(--blue)}
 .pane{display:none;max-width:480px;margin:0 auto;width:100%}
 .pane.on{display:block}
-.voice-screen{display:flex;flex-direction:column;align-items:center;min-height:calc(100vh - 112px);padding:32px 24px 40px}
-.orb-wrap{position:relative;width:180px;height:180px;margin-bottom:28px;cursor:pointer;flex-shrink:0;transition:transform .2s}
+.voice-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 112px);padding:24px 24px 40px}
+.orb-wrap{position:relative;width:240px;height:240px;margin-bottom:32px;cursor:pointer;flex-shrink:0;transition:transform .2s}
 .orb-wrap:active{transform:scale(.96)}
 canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:50%}
-.orb-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;pointer-events:none;transition:opacity .3s}
+.orb-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:7px;pointer-events:none;transition:opacity .3s}
 .orb-hint.hide{opacity:0}
-.orb-hint svg{width:26px;height:26px;fill:rgba(255,255,255,.45)}
-.orb-hint span{font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.07em;text-transform:uppercase}
-.question-bubble{background:var(--bg2);border:1px solid var(--line2);border-radius:20px 20px 20px 4px;padding:14px 18px;font-size:16px;font-weight:400;color:var(--text);line-height:1.55;text-align:left;max-width:340px;width:100%;margin-bottom:16px;min-height:52px;opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s}
+.orb-hint svg{width:36px;height:36px;fill:rgba(255,255,255,.45)}
+.orb-hint span{font-size:12px;color:rgba(255,255,255,.35);letter-spacing:.08em;text-transform:uppercase}
+.question-bubble{background:var(--bg2);border:1px solid var(--line2);border-radius:20px 20px 20px 4px;padding:16px 20px;font-size:17px;font-weight:400;color:var(--text);line-height:1.55;text-align:left;max-width:340px;width:100%;margin-bottom:16px;min-height:52px;opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s}
 .question-bubble.show{opacity:1;transform:translateY(0)}
 .answer-chips{display:flex;flex-wrap:wrap;gap:8px;max-width:340px;width:100%;margin-bottom:16px;opacity:0;transition:opacity .3s .1s}
 .answer-chips.show{opacity:1}
@@ -113,6 +113,29 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .cpt-select-option{background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s}
 .cpt-select-option:active,.cpt-select-option:hover{border-color:var(--blue);background:var(--bg3)}
 .cpt-select-option.picked{border-color:var(--green);background:var(--green-d)}
+.cpt-select-option.picked .cpt-sel-code{color:var(--green)}
+.cpt-check{float:right;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line2);display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s;flex-shrink:0;margin-left:8px}
+.cpt-select-option.picked .cpt-check{background:var(--green);border-color:var(--green)}
+.cpt-check-inner{width:10px;height:10px;opacity:0;transition:opacity .15s}
+.cpt-select-option.picked .cpt-check-inner{opacity:1}
+.cpt-confirm-btn{width:100%;padding:14px;background:var(--blue);border:none;border-radius:var(--r);color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:10px;opacity:0;transition:opacity .2s,transform .1s;pointer-events:none}
+.cpt-confirm-btn.visible{opacity:1;pointer-events:all}
+.cpt-confirm-btn:active{transform:scale(.98)}
+.add-more-box{max-width:340px;width:100%;margin-bottom:12px;opacity:0;transition:opacity .3s .1s}
+.add-more-box.show{opacity:1}
+.add-more-head{font-size:14px;color:var(--text);font-weight:500;margin-bottom:12px;line-height:1.5}
+.add-more-row{display:flex;gap:10px;margin-bottom:10px}
+.add-more-btn{flex:1;padding:12px;border-radius:var(--r);font-family:'Sora',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--line2);background:var(--bg2);color:var(--text2);display:flex;align-items:center;justify-content:center;gap:8px;transition:border-color .15s,color .15s}
+.add-more-btn:active{background:var(--bg3)}
+.add-more-btn svg{width:16px;height:16px;fill:currentColor;flex-shrink:0}
+.add-more-skip{width:100%;padding:11px;background:transparent;border:1px solid var(--line2);border-radius:var(--r);color:var(--text3);font-family:'Sora',sans-serif;font-size:13px;cursor:pointer;transition:color .15s}
+.codes-review{background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
+.codes-review-item{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.codes-review-item:last-child{border-bottom:none}
+.cri-code{font-size:12px;color:var(--blue);font-weight:600;min-width:46px}
+.cri-desc{flex:1;font-size:13px;color:var(--text);line-height:1.3}
+.cri-remove{background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 2px;transition:color .15s}
+.cri-remove:hover{color:var(--red)}
 .cpt-sel-code{font-size:12px;font-weight:600;color:var(--blue);margin-bottom:4px}
 .cpt-sel-name{font-size:14px;color:var(--text);font-weight:500;margin-bottom:4px}
 .cpt-sel-note{font-size:12px;color:var(--text2);line-height:1.5}
@@ -178,7 +201,7 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
   <div class="pane on" id="pn-log">
     <div class="voice-screen" id="voice-screen">
       <div class="orb-wrap" id="orb-wrap" onclick="handleOrbTap()">
-        <canvas id="orb-canvas" width="360" height="360"></canvas>
+        <canvas id="orb-canvas" width="480" height="480"></canvas>
         <div class="orb-hint" id="orb-hint">
           <svg viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 14.9A7.002 7.002 0 0 1 5 9H3a9 9 0 0 0 8 8.94V20H8v2h8v-2h-3v-2.06A9 9 0 0 0 21 9h-2a7 7 0 0 1-5.5 6.9z"/></svg>
           <span>Tap to start</span>
@@ -205,6 +228,7 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
       </div>
       <div class="cpt-found-box" id="cpt-found-box"></div>
       <div class="cpt-select-box" id="cpt-select-box"></div>
+      <div class="add-more-box" id="add-more-box"></div>
       <div class="state-label" id="state-label"></div>
       <div class="summary-card" id="summary-card"></div>
       <div class="final-actions" id="final-actions">
@@ -219,16 +243,18 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 </div>
 <div class="toast" id="toast"></div>
 <script src="caseflow-data.js"></script>
-<script>
+<script defer>
 // CPT_DB and KW_MAP loaded from caseflow-data.js — 4761 ACGME Plastic Surgery codes
 // Build lookup index
 let CPT_INDEX=null;
 function buildIndex(){
   if(CPT_INDEX)return;
+  if(typeof CPT_DB === 'undefined'){console.warn('CPT_DB not loaded yet');return;}
   CPT_INDEX=CPT_DB.map(([c,d,a])=>({c,d,a,search:(c+' '+d+' '+a).toLowerCase()}));
 }
 function searchCPT(query,limit=12){
   buildIndex();
+  if(!CPT_INDEX)return[];
   const q=query.toLowerCase().trim();
   if(!q)return[];
   const terms=q.split(/\s+/);
@@ -245,6 +271,7 @@ function kwMatch(text){
   const lo=text.toLowerCase();
   const matched=[];
   buildIndex();
+  if(typeof KW_MAP === 'undefined')return[];
   for(const[type,codes]of Object.entries(KW_MAP)){
     const typeWords=type.toLowerCase().split(/[\s\/,()+\-]+/).filter(w=>w.length>3);
     if(typeWords.some(w=>lo.includes(w))){
@@ -259,9 +286,9 @@ function kwMatch(text){
 // ORB
 const canvas=document.getElementById('orb-canvas');
 const ctx=canvas.getContext('2d');
-const W=360,H=360,CX=W/2,CY=H/2;
+const W=480,H=480,CX=W/2,CY=H/2;
 let orbState='idle',audioLevel=0,smoothLevel=0,analyser=null,dataArray=null,animFrame=null;
-const N=8;
+const N=10;
 let bAngles=Array.from({length:N},(_,i)=>i*(2*Math.PI/N));
 let bNoise=Array.from({length:N},()=>Math.random()*1000);
 const PAL={idle:['#1a2a50','#1e3568','#243f80'],listening:['#4f8ef7','#6fa8ff','#a78bfa'],thinking:['#a78bfa','#c084fc','#818cf8'],done:['#34d399','#6ee7b7','#10b981']};
@@ -269,12 +296,12 @@ let lastTs=0;
 function drawOrb(ts){
   ctx.clearRect(0,0,W,H);
   const t=ts*0.0007,pal=PAL[orbState];
-  const base=orbState==='idle'?74:82;
-  const R=base+smoothLevel*(orbState==='listening'?30:orbState==='thinking'?18:0);
+  const base=orbState==='idle'?100:112;
+  const R=base+smoothLevel*(orbState==='listening'?48:orbState==='thinking'?28:0);
   for(let layer=2;layer>=0;layer--){
-    const sc=1-layer*.09;
-    const sp=orbState==='listening'?3.5:orbState==='thinking'?5:1;
-    const amp=orbState==='listening'?14+smoothLevel*38:orbState==='thinking'?10+Math.sin(ts*.003)*7:5+Math.sin(ts*.0005+layer)*2.5;
+    const sc=1-layer*.085;
+    const sp=orbState==='listening'?4:orbState==='thinking'?6:1.2;
+    const amp=orbState==='listening'?20+smoothLevel*55:orbState==='thinking'?15+Math.sin(ts*.003)*10:8+Math.sin(ts*.0005+layer)*4;
     ctx.beginPath();
     const pts=[];
     for(let i=0;i<N;i++){
@@ -284,26 +311,38 @@ function drawOrb(ts){
     ctx.moveTo((pts[0][0]+pts[N-1][0])/2,(pts[0][1]+pts[N-1][1])/2);
     for(let i=0;i<N;i++){const c=pts[i],nx=pts[(i+1)%N];ctx.quadraticCurveTo(c[0],c[1],(c[0]+nx[0])/2,(c[1]+nx[1])/2)}
     ctx.closePath();
-    const g=ctx.createRadialGradient(CX-R*.2,CY-R*.25,R*.08,CX,CY,R*sc*1.1);
+    const g=ctx.createRadialGradient(CX-R*.25,CY-R*.28,R*.06,CX,CY,R*sc*1.15);
     g.addColorStop(0,pal[layer%pal.length]);g.addColorStop(1,pal[(layer+2)%pal.length]);
-    ctx.globalAlpha=.55+layer*.18;ctx.fillStyle=g;ctx.fill();
+    ctx.globalAlpha=.58+layer*.16;ctx.fillStyle=g;ctx.fill();
   }
+  // Outer glow — bigger and softer when listening
+  const glowR = orbState==='listening' ? R*1.7 : R*1.5;
   const gc=orbState==='listening'?'rgba(79,142,247,':orbState==='thinking'?'rgba(167,139,250,':'rgba(26,50,110,';
-  const gr=ctx.createRadialGradient(CX,CY,R*.7,CX,CY,R*1.45);
-  gr.addColorStop(0,gc+'.16)');gr.addColorStop(1,gc+'0)');
-  ctx.globalAlpha=1;ctx.beginPath();ctx.arc(CX,CY,R*1.45,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();
-  const hl=ctx.createRadialGradient(CX-R*.3,CY-R*.35,0,CX-R*.3,CY-R*.35,R*.5);
-  hl.addColorStop(0,'rgba(255,255,255,.11)');hl.addColorStop(1,'rgba(255,255,255,0)');
+  const glowAlpha=orbState==='listening'?(.22+smoothLevel*.15):'.14';
+  const gr=ctx.createRadialGradient(CX,CY,R*.65,CX,CY,glowR);
+  gr.addColorStop(0,gc+glowAlpha+')');gr.addColorStop(1,gc+'0)');
+  ctx.globalAlpha=1;ctx.beginPath();ctx.arc(CX,CY,glowR,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();
+  // Secondary inner glow ring when listening
+  if(orbState==='listening'&&smoothLevel>.1){
+    const ring=ctx.createRadialGradient(CX,CY,R*.85,CX,CY,R*1.15);
+    ring.addColorStop(0,'rgba(127,183,255,0)');
+    ring.addColorStop(.5,`rgba(127,183,255,${(smoothLevel*.18).toFixed(2)})`);
+    ring.addColorStop(1,'rgba(127,183,255,0)');
+    ctx.beginPath();ctx.arc(CX,CY,R*1.15,0,Math.PI*2);ctx.fillStyle=ring;ctx.fill();
+  }
+  // Specular highlight
+  const hl=ctx.createRadialGradient(CX-R*.32,CY-R*.38,0,CX-R*.32,CY-R*.38,R*.55);
+  hl.addColorStop(0,'rgba(255,255,255,.14)');hl.addColorStop(1,'rgba(255,255,255,0)');
   ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.fillStyle=hl;ctx.globalAlpha=1;ctx.fill();
   ctx.globalAlpha=1;
 }
-function readMic(){if(!analyser){audioLevel=0;return}analyser.getByteFrequencyData(dataArray);let s=0;for(let i=0;i<dataArray.length;i++)s+=dataArray[i];audioLevel=Math.min(1,(s/dataArray.length)/55)}
+function readMic(){if(!analyser){audioLevel=0;return}analyser.getByteFrequencyData(dataArray);let s=0;for(let i=0;i<dataArray.length;i++)s+=dataArray[i];audioLevel=Math.min(1,(s/dataArray.length)/42)}
 function orbLoop(ts){
   const dt=Math.min(ts-lastTs,50)/1000;lastTs=ts;readMic();
-  const tgt=orbState==='listening'?audioLevel:orbState==='thinking'?.4+Math.sin(ts*.003)*.3:0;
-  smoothLevel+=(tgt-smoothLevel)*(orbState==='listening'?.3:.07);
-  const spd=orbState==='listening'?.004:orbState==='thinking'?.006:.001;
-  for(let i=0;i<N;i++)bAngles[i]+=spd*(i%2===0?1:-1)*(1+smoothLevel*.5);
+  const tgt=orbState==='listening'?audioLevel:orbState==='thinking'?.5+Math.sin(ts*.0025)*.35:0;
+  smoothLevel+=(tgt-smoothLevel)*(orbState==='listening'?.38:.06);
+  const spd=orbState==='listening'?.005:orbState==='thinking'?.007:.0012;
+  for(let i=0;i<N;i++)bAngles[i]+=spd*(i%2===0?1:-1)*(1+smoothLevel*.6);
   drawOrb(ts);animFrame=requestAnimationFrame(orbLoop);
 }
 function startOrb(){if(animFrame)cancelAnimationFrame(animFrame);lastTs=performance.now();animFrame=requestAnimationFrame(orbLoop)}
@@ -382,7 +421,15 @@ async function processDescription(text){
 
   if(caseData.procedures.length)showCptFound(caseData.procedures);
   pendingQs=QUESTIONS.filter(q=>q.isEmpty());currentQ=-1;
-  await sleep(caseData.procedures.length?1000:100);nextQuestion();
+  await sleep(caseData.procedures.length?800:100);
+  // Always show add-more screen if we found at least one code
+  if(caseData.procedures.length){
+    showAddMoreScreen();
+    pendingQs=QUESTIONS.filter(q=>q.key!=='procedures'&&q.isEmpty());
+    currentQ=-1;
+  } else {
+    nextQuestion();
+  }
 }
 function localExtract(text){
   const lo=text.toLowerCase();
@@ -453,7 +500,7 @@ function hideAnswerUI(){
   document.getElementById('srch-results-box').innerHTML='';
   if(fuOn)stopFuRec();
 }
-function hideAll(){hideAnswerUI();document.getElementById('cpt-found-box').classList.remove('show');document.getElementById('cpt-select-box').classList.remove('show');document.getElementById('summary-card').classList.remove('show');document.getElementById('final-actions').classList.remove('show')}
+function hideAll(){hideAnswerUI();document.getElementById('cpt-found-box').classList.remove('show');document.getElementById('cpt-select-box').classList.remove('show');document.getElementById('add-more-box').classList.remove('show');document.getElementById('summary-card').classList.remove('show');document.getElementById('final-actions').classList.remove('show')}
 function showChips(opts){const el=document.getElementById('a-chips');el.innerHTML=opts.map(o=>`<div class="chip-opt" onclick="chipPick('${o}',this)">${o}</div>`).join('');el.classList.add('show');document.getElementById('a-voice-row').classList.add('show')}
 function showTextAndVoice(){document.getElementById('a-text-wrap').classList.add('show');document.getElementById('a-voice-row').classList.add('show');setTimeout(()=>document.getElementById('a-text-input').focus(),200)}
 function chipPick(val,el){document.querySelectorAll('.chip-opt').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');setTimeout(()=>answerQuestion(val),220)}
@@ -507,48 +554,229 @@ function getCptNote(code){
 }
 
 function showCptSelection(procs){
-  // Hide the found box — we're replacing it with the selection UI
   document.getElementById('cpt-found-box').classList.remove('show');
   const box = document.getElementById('cpt-select-box');
   const question = procs.length === 2
-    ? `These two codes both match your description. Which one applies?`
-    : `${procs.length} similar codes match your description. Which one applies?`;
+    ? 'Both codes match — tap all that apply, then confirm.'
+    : `${procs.length} codes match — tap all that apply, then confirm.`;
 
   box.innerHTML = `
     <div class="cpt-select-head">${question}</div>
     ${procs.map((p,i) => {
       const note = getCptNote(p.c);
-      return `<div class="cpt-select-option" id="cpt-opt-${i}" onclick="pickCpt(${i})">
-        <div class="cpt-sel-code">${p.c}</div>
-        <div class="cpt-sel-name">${p.d}</div>
-        ${note ? `<div class="cpt-sel-note">${note}</div>` : `<div class="cpt-sel-note">${p.a}</div>`}
+      return `<div class="cpt-select-option" id="cpt-opt-${i}" onclick="toggleCpt(${i})">
+        <div style="display:flex;align-items:flex-start;gap:8px">
+          <div style="flex:1">
+            <div class="cpt-sel-code">${p.c}</div>
+            <div class="cpt-sel-name">${p.d}</div>
+            ${note ? `<div class="cpt-sel-note">${note}</div>` : `<div class="cpt-sel-note">${p.a}</div>`}
+          </div>
+          <div class="cpt-check" id="chk-${i}">
+            <svg class="cpt-check-inner" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
       </div>`;
     }).join('')}
+    <button class="cpt-confirm-btn" id="cpt-confirm-btn" onclick="confirmCptSelection()">Confirm selected codes</button>
   `;
   box.classList.add('show');
-  setStateLabel('Tap to select the correct code');
-  // Store procs for pickup in pickCpt
+  setStateLabel('Tap all codes that apply');
   box._procs = procs;
+  box._selected = new Set();
 }
 
-function pickCpt(idx){
+function toggleCpt(idx){
   const box = document.getElementById('cpt-select-box');
-  const procs = box._procs;
-  if(!procs) return;
-  // Animate selection
-  document.querySelectorAll('.cpt-select-option').forEach((el,i)=>{
-    el.classList.toggle('picked', i===idx);
-  });
-  setTimeout(()=>{
-    const chosen = procs[idx];
-    caseData.procedures = [chosen];
-    box.classList.remove('show');
-    box.innerHTML = '';
-    showCptFound([chosen]);
-    setStateLabel('');
-    // Continue with remaining questions
-    setTimeout(()=>nextQuestion(), 700);
-  }, 300);
+  if(!box._selected) return;
+  const el = document.getElementById('cpt-opt-'+idx);
+  if(box._selected.has(idx)){
+    box._selected.delete(idx);
+    el.classList.remove('picked');
+  } else {
+    box._selected.add(idx);
+    el.classList.add('picked');
+  }
+  // Show confirm button once at least one is selected
+  const btn = document.getElementById('cpt-confirm-btn');
+  if(box._selected.size > 0){
+    btn.classList.add('visible');
+    btn.textContent = box._selected.size === 1
+      ? 'Confirm 1 code'
+      : `Confirm ${box._selected.size} codes`;
+  } else {
+    btn.classList.remove('visible');
+  }
+}
+
+function confirmCptSelection(){
+  const box = document.getElementById('cpt-select-box');
+  if(!box._procs || !box._selected || box._selected.size === 0) return;
+  const chosen = [...box._selected].map(i => box._procs[i]);
+  caseData.procedures = chosen;
+  box.classList.remove('show');
+  box.innerHTML = '';
+  setStateLabel('');
+  showAddMoreScreen();
+}
+
+// ── ADD MORE CODES SCREEN ──
+let addMoreRec = null, addMoreRecOn = false, addMoreFinal = '', addMoreInt = '';
+
+function showAddMoreScreen(){
+  showCptFound(caseData.procedures);
+  const box = document.getElementById('add-more-box');
+  box.innerHTML = `
+    <div class="add-more-head">Do you need to add more codes?</div>
+    <div class="codes-review" id="codes-review-list"></div>
+    <div class="add-more-row">
+      <button class="add-more-btn" id="add-voice-btn" onclick="startAddMoreVoice()">
+        <svg viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 14.9A7.002 7.002 0 0 1 5 9H3a9 9 0 0 0 8 8.94V20H8v2h8v-2h-3v-2.06A9 9 0 0 0 21 9h-2a7 7 0 0 1-5.5 6.9z"/></svg>
+        Speak a code
+      </button>
+      <button class="add-more-btn" onclick="startAddMoreSearch()">
+        <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Search codes
+      </button>
+    </div>
+    <div class="cpt-search-box show" id="add-more-search" style="display:none;max-width:100%;margin:0 0 10px">
+      <div class="srch-wrap">
+        <div class="srch-ico"><svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></div>
+        <input class="srch-field" id="add-more-search-input" placeholder="Search by name or CPT code…" oninput="addMoreSearch(this.value)">
+      </div>
+      <div class="srch-results" id="add-more-results"></div>
+    </div>
+    <div id="add-voice-status" style="font-size:13px;color:var(--red);min-height:18px;margin-bottom:8px;text-align:center"></div>
+    <button class="add-more-skip" onclick="doneAddingCodes()">Done adding codes</button>
+  `;
+  renderCodesReview();
+  box.classList.add('show');
+  setStateLabel('Add more codes or tap done');
+}
+
+function renderCodesReview(){
+  const el = document.getElementById('codes-review-list');
+  if(!el) return;
+  el.innerHTML = caseData.procedures.map((p,i) => `
+    <div class="codes-review-item">
+      <div class="cri-code">${p.c}</div>
+      <div class="cri-desc">${p.d}</div>
+      <button class="cri-remove" onclick="removeFromReview(${i})">×</button>
+    </div>`).join('');
+}
+
+function removeFromReview(i){
+  caseData.procedures.splice(i,1);
+  showCptFound(caseData.procedures);
+  renderCodesReview();
+}
+
+function startAddMoreSearch(){
+  const el = document.getElementById('add-more-search');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if(el.style.display !== 'none') setTimeout(()=>document.getElementById('add-more-search-input').focus(), 100);
+}
+
+function addMoreSearch(q){
+  const res = document.getElementById('add-more-results');
+  if(!q.trim()){res.innerHTML='';return}
+  const hits = searchCPT(q, 10);
+  if(!hits.length){res.innerHTML='<div class="no-results">No results</div>';return}
+  res.innerHTML = hits.map(h => `
+    <div class="srch-row" onclick="addMoreCode('${h.c}','${esc(h.d)}','${esc(h.a)}')">
+      <div class="srch-code">${h.c}</div>
+      <div class="srch-info"><div class="srch-desc">${h.d}</div><div class="srch-area">${h.a}</div></div>
+      <div class="srch-add">+</div>
+    </div>`).join('');
+}
+
+function addMoreCode(code, desc, area){
+  if(!caseData.procedures.find(p=>p.c===code)){
+    caseData.procedures.push({c:code, d:desc, a:area});
+    showCptFound(caseData.procedures);
+    renderCodesReview();
+    toast('Code added','ok');
+  } else {
+    toast('Already added','');
+  }
+  document.getElementById('add-more-search-input').value = '';
+  document.getElementById('add-more-results').innerHTML = '';
+}
+
+async function startAddMoreVoice(){
+  const btn = document.getElementById('add-voice-btn');
+  const status = document.getElementById('add-voice-status');
+  if(addMoreRecOn){ stopAddMoreVoice(); return; }
+
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    await startMic(stream);
+  } catch(e){ toast('Mic access required','err'); return; }
+
+  addMoreFinal=''; addMoreInt='';
+  if(!addMoreRec){
+    addMoreRec = makeRec(
+      e => {
+        addMoreInt='';
+        for(let i=e.resultIndex;i<e.results.length;i++){
+          if(e.results[i].isFinal) addMoreFinal+=' '+e.results[i][0].transcript;
+          else addMoreInt+=e.results[i][0].transcript;
+        }
+        const d=(addMoreFinal+' '+addMoreInt).trim();
+        if(status) status.textContent = d || 'Listening…';
+      },
+      ()=>{ if(addMoreRecOn) addMoreRec.start(); }
+    );
+  }
+  if(!addMoreRec){ toast('Speech not available','err'); return; }
+  addMoreRecOn=true; addMoreRec.start();
+  btn.style.borderColor='var(--red)'; btn.style.color='var(--red)';
+  status.textContent = 'Listening… tap again to stop';
+}
+
+function stopAddMoreVoice(){
+  addMoreRecOn=false; if(addMoreRec) addMoreRec.stop(); stopMic();
+  const btn = document.getElementById('add-voice-btn');
+  const status = document.getElementById('add-voice-status');
+  if(btn){ btn.style.borderColor=''; btn.style.color=''; }
+  const text = (addMoreFinal+' '+addMoreInt).trim();
+  if(!text){ if(status) status.textContent=''; return; }
+  if(status) status.textContent = 'Finding codes…';
+  // Search for codes from the spoken text
+  buildIndex();
+  const matched = kwMatch(text);
+  if(matched.length){
+    matched.forEach(e => {
+      const c=e.c||e[0], d=e.d||e[1], a=e.a||e[2];
+      if(!caseData.procedures.find(p=>p.c===c)){
+        caseData.procedures.push({c,d,a});
+      }
+    });
+    showCptFound(caseData.procedures);
+    renderCodesReview();
+    if(status) status.textContent='';
+    toast(`${matched.length} code${matched.length>1?'s':''} added`,'ok');
+  } else {
+    // No match — show search populated with their text
+    if(status) status.textContent='';
+    const searchEl = document.getElementById('add-more-search');
+    const searchInput = document.getElementById('add-more-search-input');
+    if(searchEl && searchInput){
+      searchEl.style.display='block';
+      searchInput.value = text;
+      addMoreSearch(text);
+    }
+    toast('Try selecting from search results below','');
+  }
+  addMoreFinal=''; addMoreInt='';
+}
+
+function doneAddingCodes(){
+  document.getElementById('add-more-box').classList.remove('show');
+  document.getElementById('add-more-box').innerHTML='';
+  // Continue with remaining questions (skip procedures since we have them)
+  pendingQs = QUESTIONS.filter(q => q.key!=='procedures' && q.isEmpty());
+  currentQ = -1;
+  setTimeout(()=>nextQuestion(), 400);
 }
 
 function showCptFound(procs){
@@ -581,6 +809,7 @@ function resetFlow(){
   pendingQs=[];currentQ=-1;txFinal='';txInt='';recOn=false;if(recObj)recObj.stop();stopMic();
   orbState='idle';hideAll();
   document.getElementById('cpt-select-box').innerHTML='';
+  document.getElementById('add-more-box').innerHTML='';
   document.getElementById('q-bubble').classList.remove('show');document.getElementById('q-bubble').textContent='';
   document.getElementById('orb-hint').classList.remove('hide');setStateLabel('');
 }
@@ -604,7 +833,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   const saved=localStorage.getItem('cf5-email');if(saved)document.getElementById('l-email').value=saved;
   document.getElementById('l-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
   document.getElementById('l-email').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('l-pass').focus()});
-  startOrb();setTimeout(buildIndex,1500);
+  startOrb();
+  function tryBuildIndex(){
+    if(typeof CPT_DB!=='undefined'){buildIndex();}
+    else{setTimeout(tryBuildIndex,100);}
+  }
+  setTimeout(tryBuildIndex,200);
 });
 function isoToday(){return new Date().toISOString().split('T')[0]}
 function formatDate(d){if(!d)return'Today';return new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}
