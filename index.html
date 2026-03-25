@@ -1285,7 +1285,8 @@ async function submitCase(){
   } catch(e){
     // Save locally even if ACGME submission fails; user can re-submit from History
     status='pending';
-    toast('Saved locally — ACGME: '+e.message,'');
+    const msg=e.message.length>60?e.message.slice(0,57)+'…':e.message;
+    toast('Saved locally — ACGME: '+msg,'');
     console.warn('ACGME submit error:',e);
   }
 
@@ -1531,7 +1532,8 @@ async function resubmitCase(){
     });
   } catch(e){
     newStatus='pending';
-    toast('Saved — ACGME: '+e.message,'');
+    const msg2=e.message.length>60?e.message.slice(0,57)+'…':e.message;
+    toast('Saved — ACGME: '+msg2,'');
     console.warn('ACGME resubmit error:',e);
   }
 
