@@ -808,10 +808,17 @@ async function startAddMoreVoice(){
   showBubble('Tell me the procedures you performed.');
   document.getElementById('q-bubble').classList.add('show');
 
+  // getUserMedia is only for orb visualizer — not required for transcription
   try{
     const stream = await navigator.mediaDevices.getUserMedia({audio:true});
     await startMic(stream);
-  } catch(e){ toast('Mic access required','err'); return; }
+  } catch(e){
+    if(e && (e.name==='NotAllowedError'||e.name==='PermissionDeniedError')){
+      toast('Mic access required','err'); return;
+    }
+    console.warn('getUserMedia failed (visualizer disabled):', e);
+    // Continue without visualizer
+  }
 
   addMoreFinal=''; addMoreInt='';
   if(!addMoreRec){
@@ -828,10 +835,13 @@ async function startAddMoreVoice(){
       ()=>{ if(addMoreRecOn) addMoreRec.start(); }
     );
   }
-  if(!addMoreRec){ toast('Speech not available','err'); return; }
-  addMoreRecOn=true; addMoreRec.start();
+  if(!addMoreRec){ toast('Speech not available — try Chrome or Safari','err'); return; }
+  addMoreRecOn=true;
+  try{ addMoreRec.start(); } catch(e){ console.error('addMoreRec.start error:',e); toast('Mic start error: '+e.message,'err'); return; }
   orbState='listening';
-  document.getElementById('orb-wrap').classList.remove('inactive');
+  const orbWrap = document.getElementById('orb-wrap');
+  orbWrap.style.display='';
+  orbWrap.classList.remove('inactive');
   document.getElementById('orb-hint').classList.add('hide');
   setStateLabel('Tap orb to stop');
 }
