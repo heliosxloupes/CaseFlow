@@ -286,6 +286,11 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--bg3);border:1px solid var(--line2);border-radius:24px;padding:11px 20px;font-size:13px;color:var(--text);font-weight:500;opacity:0;transition:all .22s;z-index:999;white-space:nowrap;pointer-events:none}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{border-color:rgba(52,211,153,.28);color:var(--green)}
+.err-banner{position:fixed;bottom:0;left:0;right:0;z-index:9900;padding:12px 16px 24px;background:rgba(20,10,10,.97);border-top:1px solid rgba(248,113,113,.3);cursor:pointer}
+.err-banner-body{display:flex;align-items:flex-start;gap:10px;max-width:500px;margin:0 auto}
+.err-banner-icon{font-size:18px;flex-shrink:0;margin-top:1px;color:#f87171}
+.err-banner-text{flex:1;font-size:13px;color:rgba(255,255,255,.85);line-height:1.55;word-break:break-word;font-family:'Sora',sans-serif}
+.err-banner-close{flex-shrink:0;font-size:16px;color:rgba(255,255,255,.35);padding:0 4px}
 .toast.err{border-color:rgba(248,113,113,.28);color:var(--red)}
 .new-case-btn{display:flex;align-items:center;gap:5px;background:var(--blue-d);border:1px solid var(--blue-b);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--blue);font-family:'Sora',sans-serif;font-weight:500;cursor:pointer;transition:background .15s}
 /* Collapse hidden flow elements so the orb is truly centered on initial load */
@@ -493,6 +498,13 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
   <div class="submit-label">Submitting to ACGME…</div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="err-banner" id="err-banner" style="display:none" onclick="closeErrBanner()">
+  <div class="err-banner-body">
+    <div class="err-banner-icon">⚠</div>
+    <div class="err-banner-text" id="err-banner-text"></div>
+    <div class="err-banner-close">✕</div>
+  </div>
+</div>
 <script src="caseflow-data.js"></script>
 <script>
 // CPT_DB and KW_MAP loaded from caseflow-data.js — 4761 ACGME Plastic Surgery codes
@@ -1285,8 +1297,7 @@ async function submitCase(){
   } catch(e){
     // Save locally even if ACGME submission fails; user can re-submit from History
     status='pending';
-    const msg=e.message.length>60?e.message.slice(0,57)+'…':e.message;
-    toast('Saved locally — ACGME: '+msg,'');
+    showErrBanner('Case saved locally. ACGME submission failed:\n\n'+e.message+'\n\nYou can re-submit from Case History once this is resolved. Tap to dismiss.');
     console.warn('ACGME submit error:',e);
   }
 
@@ -1532,8 +1543,7 @@ async function resubmitCase(){
     });
   } catch(e){
     newStatus='pending';
-    const msg2=e.message.length>60?e.message.slice(0,57)+'…':e.message;
-    toast('Saved — ACGME: '+msg2,'');
+    showErrBanner('Re-submission failed. ACGME error:\n\n'+e.message+'\n\nCase status set to pending. Tap to dismiss.');
     console.warn('ACGME resubmit error:',e);
   }
 
@@ -1722,6 +1732,8 @@ function formatDate(d){if(!d)return'Today';return new Date(d+'T12:00:00').toLoca
 function esc(s){return s.replace(/'/g,"\'").replace(/"/g,'&quot;')}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast on '+type;setTimeout(()=>t.className='toast '+type,3200)}
+function showErrBanner(msg){const b=document.getElementById('err-banner');document.getElementById('err-banner-text').textContent=msg;b.style.display='block';}
+function closeErrBanner(){document.getElementById('err-banner').style.display='none';}
 if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}
 </script>
 </body>

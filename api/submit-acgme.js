@@ -231,9 +231,11 @@ module.exports = async function handler(req, res) {
     step(`ERROR: ${err.message}`);
     if (browser) await browser.close().catch(() => {});
 
+    // Return a clean message — strip Playwright stack noise
+    const clean = err.message.split('\n')[0].slice(0, 200);
     return res.status(500).json({
       ok: false,
-      error: err.message,
+      error: clean,
       log,
     });
   }
