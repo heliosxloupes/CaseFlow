@@ -527,7 +527,7 @@ function hideAnswerUI(){
   if(fuOn)stopFuRec();
 }
 function hideAll(){hideAnswerUI();document.getElementById('cpt-found-box').classList.remove('show');document.getElementById('cpt-select-box').classList.remove('show');document.getElementById('add-more-box').classList.remove('show');document.getElementById('summary-card').classList.remove('show');document.getElementById('final-actions').classList.remove('show')}
-function showChips(opts){const el=document.getElementById('a-chips');el.innerHTML=opts.map(o=>`<div class="chip-opt" onclick="chipPick('${o}',this)">${o}</div>`).join('');el.classList.add('show');document.getElementById('a-voice-row').classList.add('show')}
+function showChips(opts){const el=document.getElementById('a-chips');el.innerHTML=opts.map(o=>`<div class="chip-opt" onclick="chipPick('${o}',this)">${o}</div>`).join('');el.classList.add('show');}
 function showTextAndVoice(){document.getElementById('a-text-wrap').classList.add('show');document.getElementById('a-voice-row').classList.add('show');setTimeout(()=>document.getElementById('a-text-input').focus(),200)}
 function chipPick(val,el){document.querySelectorAll('.chip-opt').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');setTimeout(()=>answerQuestion(val),220)}
 // Detect if returned codes are similar enough to need user selection
