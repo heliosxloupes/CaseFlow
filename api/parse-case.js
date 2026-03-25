@@ -44,7 +44,22 @@ function findCodes(procedureNames, topPerProc = 3) {
       }
     }
 
+    // Context filters: penalise codes whose descriptions imply a clinical context
+    // that the query doesn't mention, so they don't crowd out general matches.
+    const queryText = words.join(' ');
+    const noInfection = !/necrotiz|infect|gangren/i.test(queryText);
+    const noFracture  = !/fractur|disloc|replant|amputat/i.test(queryText);
+    const noPancreas  = !/pancrea/i.test(queryText);
+    for (const code of Object.keys(scores)) {
+      if (!CODES[code]) continue;
+      const desc = CODES[code][0].toLowerCase();
+      if (noInfection && /necrotiz|infect|gangren/.test(desc)) scores[code] -= 4;
+      if (noFracture  && /fractur|disloc|replant|amputat/.test(desc)) scores[code] -= 4;
+      if (noPancreas  && /pancrea/.test(desc)) scores[code] -= 4;
+    }
+
     const ranked = Object.entries(scores)
+      .filter(([, s]) => s > 0)
       .sort((a, b) => b[1] - a[1])
       .slice(0, topPerProc);
 
@@ -113,8 +128,20 @@ Return ONLY valid JSON, no markdown:
 }
 
 CRITICAL for procedures: Use SHORT, specific CPT-style names (2-5 words). Match the exact clinical terminology used in CPT code descriptions. Do NOT write verbose sentences.
-Good examples: "debridement open wound", "breast augmentation implant", "capsulectomy peri-implant complete", "abdominoplasty", "rhinoplasty primary", "blepharoplasty upper eyelid", "skin graft split thickness", "tendon repair flexor", "carpal tunnel release", "liposuction trunk", "mastopexy"
-Bad examples: "debridement and wound washout of upper extremity" (too verbose — use "debridement open wound" instead)
+Good examples:
+- "debridement subcutaneous tissue" (for wound debridement / washout)
+- "debridement muscle fascia" (if deep tissue debridement mentioned)
+- "breast augmentation implant"
+- "capsulectomy peri-implant complete"
+- "abdominoplasty"
+- "rhinoplasty primary"
+- "blepharoplasty upper eyelid"
+- "skin graft split thickness"
+- "tendon repair flexor"
+- "carpal tunnel release"
+- "liposuction trunk"
+- "mastopexy"
+Bad: "debridement and wound washout of upper extremity" → use "debridement subcutaneous tissue" instead
 List each procedure separately.`,
         messages: [{ role: 'user', content: `Extract case details: "${transcript}"` }]
       })
