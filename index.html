@@ -436,7 +436,13 @@ async function processDescription(text){
   if(extracted.patientType)caseData.patientType=extracted.patientType;
   if(extracted.caseYear)caseData.caseYear='Year '+(extracted.caseYear||4);
   if(extracted.notes)caseData.notes=extracted.notes;
-  if(extracted.suggestedCodes&&extracted.suggestedCodes.length)caseData.procedures=extracted.suggestedCodes.map(s=>({c:s.code,d:s.desc,a:s.area}));
+  if(extracted.suggestedCodes&&extracted.suggestedCodes.length){
+    // Primary codes go straight into procedures
+    const primaries = extracted.suggestedCodes.filter(s=>s.primary!==false);
+    const alternatives = extracted.suggestedCodes.filter(s=>s.primary===false);
+    caseData.procedures = primaries.map(s=>({c:s.code,d:s.desc,a:s.area}));
+    caseData.alternatives = alternatives; // store for display
+  }
   orbState='idle';
 
   // Check if codes need user selection (same area = ambiguous)
@@ -666,7 +672,6 @@ function confirmCptSelection(){
 let addMoreRec = null, addMoreRecOn = false, addMoreFinal = '', addMoreInt = '';
 
 function showAddMoreScreen(){
-  // Fully quiet the orb and clear all active UI
   orbState='idle';
   stopMic();
   document.getElementById('orb-hint').classList.remove('hide');
@@ -677,8 +682,26 @@ function showAddMoreScreen(){
   document.getElementById('orb-wrap').classList.add('inactive');
 
   showCptFound(caseData.procedures);
+
+  const alts = caseData.alternatives || [];
+  const altsHTML = alts.length ? `
+    <div style="font-size:11px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Related codes — tap to add</div>
+    ${alts.map(s=>`
+      <div class="cpt-select-option" style="margin-bottom:6px" onclick="addAltCode('${s.code}','${esc(s.desc)}','${esc(s.area)}')">
+        <div style="display:flex;align-items:flex-start;gap:8px">
+          <div style="flex:1">
+            <div class="cpt-sel-code">${s.code}</div>
+            <div class="cpt-sel-name">${s.desc}</div>
+            <div class="cpt-sel-note">${s.area}</div>
+          </div>
+          <div class="radd" style="font-size:20px;color:var(--text3);padding-top:2px">+</div>
+        </div>
+      </div>`).join('')}
+    <div style="height:10px"></div>` : '';
+
   const box = document.getElementById('add-more-box');
   box.innerHTML = `
+    ${altsHTML}
     <div class="add-more-row">
       <button class="add-more-btn" id="add-voice-btn" onclick="startAddMoreVoice()">
         <svg viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 14.9A7.002 7.002 0 0 1 5 9H3a9 9 0 0 0 8 8.94V20H8v2h8v-2h-3v-2.06A9 9 0 0 0 21 9h-2a7 7 0 0 1-5.5 6.9z"/></svg>
@@ -704,6 +727,17 @@ function showAddMoreScreen(){
   `;
   box.classList.add('show');
   setStateLabel('');
+}
+
+function addAltCode(code, desc, area){
+  if(!caseData.procedures.find(p=>p.c===code)){
+    caseData.procedures.push({c:code,d:desc,a:area});
+    // Remove from alternatives
+    caseData.alternatives = (caseData.alternatives||[]).filter(s=>s.code!==code);
+    showCptFound(caseData.procedures);
+    showAddMoreScreen();
+    toast('Code added','ok');
+  }
 }
 
 function renderCodesReview(){
@@ -871,7 +905,7 @@ async function submitCase(){
   toast('Case submitted successfully','ok');resetFlow();
 }
 function resetFlow(){
-  caseData={description:'',procedures:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:''};
+  caseData={description:'',procedures:[],alternatives:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:''};
   pendingQs=[];currentQ=-1;txFinal='';txInt='';recOn=false;if(recObj)recObj.stop();stopMic();
   orbState='idle';hideAll();
   document.getElementById('cpt-select-box').innerHTML='';
