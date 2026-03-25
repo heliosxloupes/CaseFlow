@@ -192,10 +192,18 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .hist-search-field{width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--line2);border-radius:10px;padding:11px 12px 11px 36px;color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;transition:border-color .18s}
 .hist-search-field:focus{border-color:var(--blue)}
 .hist-search-field::placeholder{color:var(--text3)}
-.hist-date-row{display:flex;align-items:center;gap:8px}
+.hist-date-toggle{display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--line2);border-radius:20px;padding:7px 14px;font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;font-family:'Sora',sans-serif;transition:border-color .15s,color .15s;margin-bottom:10px;user-select:none}
+.hist-date-toggle.active{border-color:var(--blue);color:var(--blue);background:var(--blue-d)}
+.hist-date-toggle svg{width:13px;height:13px;flex-shrink:0}
+.hist-date-toggle .caret{font-size:9px;opacity:.6;margin-left:2px;transition:transform .2s}
+.hist-date-toggle.active .caret{transform:rotate(180deg)}
+.hist-date-expand{display:none;align-items:center;gap:8px;margin-bottom:10px}
+.hist-date-expand.open{display:flex}
 .hist-date-field{flex:1;min-width:0;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 10px;color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;transition:border-color .18s}
 .hist-date-field:focus{border-color:var(--blue)}
 .hist-date-sep{color:var(--text3);font-size:14px;flex-shrink:0}
+.hist-date-clear{font-size:12px;color:var(--text3);cursor:pointer;padding:4px 6px;flex-shrink:0;transition:color .15s}
+.hist-date-clear:active{color:#f87171}
 .hist-count{padding:10px 20px 2px;max-width:600px;margin:0 auto;font-size:12px;color:var(--text3)}
 .hist-wrap{padding:8px 20px 100px;max-width:600px;margin:0 auto}
 .hist-item{background:var(--bg1);border:1px solid var(--line);border-radius:var(--rl);padding:16px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;cursor:pointer;transition:border-color .15s,background .15s}
@@ -352,10 +360,16 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
         <div class="hist-search-ico"><svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></div>
         <input class="hist-search-field" id="hist-search" placeholder="Search procedures or CPT codes…" oninput="filterHistory()" autocomplete="off">
       </div>
-      <div class="hist-date-row">
-        <input type="date" class="hist-date-field" id="hist-from" onchange="filterHistory()">
+      <div class="hist-date-toggle" id="hist-date-toggle" onclick="toggleDateFilter()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span id="hist-date-label">Filter by date</span>
+        <span class="caret">▼</span>
+      </div>
+      <div class="hist-date-expand" id="hist-date-expand">
+        <input type="date" class="hist-date-field" id="hist-from" onchange="filterHistory();updateDateToggleLabel()">
         <span class="hist-date-sep">—</span>
-        <input type="date" class="hist-date-field" id="hist-to" onchange="filterHistory()">
+        <input type="date" class="hist-date-field" id="hist-to" onchange="filterHistory();updateDateToggleLabel()">
+        <span class="hist-date-clear" onclick="clearDateFilter()">✕</span>
       </div>
     </div>
     <div class="hist-count" id="hist-count"></div>
@@ -1199,6 +1213,36 @@ function resetFlow(){
 }
 function renderHistory(){
   filterHistory();
+}
+function toggleDateFilter(){
+  const expand=document.getElementById('hist-date-expand');
+  const toggle=document.getElementById('hist-date-toggle');
+  const isOpen=expand.classList.contains('open');
+  expand.classList.toggle('open');
+  toggle.classList.toggle('active');
+  if(!isOpen) document.getElementById('hist-from').focus();
+}
+function clearDateFilter(){
+  document.getElementById('hist-from').value='';
+  document.getElementById('hist-to').value='';
+  document.getElementById('hist-date-expand').classList.remove('open');
+  document.getElementById('hist-date-toggle').classList.remove('active');
+  document.getElementById('hist-date-label').textContent='Filter by date';
+  filterHistory();
+}
+function updateDateToggleLabel(){
+  const from=document.getElementById('hist-from').value;
+  const to=document.getElementById('hist-to').value;
+  const fmt=d=>d?new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
+  const toggle=document.getElementById('hist-date-toggle');
+  const label=document.getElementById('hist-date-label');
+  if(from||to){
+    label.textContent=from&&to?`${fmt(from)} — ${fmt(to)}`:from?`From ${fmt(from)}`:`Until ${fmt(to)}`;
+    toggle.classList.add('active');
+  } else {
+    label.textContent='Filter by date';
+    toggle.classList.remove('active');
+  }
 }
 function filterHistory(){
   const q=(document.getElementById('hist-search')?.value||'').toLowerCase().trim();
