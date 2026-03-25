@@ -17,6 +17,7 @@ const STOPWORDS = new Set(['and','the','for','with','of','or','in','to',
   'via','due','such','also']);
 
 // Map Claude's procedure names to real CPT codes from the PDF
+// Returns 1 primary (best match) + up to 2 alternatives per procedure
 function findCodes(procedureNames, topPerProc = 3) {
   const results = [];
   const seen = new Set();
@@ -39,6 +40,7 @@ function findCodes(procedureNames, topPerProc = 3) {
       .sort((a, b) => b[1] - a[1])
       .slice(0, topPerProc);
 
+    let firstForProc = true;
     for (const [code, score] of ranked) {
       if (!seen.has(code) && CODES[code]) {
         seen.add(code);
@@ -46,8 +48,11 @@ function findCodes(procedureNames, topPerProc = 3) {
           code,
           desc: CODES[code][0],
           area: CODES[code][1],
-          confidence: score >= 2 ? 'high' : 'medium'
+          confidence: score >= 2 ? 'high' : 'medium',
+          primary: firstForProc,
+          procedureName: name
         });
+        firstForProc = false;
       }
     }
   }

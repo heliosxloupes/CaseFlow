@@ -445,21 +445,10 @@ async function processDescription(text){
   }
   orbState='idle';
 
-  // Check if codes need user selection (same area = ambiguous)
-  const procs = caseData.procedures;
-  if(procs.length > 1 && areSimilar(procs)){
-    // Don't auto-add — make user pick one
-    await sleep(400);
-    showCptSelection(procs);
-    pendingQs=QUESTIONS.filter(q=>q.key!=='procedures'&&q.isEmpty());
-    currentQ=-1;
-    return; // selection callback will call nextQuestion
-  }
-
-  if(caseData.procedures.length)showCptFound(caseData.procedures);
-  pendingQs=QUESTIONS.filter(q=>q.isEmpty());currentQ=-1;
-  await sleep(caseData.procedures.length?800:100);
-  // Always show add-more screen if we found at least one code
+  // Auto-confirm the 1 primary per procedure; alternatives appear as tappable suggestions
+  if(caseData.procedures.length) showCptFound(caseData.procedures);
+  pendingQs=QUESTIONS.filter(q=>q.isEmpty()); currentQ=-1;
+  await sleep(caseData.procedures.length ? 800 : 100);
   if(caseData.procedures.length){
     showAddMoreScreen();
     pendingQs=QUESTIONS.filter(q=>q.key!=='procedures'&&q.isEmpty());
@@ -826,48 +815,82 @@ async function startAddMoreVoice(){
 }
 
 
-function stopAddMoreVoice(){
+async function stopAddMoreVoice(){
   addMoreRecOn=false;
   if(addMoreRec) addMoreRec.stop();
   stopMic();
 
-  // Return orb to fully idle/quiet state
+  const text = (addMoreFinal+' '+addMoreInt).trim();
+  addMoreFinal=''; addMoreInt='';
+
+  if(!text){
+    orbState='idle';
+    document.getElementById('q-bubble').classList.remove('show');
+    document.getElementById('q-bubble').textContent='';
+    document.getElementById('orb-hint').classList.remove('hide');
+    setStateLabel('');
+    showAddMoreScreen();
+    return;
+  }
+
+  // Show thinking state while API runs
+  orbState='thinking';
+  showBubble('Finding codes…');
+  document.getElementById('q-bubble').classList.add('show');
+  document.getElementById('orb-hint').classList.add('hide');
+  setStateLabel('');
+
+  let extracted = null;
+  try {
+    const res = await fetch('/api/parse-case',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:'plastic-surgery'})});
+    if(!res.ok) throw new Error();
+    extracted = await res.json();
+  } catch(e) {
+    // Fallback: local keyword match
+    buildIndex();
+    const matched = kwMatch(text);
+    orbState='idle';
+    document.getElementById('q-bubble').classList.remove('show');
+    document.getElementById('orb-hint').classList.remove('hide');
+    showAddMoreScreen();
+    if(matched.length){
+      matched.forEach(e=>{if(!caseData.procedures.find(p=>p.c===e.c))caseData.procedures.push({c:e.c,d:e.d,a:e.a});});
+      showCptFound(caseData.procedures);
+      toast(`${matched.length} code${matched.length>1?'s':''} added`,'ok');
+    } else {
+      const searchEl=document.getElementById('add-more-search');
+      const searchInput=document.getElementById('add-more-search-input');
+      if(searchEl&&searchInput){searchEl.style.display='block';searchInput.value=text;addMoreSearch(text);}
+      toast('No exact match — try the search results below','');
+    }
+    return;
+  }
+
+  // Add new primary codes; merge new alternatives
+  if(extracted.suggestedCodes && extracted.suggestedCodes.length){
+    const primaries = extracted.suggestedCodes.filter(s=>s.primary!==false);
+    const alternatives = extracted.suggestedCodes.filter(s=>s.primary===false);
+    let added=0;
+    primaries.forEach(s=>{
+      if(!caseData.procedures.find(p=>p.c===s.code)){
+        caseData.procedures.push({c:s.code,d:s.desc,a:s.area});
+        added++;
+      }
+    });
+    const existingCodes=new Set(caseData.procedures.map(p=>p.c));
+    const newAlts=alternatives.filter(s=>!existingCodes.has(s.code));
+    caseData.alternatives=[...(caseData.alternatives||[]),...newAlts].filter(s=>!caseData.procedures.find(p=>p.c===s.code));
+    if(added) toast(`${added} code${added>1?'s':''} added`,'ok');
+    else toast('Codes already in list','');
+  }
+
   orbState='idle';
   document.getElementById('q-bubble').classList.remove('show');
   document.getElementById('q-bubble').textContent='';
   document.getElementById('orb-hint').classList.remove('hide');
   setStateLabel('');
-
-  const text = (addMoreFinal+' '+addMoreInt).trim();
-  addMoreFinal=''; addMoreInt='';
-
-  // Rebuild quiet add-more screen
+  showCptFound(caseData.procedures);
   showAddMoreScreen();
-
-  if(!text) return;
-
-  // Try to find codes from spoken text
-  buildIndex();
-  const matched = kwMatch(text);
-  if(matched.length){
-    matched.forEach(e => {
-      const code=e.c||e[0], desc=e.d||e[1], area=e.a||e[2];
-      if(!caseData.procedures.find(p=>p.c===code))
-        caseData.procedures.push({c:code, d:desc, a:area});
-    });
-    showCptFound(caseData.procedures);
-    toast(`${matched.length} code${matched.length>1?'s':''} added`,'ok');
-  } else {
-    // No match — open search pre-filled
-    const searchEl = document.getElementById('add-more-search');
-    const searchInput = document.getElementById('add-more-search-input');
-    if(searchEl && searchInput){
-      searchEl.style.display='block';
-      searchInput.value = text;
-      addMoreSearch(text);
-    }
-    toast('No exact match — try the search results below','');
-  }
 }
 
 function doneAddingCodes(){
