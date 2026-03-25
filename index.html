@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="CaseFlow">
 <meta name="theme-color" content="#07090f">
 <link rel="manifest" href="/manifest.json">
@@ -415,10 +415,26 @@ let fuRec=null,fuOn=false,fuFinal='',fuInt='';
 function makeRec(onResult,onEnd){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR)return null;
-  const r=new SR();r.continuous=true;r.interimResults=true;r.lang='en-US';
+  const r=new SR();
+  // iOS Safari does not support continuous mode reliably — use single-shot + auto-restart
+  r.continuous=false;
+  r.interimResults=true;
+  r.lang='en-US';
   r.onresult=onResult;
-  r.onerror=e=>{if(e.error==='not-allowed'||e.error==='permission-denied')toast('Mic access denied — allow mic in browser settings','err');else if(e.error!=='no-speech')toast('Mic error: '+e.error,'err')};
-  if(onEnd)r.onend=onEnd;return r;
+  r.onerror=e=>{
+    console.error('SpeechRec error:',e.error);
+    if(e.error==='not-allowed'||e.error==='permission-denied'){
+      toast('Mic access denied — allow mic in Safari settings','err');
+    } else if(e.error==='no-speech'||e.error==='aborted'){
+      // normal — will restart via onend
+    } else {
+      showBubble('Voice error: '+e.error+'. Try tapping the orb again.');
+      document.getElementById('q-bubble').classList.add('show');
+    }
+  };
+  // iOS fires onend after each utterance — restart with a small delay to avoid race condition
+  if(onEnd) r.onend=()=>setTimeout(onEnd, 150);
+  return r;
 }
 // CONVERSATION
 let caseData={description:'',procedures:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:''};
@@ -452,7 +468,7 @@ async function startInitialListening(){
     // Continue without visualizer
   }
   buildIndex();
-  if(!recObj)recObj=makeRec(e=>{txInt='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)txFinal+=' '+e.results[i][0].transcript;else txInt+=e.results[i][0].transcript}showBubble((txFinal+' '+txInt).trim()||'Listening…')},()=>{if(recOn)recObj.start()});
+  if(!recObj)recObj=makeRec(e=>{txInt='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)txFinal+=' '+e.results[i][0].transcript;else txInt+=e.results[i][0].transcript}showBubble((txFinal+' '+txInt).trim()||'Listening…')},()=>{if(recOn){try{recObj.start();}catch(e){console.warn('rec restart:',e)}}});
   if(!recObj){showBubble('Speech recognition not supported in this browser — try Chrome on Android or Safari on iOS.');document.getElementById('q-bubble').classList.add('show');return}
   txFinal='';txInt='';recOn=true;
   try{recObj.start();}catch(e){console.error('recObj.start error:',e);showBubble('Mic start error: '+e.message);document.getElementById('q-bubble').classList.add('show');return;}
@@ -549,7 +565,7 @@ function addCptFromSearch(code,desc,area){
 function toggleFollowUpRec(){fuOn?stopFuRec():startFuRec()}
 function startFuRec(){
   fuFinal='';fuInt='';
-  if(!fuRec)fuRec=makeRec(e=>{fuInt='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)fuFinal+=' '+e.results[i][0].transcript;else fuInt+=e.results[i][0].transcript}const d=(fuFinal+' '+fuInt).trim();const vtx=document.getElementById('a-voice-tx');vtx.textContent=d||'Listening…';vtx.classList.toggle('has-text',!!d);document.getElementById('a-text-input').value=d},()=>{if(fuOn)fuRec.start()});
+  if(!fuRec)fuRec=makeRec(e=>{fuInt='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)fuFinal+=' '+e.results[i][0].transcript;else fuInt+=e.results[i][0].transcript}const d=(fuFinal+' '+fuInt).trim();const vtx=document.getElementById('a-voice-tx');vtx.textContent=d||'Listening…';vtx.classList.toggle('has-text',!!d);document.getElementById('a-text-input').value=d},()=>{if(fuOn){try{fuRec.start();}catch(e){console.warn('fu restart:',e)}}});
   if(!fuRec)return;fuOn=true;fuRec.start();
   document.getElementById('mic-small').classList.add('rec');
   document.getElementById('a-voice-tx').textContent='Listening…';
@@ -859,7 +875,7 @@ async function startAddMoreVoice(){
         const d=(addMoreFinal+' '+addMoreInt).trim();
         showBubble(d || 'Tell me the procedures you performed.');
       },
-      ()=>{ if(addMoreRecOn) addMoreRec.start(); }
+      ()=>{ if(addMoreRecOn){try{addMoreRec.start();}catch(e){console.warn('addMore restart:',e)}} }
     );
   }
   if(!addMoreRec){ toast('Speech not available — try Chrome or Safari','err'); return; }
