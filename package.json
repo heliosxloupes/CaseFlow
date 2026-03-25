@@ -5,6 +5,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.0",
     "@sparticuz/chromium": "^131.0.1",
+    "jsonwebtoken": "^9.0.2",
     "playwright-core": "^1.49.0"
   }
 }

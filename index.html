@@ -325,7 +325,6 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .login-footer-note{text-align:center;margin-top:28px;font-size:12px;color:var(--text3);line-height:1.7}
 </style>
 </head>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <body>
 <div class="page on" id="pg-login">
   <div class="login-outer">
@@ -333,41 +332,15 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
       <div class="login-brand-name">Case<em>Flow</em></div>
       <div class="login-brand-tag">ACGME Case Logging</div>
     </div>
-
-    <!-- Google OAuth -->
-    <button class="btn-google" id="l-google-btn" onclick="signInWithGoogle()">
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-      </svg>
-      Continue with Google
-    </button>
-
-    <div class="login-divider"><span>or</span></div>
-
     <div class="login-form">
-      <!-- Sign In / Sign Up toggle -->
-      <div class="auth-toggle">
-        <button class="auth-toggle-btn on" id="l-tab-in" onclick="setAuthMode('signin')">Sign In</button>
-        <button class="auth-toggle-btn" id="l-tab-up" onclick="setAuthMode('signup')">Sign Up</button>
-      </div>
-
       <label class="lbl">Email</label>
       <input class="ifield" type="email" id="l-email" placeholder="you@hospital.com" autocomplete="email" autocapitalize="none">
       <label class="lbl">Password</label>
       <input class="ifield" type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password">
-      <div id="l-confirm-wrap" style="display:none">
-        <label class="lbl">Confirm Password</label>
-        <input class="ifield" type="password" id="l-confirm" placeholder="••••••••" autocomplete="new-password">
-      </div>
-
-      <button class="btn-main" id="l-btn" onclick="doEmailAuth()">Sign In</button>
+      <button class="btn-main" id="l-btn" onclick="doLogin()">Sign In</button>
       <div class="login-err" id="l-err"></div>
     </div>
-
-    <div class="login-footer-note" id="l-note">By signing in you agree to keep your ACGME credentials secure.</div>
+    <div class="login-footer-note">Your session is stored securely on this device.</div>
   </div>
 </div>
 
@@ -1667,187 +1640,80 @@ async function callSubmitAcgme(casePayload){
   return data;
 }
 
-// ── SUPABASE ──────────────────────────────────────────────────────────────────
-// Replace these two values with your project's URL and anon key from:
-// Supabase Dashboard → Project Settings → API
-const SUPABASE_URL  = 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON = 'YOUR_SUPABASE_ANON_KEY';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+// JWT helpers (decode only — verification happens server-side)
+function jwtDecode(token){try{return JSON.parse(atob(token.split('.')[1]));}catch{return null;}}
+function jwtValid(token){const p=jwtDecode(token);return p&&p.exp*1000>Date.now();}
 
-// ── AUTH UI ───────────────────────────────────────────────────────────────────
-let authMode = 'signin'; // 'signin' | 'signup'
-function setAuthMode(mode){
-  authMode = mode;
-  document.getElementById('l-tab-in').classList.toggle('on', mode==='signin');
-  document.getElementById('l-tab-up').classList.toggle('on', mode==='signup');
-  document.getElementById('l-confirm-wrap').style.display = mode==='signup'?'block':'none';
-  document.getElementById('l-btn').textContent = mode==='signup'?'Create Account':'Sign In';
-  document.getElementById('l-err').textContent='';
-  if(mode==='signup') document.getElementById('l-pass').autocomplete='new-password';
-  else document.getElementById('l-pass').autocomplete='current-password';
-}
-
-async function signInWithGoogle(){
-  const btn=document.getElementById('l-google-btn');
-  btn.disabled=true;
-  const {error}=await sb.auth.signInWithOAuth({
-    provider:'google',
-    options:{redirectTo: window.location.origin}
-  });
-  if(error){document.getElementById('l-err').textContent=error.message; btn.disabled=false;}
-}
-
-async function doEmailAuth(){
+async function doLogin(){
   const email=document.getElementById('l-email').value.trim();
   const pass=document.getElementById('l-pass').value;
   const err=document.getElementById('l-err');
   err.textContent='';
-  if(!email||!pass){err.textContent='Please fill in all fields.';return}
-  if(!email.includes('@')){err.textContent='Enter a valid email address.';return}
-  if(authMode==='signup'){
-    const confirm=document.getElementById('l-confirm').value;
-    if(pass!==confirm){err.textContent='Passwords do not match.';return}
-    if(pass.length<8){err.textContent='Password must be at least 8 characters.';return}
-  }
+  if(!email||!pass){err.textContent='Please enter your email and password.';return}
   const btn=document.getElementById('l-btn');
-  btn.innerHTML='<span class="spin"></span>';
-  btn.classList.add('busy');
-  if(authMode==='signup'){
-    const {error}=await sb.auth.signUp({email,password:pass});
-    btn.innerHTML='Create Account'; btn.classList.remove('busy');
-    if(error){err.textContent=error.message;return}
-    document.getElementById('l-note').textContent='Check your email to confirm your account, then sign in.';
-    setAuthMode('signin');
-    toast('Account created — check your email','ok');
-  } else {
-    const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
-    btn.innerHTML='Sign In'; btn.classList.remove('busy');
-    if(error){err.textContent=error.message==='Invalid login credentials'?'Incorrect email or password.':error.message;return}
+  btn.innerHTML='<span class="spin"></span>';btn.classList.add('busy');
+  try{
+    const res=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    const data=await res.json();
+    btn.innerHTML='Sign In';btn.classList.remove('busy');
+    if(!res.ok){err.textContent=data.error||'Sign in failed.';return}
+    localStorage.setItem('cf5-token',data.token);
+    localStorage.setItem('cf5-email',email);
     sessionPassword=pass;
+    launchApp(email);
+  }catch(e){
+    btn.innerHTML='Sign In';btn.classList.remove('busy');
+    err.textContent='Network error — check your connection.';
   }
 }
 
-async function doLogout(){
+function doLogout(){
   if(!confirm('Sign out?'))return;
   sessionPassword='';
+  localStorage.removeItem('cf5-token');
   resetFlow();
-  await sb.auth.signOut();
   showPage('pg-login');
 }
 
-async function launchApp(user){
-  document.getElementById('hdr-u').textContent=(user.email||'').split('@')[0];
-  // Load cases from Supabase, merge with localStorage cache
-  await syncCasesFromSupabase();
+function launchApp(email){
+  document.getElementById('hdr-u').textContent=(email||'').split('@')[0];
   document.getElementById('hdr-n').textContent=cases.length;
   showPage('pg-app');
   startOrb();
   renderHistory();
 }
 
-// ── SUPABASE DATA LAYER ───────────────────────────────────────────────────────
-
-// Cases: sync from Supabase on login, push on save
-async function syncCasesFromSupabase(){
-  try{
-    const {data,error}=await sb.from('cases').select('*').order('ts',{ascending:false});
-    if(error||!data)return;
-    // Merge: Supabase is source of truth; keep local-only entries as well
-    const remoteIds=new Set(data.map(c=>c.local_id).filter(Boolean));
-    const localOnly=cases.filter(c=>!remoteIds.has(String(c.id)));
-    cases=[...data.map(dbCaseToLocal),...localOnly];
-    localStorage.setItem('cf5-cases',JSON.stringify(cases));
-  }catch(e){console.warn('Supabase sync error:',e);}
-}
-
-function dbCaseToLocal(row){
-  return{id:row.local_id||row.id,date:row.date,yr:row.yr,role:row.role,site:row.site,att:row.att,pt:row.pt,notes:row.notes||'',procs:row.procs||[],status:row.status,ts:row.ts};
-}
-
-async function pushCaseToSupabase(c){
-  try{
-    const {data:{user}}=await sb.auth.getUser();
-    if(!user)return;
-    await sb.from('cases').upsert({
-      user_id:user.id,local_id:String(c.id),date:c.date,procs:c.procs,role:c.role,
-      site:c.site,att:c.att,pt:c.pt,yr:c.yr,notes:c.notes||'',status:c.status,ts:c.ts
-    },{onConflict:'local_id'});
-  }catch(e){console.warn('Case push error:',e);}
-}
-
-async function updateCaseStatusInSupabase(localId, status){
-  try{
-    await sb.from('cases').update({status,ts:new Date().toISOString()}).eq('local_id',String(localId));
-  }catch(e){console.warn('Case status update error:',e);}
-}
-
-// ACGME vault: stored in Supabase user_settings per user
-async function loadVaultFromSupabase(){
-  try{
-    const {data,error}=await sb.from('user_settings').select('acgme_vault').single();
-    if(error||!data?.acgme_vault)return null;
-    return data.acgme_vault;
-  }catch{return null;}
-}
-
-async function saveVaultToSupabase(vaultBlob){
-  const {data:{user}}=await sb.auth.getUser();
-  if(!user)return;
-  await sb.from('user_settings').upsert({user_id:user.id,acgme_vault:vaultBlob,updated_at:new Date().toISOString()},{onConflict:'user_id'});
-}
-
-// Override getAcgmeCredentials to try Supabase first, then localStorage fallback
+// localStorage-based vault (ready to migrate to DB later)
 async function getAcgmeCredentials(){
-  let blob=await loadVaultFromSupabase();
-  if(!blob) blob=JSON.parse(localStorage.getItem('cf5-vault')||'null');
+  const blob=JSON.parse(localStorage.getItem('cf5-vault')||'null');
   if(!blob) throw new Error('No ACGME credentials saved. Go to Settings to add them.');
-  if(!sessionPassword) throw new Error('Session expired. Please sign out and back in.');
+  if(!sessionPassword) throw new Error('Session expired — please sign out and back in.');
   return decryptVault(blob,sessionPassword);
 }
 
-// Override saveAcgmeCredentials to save to Supabase
-async function saveAcgmeCredentials(){
-  const user=document.getElementById('s-acgme-user').value.trim();
-  const pass=document.getElementById('s-acgme-pass').value;
-  const statusEl=document.getElementById('s-cred-status');
-  if(!user||!pass){statusEl.textContent='Enter both username and password.';statusEl.className='settings-cred-status err';return}
-  if(!sessionPassword){statusEl.textContent='Session expired — sign out and back in.';statusEl.className='settings-cred-status err';return}
-  try{
-    const blob=await encryptVault({acgmeUser:user,acgmePass:pass},sessionPassword);
-    await saveVaultToSupabase(blob);
-    localStorage.setItem('cf5-vault',JSON.stringify(blob)); // local cache
-    document.getElementById('s-acgme-user').value='';
-    document.getElementById('s-acgme-pass').value='';
-    statusEl.textContent='✓ Credentials saved securely';
-    statusEl.className='settings-cred-status ok';
-    toast('ACGME credentials saved','ok');
-  }catch(e){statusEl.textContent='Error: '+e.message;statusEl.className='settings-cred-status err';}
-}
+// no-op stubs so submitCase / resubmitCase don't break when they call these
+function pushCaseToSupabase(){}
+function updateCaseStatusInSupabase(){}
 
 function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));document.getElementById(id).classList.add('on')}
 function goTab(n){document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));document.getElementById('tb-'+n).classList.add('on');document.getElementById('pn-'+n).classList.add('on');if(n==='history')renderHistory();if(n==='settings')loadSettingsUI();}
 
 document.addEventListener('DOMContentLoaded',()=>{
-  // Keyboard shortcuts on login
-  document.getElementById('l-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doEmailAuth()});
+  document.getElementById('l-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
   document.getElementById('l-email').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('l-pass').focus()});
-
   startOrb();
   function tryBuildIndex(){if(typeof CPT_DB!=='undefined'){buildIndex();}else{setTimeout(tryBuildIndex,100);}}
   setTimeout(tryBuildIndex,200);
-
-  // Listen for auth state — handles page load, OAuth redirects, and session restore
-  sb.auth.onAuthStateChange(async(event,session)=>{
-    if(session?.user){
-      // Store session password from sign-in (not available on OAuth/restore — handled differently)
-      if(event==='SIGNED_IN' && session.user.app_metadata?.provider==='email'){
-        // sessionPassword already set in doEmailAuth before this fires
-      }
-      await launchApp(session.user);
-    } else {
-      showPage('pg-login');
-    }
-  });
+  // Auto-login if a valid JWT token exists
+  const token=localStorage.getItem('cf5-token');
+  const email=localStorage.getItem('cf5-email')||'';
+  if(token&&jwtValid(token)){
+    launchApp(email);
+  } else {
+    localStorage.removeItem('cf5-token');
+    if(email) document.getElementById('l-email').value=email;
+  }
 });
 function isoToday(){return new Date().toISOString().split('T')[0]}
 function formatDate(d){if(!d)return'Today';return new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}
