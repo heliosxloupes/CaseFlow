@@ -194,8 +194,14 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .empty{text-align:center;padding:60px 20px}
 .empty svg{width:44px;height:44px;margin:0 auto 14px;opacity:.12;display:block}
 .empty p{font-size:14px;color:var(--text3);line-height:1.65}
-.spin{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.15);border-top-color:#fff;border-radius:50%;animation:rot .65s linear infinite;vertical-align:middle;margin-right:6px}
-@keyframes rot{to{transform:rotate(360deg)}}
+/* Submit overlay */
+.submit-overlay{position:fixed;inset:0;z-index:9000;background:rgba(7,9,15,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;opacity:0;pointer-events:none;transition:opacity .25s}
+.submit-overlay.on{opacity:1;pointer-events:all}
+.submit-spinner-wrap{position:relative;width:100px;height:100px;display:flex;align-items:center;justify-content:center}
+.spinner{background-image:linear-gradient(rgb(186,66,255) 35%,rgb(0,225,255));width:100px;height:100px;animation:spinning82341 1.7s linear infinite;border-radius:50px;filter:blur(1px);box-shadow:0px -5px 20px 0px rgb(186,66,255),0px 5px 20px 0px rgb(0,225,255);display:flex;align-items:center;justify-content:center}
+.spinner1{background-color:rgb(20,22,30);width:82px;height:82px;border-radius:50px;filter:blur(8px)}
+@keyframes spinning82341{to{transform:rotate(360deg)}}
+.submit-label{font-family:'Sora',sans-serif;font-size:14px;font-weight:600;color:rgba(255,255,255,.7);letter-spacing:.04em}
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--bg3);border:1px solid var(--line2);border-radius:24px;padding:11px 20px;font-size:13px;color:var(--text);font-weight:500;opacity:0;transition:all .22s;z-index:999;white-space:nowrap;pointer-events:none}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{border-color:rgba(52,211,153,.28);color:var(--green)}
@@ -294,6 +300,12 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
   <div class="pane" id="pn-history">
     <div class="hist-wrap" id="hist-list"></div>
   </div>
+</div>
+<div class="submit-overlay" id="submit-overlay">
+  <div class="submit-spinner-wrap">
+    <div class="spinner"><div class="spinner1"></div></div>
+  </div>
+  <div class="submit-label">Submitting to ACGME…</div>
 </div>
 <div class="toast" id="toast"></div>
 <script src="caseflow-data.js"></script>
@@ -1071,12 +1083,16 @@ function saveSummaryChip(key, val, e){
 }
 let cases=JSON.parse(localStorage.getItem('cf5-cases')||'[]');
 async function submitCase(){
-  const btn=document.getElementById('go-btn');btn.innerHTML='<span class="spin"></span>Submitting&#8230;';btn.disabled=true;
+  const btn=document.getElementById('go-btn');
+  const overlay=document.getElementById('submit-overlay');
+  btn.disabled=true;
+  overlay.classList.add('on');
   await sleep(1800);
   const c={id:Date.now(),date:caseData.date||isoToday(),yr:(caseData.caseYear||'Year 4').replace('Year ',''),role:caseData.role||'Surgeon',site:caseData.site||'',att:caseData.attending||'',pt:caseData.patientType||'Adult',cid:caseData.caseId,notes:caseData.notes,procs:caseData.procedures,status:'submitted',ts:new Date().toISOString()};
   cases.unshift(c);localStorage.setItem('cf5-cases',JSON.stringify(cases));
   document.getElementById('hdr-n').textContent=cases.length;
-  btn.innerHTML='Submit to ACGME';btn.disabled=false;
+  overlay.classList.remove('on');
+  btn.disabled=false;
   orbState='done';await sleep(700);orbState='idle';
   toast('Case submitted successfully','ok');resetFlow();
 }
