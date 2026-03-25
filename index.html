@@ -167,11 +167,16 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .cpt-sel-note{font-size:12px;color:var(--text2);line-height:1.5}
 .state-label{font-size:15px;color:var(--text3);margin-top:8px;min-height:22px;letter-spacing:.02em;text-align:center}
 
-.sum-row{display:flex;align-items:flex-start;padding:12px 16px;border-bottom:1px solid var(--line);gap:12px}
+.sum-row{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);gap:12px}
 .sum-row:last-child{border-bottom:none}
-.sum-lbl{font-size:11px;color:var(--text3);min-width:80px;padding-top:2px;flex-shrink:0}
+.sum-lbl{font-size:11px;color:var(--text3);min-width:72px;flex-shrink:0}
 .sum-val{font-size:14px;color:var(--text);flex:1;font-weight:500;line-height:1.4}
 .sum-val.empty{color:var(--text3);font-weight:400;font-style:italic}
+.sum-editable{cursor:pointer;transition:background .15s}
+.sum-editable:active,.sum-editing{background:var(--bg2)}
+.sum-edit-panel{display:flex;flex-wrap:wrap;gap:8px;padding:10px 16px 14px;border-bottom:1px solid var(--line);background:var(--bg2)}
+.sum-chip{font-size:13px;padding:8px 14px}
+.sum-date-input{width:100%;background:var(--bg3);border:1px solid var(--blue);border-radius:var(--r);padding:11px 14px;color:var(--text);font-family:'Sora',sans-serif;font-size:15px;outline:none;color-scheme:dark}
 
 .btn-redo{flex:1;padding:14px;background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);color:var(--text2);font-family:'Sora',sans-serif;font-size:14px;font-weight:500;cursor:pointer}
 .btn-go{flex:2;padding:14px;background:var(--green);border:none;border-radius:var(--r);color:#071a10;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s}
@@ -960,14 +965,75 @@ function showCptFound(procs){
   box.classList.add('show');
 }
 function setStateLabel(t){document.getElementById('state-label').textContent=t}
+const SUMMARY_FIELDS = [
+  {key:'date',      label:'Date',      type:'date',  get:()=>caseData.date,      set:v=>{caseData.date=v}},
+  {key:'role',      label:'Role',      type:'chips', get:()=>caseData.role,      set:v=>{caseData.role=v},      options:['Surgeon','Assistant','Teaching Assistant','Observer']},
+  {key:'site',      label:'Site',      type:'chips', get:()=>caseData.site,      set:v=>{caseData.site=v},      options:['Larkin Community Hospital','Larkin Palm Springs','Affiliated Site']},
+  {key:'attending', label:'Attending', type:'chips', get:()=>caseData.attending, set:v=>{caseData.attending=v}, options:['Dr. Smith','Dr. Johnson','Dr. Williams','Dr. Brown']},
+  {key:'patient',   label:'Patient',   type:'chips', get:()=>caseData.patientType,set:v=>{caseData.patientType=v},options:['Adult','Pediatric']},
+  {key:'year',      label:'Year',      type:'chips', get:()=>caseData.caseYear,  set:v=>{caseData.caseYear=v},  options:['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6']},
+];
+let summaryEditKey = null;
+
 function showSummary(){
   hideAnswerUI();
   document.getElementById('orb-wrap').style.display='none';
   document.getElementById('q-bubble').classList.remove('show');
-  const rows=[{l:'Procedure',v:caseData.procedures.map(p=>p.d).join(', ')||''},{l:'Date',v:formatDate(caseData.date)},{l:'Role',v:caseData.role},{l:'Site',v:caseData.site},{l:'Attending',v:caseData.attending},{l:'Patient',v:caseData.patientType},{l:'Year',v:caseData.caseYear}];
-  document.getElementById('summary-card').innerHTML=rows.map(r=>`<div class="sum-row"><div class="sum-lbl">${r.l}</div><div class="sum-val ${r.v?'':'empty'}">${r.v||'&#8212;'}</div></div>`).join('');
+  summaryEditKey = null;
+  renderSummaryCard();
   setTimeout(()=>{document.getElementById('summary-card').classList.add('show');document.getElementById('final-actions').classList.add('show')},200);
-  setStateLabel('Review and submit');
+  setStateLabel('Tap any field to edit');
+}
+
+function renderSummaryCard(){
+  const procs = caseData.procedures.map(p=>p.d).join(', ') || '—';
+  let html = `<div class="sum-row"><div class="sum-lbl">Procedures</div><div class="sum-val">${procs}</div></div>`;
+  for(const f of SUMMARY_FIELDS){
+    const val = f.get();
+    const isEditing = summaryEditKey === f.key;
+    const displayVal = f.type==='date' && val ? formatDate(val) : (val || '');
+    html += `<div class="sum-row sum-editable ${isEditing?'sum-editing':''}" onclick="toggleSummaryEdit('${f.key}')">
+      <div class="sum-lbl">${f.label}</div>
+      <div class="sum-val ${val?'':'empty'}" style="flex:1">${displayVal||'&#8212;'}</div>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="opacity:.35;flex-shrink:0;margin-left:6px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    </div>`;
+    if(isEditing){
+      if(f.type==='date'){
+        html += `<div class="sum-edit-panel">
+          <input type="date" class="sum-date-input" value="${val||''}" onchange="saveSummaryDate(this.value)">
+        </div>`;
+      } else {
+        html += `<div class="sum-edit-panel">
+          ${f.options.map(o=>`<div class="chip-opt sum-chip ${val===o?'selected':''}" onclick="saveSummaryChip('${f.key}','${o}',event)">${o}</div>`).join('')}
+        </div>`;
+      }
+    }
+  }
+  document.getElementById('summary-card').innerHTML = html;
+}
+
+function toggleSummaryEdit(key){
+  summaryEditKey = summaryEditKey===key ? null : key;
+  renderSummaryCard();
+  if(summaryEditKey===key && SUMMARY_FIELDS.find(f=>f.key===key)?.type==='date'){
+    setTimeout(()=>document.querySelector('.sum-date-input')?.focus(),100);
+  }
+}
+
+function saveSummaryDate(val){
+  const f = SUMMARY_FIELDS.find(f=>f.key==='date');
+  if(f) f.set(val);
+  summaryEditKey=null;
+  renderSummaryCard();
+}
+
+function saveSummaryChip(key, val, e){
+  e.stopPropagation();
+  const f = SUMMARY_FIELDS.find(f=>f.key===key);
+  if(f) f.set(val);
+  summaryEditKey=null;
+  renderSummaryCard();
+  toast('Updated','ok');
 }
 let cases=JSON.parse(localStorage.getItem('cf5-cases')||'[]');
 async function submitCase(){
