@@ -454,21 +454,23 @@ async function handleOrbTap(){
   else if(orbState==='listening') stopInitialListening();
 }
 async function startInitialListening(){
-  // Request mic once — save stream globally so add-more voice can reuse it without re-prompting
-  try{
-    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-    savedMicStream=stream;
-    await startMic(stream);
-  } catch(e){
-    if(e && (e.name==='NotAllowedError'||e.name==='PermissionDeniedError')){
-      showBubble('Microphone access is blocked. Tap the lock icon in your browser address bar, set Microphone to Allow, then refresh.');
-      document.getElementById('q-bubble').classList.add('show');
-      setStateLabel('Mic permission required');
-      return;
+  // Reuse saved stream if tracks are still live; only request new stream when needed
+  const needNewStream = !savedMicStream || savedMicStream.getTracks().some(t=>t.readyState==='ended');
+  if(needNewStream){
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      savedMicStream=stream;
+    } catch(e){
+      if(e && (e.name==='NotAllowedError'||e.name==='PermissionDeniedError')){
+        showBubble('Microphone access is blocked. Tap the lock icon in your browser address bar, set Microphone to Allow, then refresh.');
+        document.getElementById('q-bubble').classList.add('show');
+        setStateLabel('Mic permission required');
+        return;
+      }
+      console.warn('getUserMedia failed (visualizer disabled):', e);
     }
-    console.warn('getUserMedia failed (visualizer disabled):', e);
-    // Continue without visualizer
   }
+  if(savedMicStream) await startMic(savedMicStream);
   buildIndex();
   if(!recObj)recObj=makeRec(e=>{txInt='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)txFinal+=' '+e.results[i][0].transcript;else txInt+=e.results[i][0].transcript}showBubble((txFinal+' '+txInt).trim()||'Listening…')},()=>{if(recOn){try{recObj.start();}catch(e){console.warn('rec restart:',e)}}});
   if(!recObj){showBubble('Speech recognition not supported in this browser — try Chrome on Android or Safari on iOS.');document.getElementById('q-bubble').classList.add('show');return}
@@ -480,7 +482,8 @@ async function startInitialListening(){
   document.getElementById('new-case-btn').style.display='flex';
 }
 function stopInitialListening(){
-  recOn=false;if(recObj){try{recObj.abort();}catch(e){} recObj=null;}stopMic();
+  recOn=false;if(recObj){try{recObj.abort();}catch(e){} recObj=null;}
+  // Keep mic stream alive — stopMic() only in resetFlow() to avoid iOS audio session cooldown
   const text=(txFinal+' '+txInt).trim();
   if(!text){orbState='idle';document.getElementById('orb-hint').classList.remove('hide');showBubble('');setStateLabel('');return}
   orbState='thinking';showBubble('Finding your CPT codes…');setStateLabel('');
@@ -853,12 +856,14 @@ async function startAddMoreVoice(){
   showBubble('Tell me the procedures you performed.');
   document.getElementById('q-bubble').classList.add('show');
 
-  // Reuse saved stream for visualizer — no extra permission prompt
-  try{
-    const stream = savedMicStream || await navigator.mediaDevices.getUserMedia({audio:true});
-    if(!savedMicStream) savedMicStream=stream;
-    await startMic(stream);
-  } catch(e){ console.warn('Visualizer skipped:', e); }
+  // Reuse saved stream if live; request new one only if tracks have ended
+  const needNew = !savedMicStream || savedMicStream.getTracks().some(t=>t.readyState==='ended');
+  if(needNew){
+    try{
+      savedMicStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    } catch(e){ console.warn('Visualizer skipped:', e); }
+  }
+  if(savedMicStream) await startMic(savedMicStream);
 
   addMoreFinal=''; addMoreInt='';
   if(!addMoreRec){
@@ -890,7 +895,7 @@ async function startAddMoreVoice(){
 async function stopAddMoreVoice(){
   addMoreRecOn=false;
   if(addMoreRec){try{addMoreRec.abort();}catch(e){} addMoreRec=null;}
-  stopMic();
+  // Keep mic stream alive for potential re-use; only torn down in resetFlow()
 
   const text = (addMoreFinal+' '+addMoreInt).trim();
   addMoreFinal=''; addMoreInt='';
