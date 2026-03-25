@@ -15,6 +15,10 @@
 const chromium = require('@sparticuz/chromium');
 const { chromium: playwrightChromium } = require('playwright-core');
 
+// Speed up cold starts on serverless
+chromium.setHeadlessMode = true;
+chromium.setGraphicsMode = false;
+
 // ── ACGME ADS URLs & selectors ──────────────────────────────────────────────
 // Tested against https://apps.acgme.org/ads/  (Plastic Surgery resident portal)
 // Update selectors here if ACGME redesigns their portal.
@@ -57,10 +61,21 @@ module.exports = async function handler(req, res) {
   try {
     // ── Launch Chromium ───────────────────────────────────────────────────
     step('Launching browser');
+    const execPath = await chromium.executablePath();
     browser = await playwrightChromium.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
+      args: [
+        ...chromium.args,
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+      ],
+      executablePath: execPath,
       headless: true,
+      timeout: 60000,
     });
 
     const context = await browser.newContext({
