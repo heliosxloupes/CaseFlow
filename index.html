@@ -236,6 +236,24 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .settings-cred-status.err{color:#f87171}
 .settings-save-btn{width:100%;padding:13px;font-size:14px}
 .settings-value{font-size:13px;color:var(--text2);padding:4px 0}
+.acgme-status-card{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--line2);border-radius:12px;padding:14px 16px;margin-bottom:16px}
+.acgme-status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:rgba(255,255,255,.2)}
+.acgme-status-dot.ok{background:#34d399;box-shadow:0 0 8px rgba(52,211,153,.5)}
+.acgme-status-dot.warn{background:#fbbf24}
+.acgme-status-info{flex:1}
+.acgme-status-title{font-size:13px;font-weight:600;color:var(--text);line-height:1}
+.acgme-status-sub{font-size:11px;color:var(--text3);margin-top:3px}
+.acgme-status-edit{font-size:12px;font-weight:600;color:var(--purple);padding:5px 10px;background:rgba(168,85,247,.1);border-radius:8px;border:none;cursor:pointer;font-family:'Sora',sans-serif}
+.acgme-how-it-works{background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:12px;padding:14px 16px;margin-bottom:16px}
+.acgme-how-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+.acgme-how-step{display:flex;align-items:flex-start;gap:10px;margin-bottom:9px}
+.acgme-how-step:last-child{margin-bottom:0}
+.acgme-step-num{width:20px;height:20px;border-radius:50%;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--purple);flex-shrink:0;margin-top:1px}
+.acgme-step-text{font-size:12px;color:var(--text3);line-height:1.55}
+.acgme-form-collapse{overflow:hidden;transition:max-height .35s ease,opacity .3s ease;max-height:0;opacity:0}
+.acgme-form-collapse.open{max-height:400px;opacity:1}
+.settings-setup-btn{width:100%;padding:13px;font-size:14px;margin-bottom:0;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:var(--purple)}
+.settings-setup-btn:hover{background:rgba(168,85,247,.2)}
 .settings-danger-zone{}
 .btn-signout{width:100%;padding:13px;background:transparent;border:1px solid var(--line2);border-radius:var(--r);color:var(--text2);font-family:'Sora',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:border-color .15s,color .15s}
 .btn-signout:active{border-color:#f87171;color:#f87171}
@@ -283,6 +301,12 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .spinner1{background-color:rgb(20,22,30);width:82px;height:82px;border-radius:50px;filter:blur(8px)}
 @keyframes spinning82341{to{transform:rotate(360deg)}}
 .submit-label{font-family:'Sora',sans-serif;font-size:14px;font-weight:600;color:rgba(255,255,255,.7);letter-spacing:.04em}
+.submit-duo{display:none;flex-direction:column;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:20px 24px;max-width:272px;text-align:center}
+.submit-duo.on{display:flex;animation:sdFadeUp .4s ease}
+.submit-duo-icon{font-size:38px;line-height:1;margin-bottom:2px}
+.submit-duo-title{font-family:'Sora',sans-serif;font-size:15px;font-weight:700;color:#fff}
+.submit-duo-text{font-family:'Sora',sans-serif;font-size:13px;color:rgba(255,255,255,.6);line-height:1.6}
+@keyframes sdFadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--bg3);border:1px solid var(--line2);border-radius:24px;padding:11px 20px;font-size:13px;color:var(--text);font-weight:500;opacity:0;transition:all .22s;z-index:999;white-space:nowrap;pointer-events:none}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{border-color:rgba(52,211,153,.28);color:var(--green)}
@@ -431,23 +455,60 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
     <div class="settings-wrap">
 
       <div class="settings-section">
-        <div class="settings-section-title">ACGME Account</div>
-        <div class="settings-section-desc">Your credentials are encrypted on this device and sent only at submission time. They are never stored on our servers.</div>
-        <div class="settings-field">
-          <label class="settings-label">ACGME Username / ID</label>
-          <input class="settings-input" id="s-acgme-user" type="text" placeholder="e.g. jsmith@email.com" autocomplete="username" autocapitalize="none">
+        <div class="settings-section-title">ACGME Auto-Submit</div>
+
+        <!-- Status card — updated by loadSettingsUI() -->
+        <div class="acgme-status-card" id="s-status-card">
+          <div class="acgme-status-dot" id="s-status-dot"></div>
+          <div class="acgme-status-info">
+            <div class="acgme-status-title" id="s-status-title">Not set up</div>
+            <div class="acgme-status-sub" id="s-status-sub">Add your ACGME credentials to enable auto-submit</div>
+          </div>
+          <button class="acgme-status-edit" id="s-edit-btn" onclick="toggleAcgmeForm()" style="display:none">Edit</button>
         </div>
-        <div class="settings-field">
-          <label class="settings-label">ACGME Password</label>
-          <div class="settings-pass-wrap">
-            <input class="settings-input" id="s-acgme-pass" type="password" placeholder="••••••••" autocomplete="current-password">
-            <button class="settings-pass-toggle" onclick="togglePassVis()" id="s-pass-toggle" type="button">
-              <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
+
+        <!-- How it works -->
+        <div class="acgme-how-it-works">
+          <div class="acgme-how-title">How Auto-Submit Works</div>
+          <div class="acgme-how-step">
+            <div class="acgme-step-num">1</div>
+            <div class="acgme-step-text">Save your ACGME username and password here — encrypted on this device only.</div>
+          </div>
+          <div class="acgme-how-step">
+            <div class="acgme-step-num">2</div>
+            <div class="acgme-step-text">When you submit a case, CaseFlow logs into ACGME on your behalf automatically.</div>
+          </div>
+          <div class="acgme-how-step">
+            <div class="acgme-step-num">3</div>
+            <div class="acgme-step-text">If ACGME asks for a <strong style="color:var(--text2)">Duo push</strong>, a prompt will appear here — just approve it on your phone and the case submits itself.</div>
+          </div>
+          <div class="acgme-how-step">
+            <div class="acgme-step-num">4</div>
+            <div class="acgme-step-text">If submission fails for any reason, the case is saved locally and you can re-submit from Case History.</div>
           </div>
         </div>
-        <div class="settings-cred-status" id="s-cred-status"></div>
-        <button class="btn-main settings-save-btn" onclick="saveAcgmeCredentials()">Save Credentials</button>
+
+        <!-- Credential form — collapsed by default if already saved -->
+        <div class="acgme-form-collapse" id="s-acgme-form">
+          <div class="settings-field">
+            <label class="settings-label">ACGME Username / Email</label>
+            <input class="settings-input" id="s-acgme-user" type="text" placeholder="e.g. jsmith@email.com" autocomplete="username" autocapitalize="none">
+          </div>
+          <div class="settings-field">
+            <label class="settings-label">ACGME Password</label>
+            <div class="settings-pass-wrap">
+              <input class="settings-input" id="s-acgme-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+              <button class="settings-pass-toggle" onclick="togglePassVis()" id="s-pass-toggle" type="button">
+                <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="settings-cred-status" id="s-cred-status"></div>
+          <button class="btn-main settings-save-btn" onclick="saveAcgmeCredentials()" style="margin-bottom:16px">Save Credentials</button>
+        </div>
+
+        <!-- Primary CTA when not set up -->
+        <button class="btn-main settings-setup-btn" id="s-setup-btn" onclick="toggleAcgmeForm()">Set Up ACGME Auto-Submit</button>
       </div>
 
       <div class="settings-section">
@@ -495,7 +556,12 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
   <div class="submit-spinner-wrap">
     <div class="spinner"><div class="spinner1"></div></div>
   </div>
-  <div class="submit-label">Submitting to ACGME…</div>
+  <div class="submit-label" id="submit-label">Submitting to ACGME…</div>
+  <div class="submit-duo" id="submit-duo">
+    <div class="submit-duo-icon">📱</div>
+    <div class="submit-duo-title">Approve Duo Push</div>
+    <div class="submit-duo-text">Check your phone and approve the Duo notification from ACGME to continue. This screen will close automatically once approved.</div>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
 <div class="err-banner" id="err-banner" style="display:none" onclick="closeErrBanner()">
@@ -1275,10 +1341,27 @@ function saveSummaryChip(key, val, e){
 }
 let cases=JSON.parse(localStorage.getItem('cf5-cases')||'[]');
 async function submitCase(){
+  // If no ACGME credentials, send user to Settings to set them up first
+  if(!localStorage.getItem('cf5-vault')){
+    goTab('settings');
+    setTimeout(()=>{
+      // Open the credential form automatically
+      const form=document.getElementById('s-acgme-form');
+      if(!form.classList.contains('open')) toggleAcgmeForm();
+      form.scrollIntoView({behavior:'smooth',block:'center'});
+      toast('Set up your ACGME credentials to submit cases','');
+    },150);
+    return;
+  }
   const btn=document.getElementById('go-btn');
   const overlay=document.getElementById('submit-overlay');
+  const labelEl=document.getElementById('submit-label');
+  const duoEl=document.getElementById('submit-duo');
   btn.disabled=true;
+  labelEl.textContent='Submitting to ACGME…';
+  duoEl.classList.remove('on');
   overlay.classList.add('on');
+  const duoTimer=setTimeout(()=>{labelEl.textContent='Waiting for Duo approval…';duoEl.classList.add('on');},8000);
 
   const payload={
     date:caseData.date||isoToday(),
@@ -1301,6 +1384,9 @@ async function submitCase(){
     console.warn('ACGME submit error:',e);
   }
 
+  clearTimeout(duoTimer);
+  duoEl.classList.remove('on');
+  labelEl.textContent='Submitting to ACGME…';
   const c={id:Date.now(),...payload,yr:payload.yr,cid:caseData.caseId,status,ts:new Date().toISOString()};
   cases.unshift(c);localStorage.setItem('cf5-cases',JSON.stringify(cases));
   pushCaseToSupabase(c); // async, fire-and-forget
@@ -1526,8 +1612,13 @@ async function resubmitCase(){
   if(!editingCase)return;
   const btn=document.getElementById('resubmit-btn');
   const overlay=document.getElementById('submit-overlay');
+  const labelEl2=document.getElementById('submit-label');
+  const duoEl2=document.getElementById('submit-duo');
   btn.disabled=true;
+  labelEl2.textContent='Submitting to ACGME…';
+  duoEl2.classList.remove('on');
   overlay.classList.add('on');
+  const duoTimer2=setTimeout(()=>{labelEl2.textContent='Waiting for Duo approval…';duoEl2.classList.add('on');},8000);
 
   let newStatus='submitted';
   try{
@@ -1547,6 +1638,9 @@ async function resubmitCase(){
     console.warn('ACGME resubmit error:',e);
   }
 
+  clearTimeout(duoTimer2);
+  duoEl2.classList.remove('on');
+  labelEl2.textContent='Submitting to ACGME…';
   const idx=cases.findIndex(c=>c.id===editingCase.id);
   if(idx>-1){
     cases[idx]={...editingCase,status:newStatus,ts:new Date().toISOString()};
@@ -1592,14 +1686,45 @@ async function decryptVault(blob, password){
 let sessionPassword = ''; // set on login, used as encryption key
 function loadSettingsUI(){
   const blob = JSON.parse(localStorage.getItem('cf5-vault')||'null');
-  const statusEl = document.getElementById('s-cred-status');
+  const dot = document.getElementById('s-status-dot');
+  const title = document.getElementById('s-status-title');
+  const sub = document.getElementById('s-status-sub');
+  const editBtn = document.getElementById('s-edit-btn');
+  const setupBtn = document.getElementById('s-setup-btn');
+  const formEl = document.getElementById('s-acgme-form');
   if(blob){
-    statusEl.textContent = '✓ Credentials saved';
-    statusEl.className = 'settings-cred-status ok';
-    document.getElementById('s-acgme-user').placeholder = 'Saved (tap to change)';
+    dot.className='acgme-status-dot ok';
+    title.textContent='Connected';
+    sub.textContent='Credentials saved — auto-submit enabled';
+    editBtn.style.display='block';
+    setupBtn.style.display='none';
+    // Collapse form when credentials already saved (unless user clicked edit)
+    if(!formEl.classList.contains('open')) formEl.classList.remove('open');
   } else {
-    statusEl.textContent = 'No credentials saved yet';
-    statusEl.className = 'settings-cred-status';
+    dot.className='acgme-status-dot warn';
+    title.textContent='Not set up';
+    sub.textContent='Add your ACGME credentials to enable auto-submit';
+    editBtn.style.display='none';
+    setupBtn.style.display='block';
+  }
+}
+function toggleAcgmeForm(){
+  const form=document.getElementById('s-acgme-form');
+  form.classList.toggle('open');
+  const setupBtn=document.getElementById('s-setup-btn');
+  if(form.classList.contains('open')){
+    setupBtn.textContent='Cancel';
+    setupBtn.style.background='rgba(255,255,255,.05)';
+    setupBtn.style.borderColor='rgba(255,255,255,.1)';
+    setupBtn.style.color='var(--text3)';
+  } else {
+    const blob=JSON.parse(localStorage.getItem('cf5-vault')||'null');
+    if(!blob){
+      setupBtn.textContent='Set Up ACGME Auto-Submit';
+      setupBtn.style.background='';setupBtn.style.borderColor='';setupBtn.style.color='';
+    } else {
+      setupBtn.style.display='none';
+    }
   }
 }
 async function saveAcgmeCredentials(){
@@ -1613,9 +1738,11 @@ async function saveAcgmeCredentials(){
     localStorage.setItem('cf5-vault', JSON.stringify(blob));
     document.getElementById('s-acgme-user').value = '';
     document.getElementById('s-acgme-pass').value = '';
-    statusEl.textContent = '✓ Credentials saved securely';
-    statusEl.className = 'settings-cred-status ok';
-    toast('ACGME credentials saved','ok');
+    statusEl.textContent = '';
+    // Collapse form and refresh status badge
+    document.getElementById('s-acgme-form').classList.remove('open');
+    loadSettingsUI();
+    toast('ACGME credentials saved ✓','ok');
   } catch(e){
     statusEl.textContent = 'Failed to encrypt: '+e.message;
     statusEl.className = 'settings-cred-status err';
