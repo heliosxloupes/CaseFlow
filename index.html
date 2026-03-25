@@ -185,8 +185,21 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .btn-go{flex:2;padding:14px;background:var(--green);border:none;border-radius:var(--r);color:#071a10;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s}
 .btn-go:active{opacity:.85}
 .btn-go:disabled{opacity:.35;pointer-events:none}
-.hist-wrap{padding:20px 20px 40px;max-width:600px;margin:0 auto}
-.hist-item{background:var(--bg1);border:1px solid var(--line);border-radius:var(--rl);padding:16px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start}
+.hist-filters{padding:16px 20px 0;max-width:600px;margin:0 auto}
+.hist-search-wrap{position:relative;margin-bottom:10px}
+.hist-search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.35;pointer-events:none}
+.hist-search-ico svg{width:15px;height:15px;fill:var(--text2)}
+.hist-search-field{width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--line2);border-radius:10px;padding:11px 12px 11px 36px;color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;transition:border-color .18s}
+.hist-search-field:focus{border-color:var(--blue)}
+.hist-search-field::placeholder{color:var(--text3)}
+.hist-date-row{display:flex;align-items:center;gap:8px}
+.hist-date-field{flex:1;min-width:0;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 10px;color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;transition:border-color .18s}
+.hist-date-field:focus{border-color:var(--blue)}
+.hist-date-sep{color:var(--text3);font-size:14px;flex-shrink:0}
+.hist-count{padding:10px 20px 2px;max-width:600px;margin:0 auto;font-size:12px;color:var(--text3)}
+.hist-wrap{padding:8px 20px 100px;max-width:600px;margin:0 auto}
+.hist-item{background:var(--bg1);border:1px solid var(--line);border-radius:var(--rl);padding:16px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;cursor:pointer;transition:border-color .15s,background .15s}
+.hist-item:active{background:var(--bg2);border-color:var(--blue-b)}
 .hprocs{font-size:14px;font-weight:500;margin-bottom:5px;line-height:1.4}
 .hmeta{font-size:12px;color:var(--text2);line-height:1.75}
 .spill{font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap;margin-left:12px;flex-shrink:0}
@@ -194,6 +207,32 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .empty{text-align:center;padding:60px 20px}
 .empty svg{width:44px;height:44px;margin:0 auto 14px;opacity:.12;display:block}
 .empty p{font-size:14px;color:var(--text3);line-height:1.65}
+/* Case edit modal */
+.case-edit-modal{position:fixed;inset:0;z-index:8500;background:rgb(7,9,15);display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .22s;transform:translateY(20px)}
+.case-edit-modal.on{opacity:1;pointer-events:all;transform:translateY(0);transition:opacity .22s,transform .22s}
+.case-edit-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--line);flex-shrink:0}
+.case-edit-title{font-size:16px;font-weight:700;color:var(--text)}
+.case-edit-close{background:var(--bg2);border:1px solid var(--line2);color:var(--text2);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;line-height:1;flex-shrink:0}
+.case-edit-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px;max-width:500px;margin:0 auto;width:100%;box-sizing:border-box}
+.case-edit-footer{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:10px;flex-shrink:0}
+.ce-field{margin-bottom:22px}
+.ce-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px}
+.ce-chips{display:flex;flex-wrap:wrap;gap:8px}
+.ce-chip{background:var(--bg2);border:1px solid var(--line2);border-radius:20px;padding:8px 16px;font-size:13px;color:var(--text2);cursor:pointer;transition:all .15s;font-family:'Sora',sans-serif;font-weight:500}
+.ce-chip.active{background:var(--blue-d);border-color:var(--blue);color:var(--blue)}
+.ce-proc-row{display:flex;align-items:flex-start;gap:10px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:6px}
+.ce-proc-code{font-size:12px;font-weight:700;color:var(--blue);flex-shrink:0;padding-top:1px}
+.ce-proc-info{flex:1;min-width:0}
+.ce-proc-desc{font-size:13px;color:var(--text);line-height:1.4}
+.ce-proc-area{font-size:11px;color:var(--text3);margin-top:2px}
+.ce-proc-del{color:var(--text3);cursor:pointer;font-size:18px;padding:0 2px;flex-shrink:0;line-height:1;transition:color .15s}
+.ce-proc-del:active{color:#f87171}
+.ce-add-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;background:transparent;border:1px dashed var(--line2);border-radius:8px;padding:10px;font-size:13px;color:var(--text3);cursor:pointer;font-family:'Sora',sans-serif;transition:border-color .15s,color .15s;margin-top:4px;box-sizing:border-box}
+.ce-add-btn:active{border-color:var(--blue);color:var(--blue)}
+.ce-date-input{width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:11px 12px;color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;transition:border-color .18s}
+.ce-date-input:focus{border-color:var(--blue)}
+.btn-del-case{flex:1;padding:14px;background:transparent;border:1px solid rgba(248,113,113,.3);border-radius:var(--r);color:#f87171;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-del-case:active{background:rgba(248,113,113,.1)}
 /* Search modal */
 .search-modal{position:fixed;inset:0;z-index:8000;background:rgba(7,9,15,.96);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:18vh;opacity:0;pointer-events:none;transition:opacity .2s;padding-left:20px;padding-right:20px}
 .search-modal.on{opacity:1;pointer-events:all}
@@ -308,6 +347,18 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
     </div>
   </div>
   <div class="pane" id="pn-history">
+    <div class="hist-filters">
+      <div class="hist-search-wrap">
+        <div class="hist-search-ico"><svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></div>
+        <input class="hist-search-field" id="hist-search" placeholder="Search procedures or CPT codes…" oninput="filterHistory()" autocomplete="off">
+      </div>
+      <div class="hist-date-row">
+        <input type="date" class="hist-date-field" id="hist-from" onchange="filterHistory()">
+        <span class="hist-date-sep">—</span>
+        <input type="date" class="hist-date-field" id="hist-to" onchange="filterHistory()">
+      </div>
+    </div>
+    <div class="hist-count" id="hist-count"></div>
     <div class="hist-wrap" id="hist-list"></div>
   </div>
 </div>
@@ -319,6 +370,17 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
       <input class="srch-field" id="search-modal-input" placeholder="Search by procedure name or CPT code…" oninput="modalSearch(this.value)" autocomplete="off">
     </div>
     <div class="srch-results" id="search-modal-results"></div>
+  </div>
+</div>
+<div class="case-edit-modal" id="case-edit-modal">
+  <div class="case-edit-header">
+    <div class="case-edit-title">Edit Case</div>
+    <div class="case-edit-close" onclick="closeCaseEdit()">&#x2715;</div>
+  </div>
+  <div class="case-edit-scroll" id="case-edit-scroll"></div>
+  <div class="case-edit-footer">
+    <button class="btn-del-case" onclick="deleteCase()">Delete</button>
+    <button class="btn-go" id="resubmit-btn" style="flex:2" onclick="resubmitCase()">Re-submit to ACGME</button>
   </div>
 </div>
 <div class="submit-overlay" id="submit-overlay">
@@ -853,16 +915,11 @@ function removeFromReview(i){
 }
 
 function startAddMoreSearch(){
-  const modal = document.getElementById('search-modal');
+  searchModalMode='addmore';
   document.getElementById('search-modal-input').value='';
   document.getElementById('search-modal-results').innerHTML='';
-  modal.classList.add('on');
-  setTimeout(()=>document.getElementById('search-modal-input').focus(), 120);
-}
-function closeSearchModal(){
-  document.getElementById('search-modal').classList.remove('on');
-  document.getElementById('search-modal-input').value='';
-  document.getElementById('search-modal-results').innerHTML='';
+  document.getElementById('search-modal').classList.add('on');
+  setTimeout(()=>document.getElementById('search-modal-input').focus(),120);
 }
 function modalSearch(q){
   const res = document.getElementById('search-modal-results');
@@ -1141,9 +1198,181 @@ function resetFlow(){
   goTab('log');
 }
 function renderHistory(){
+  filterHistory();
+}
+function filterHistory(){
+  const q=(document.getElementById('hist-search')?.value||'').toLowerCase().trim();
+  const from=document.getElementById('hist-from')?.value||'';
+  const to=document.getElementById('hist-to')?.value||'';
+  let filtered=cases.filter(c=>{
+    if(from&&c.date<from)return false;
+    if(to&&c.date>to)return false;
+    if(q){
+      const hay=(c.procs?.map(p=>p.d+' '+p.c).join(' ')||'')+' '+(c.role||'')+' '+(c.site||'')+' '+(c.att||'');
+      if(!hay.toLowerCase().includes(q))return false;
+    }
+    return true;
+  });
+  const count=document.getElementById('hist-count');
   const list=document.getElementById('hist-list');
-  if(!cases.length){list.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/></svg><p>No cases logged yet.<br>Head to Log Case to get started.</p></div>';return}
-  list.innerHTML=cases.map(c=>{const procs=c.procs?.length?c.procs.map(p=>p.d).join(', '):'No procedures listed';const d=new Date(c.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});return`<div class="hist-item"><div style="flex:1;min-width:0"><div class="hprocs">${procs}</div><div class="hmeta">${d} &#183; ${c.role} &#183; Year ${c.yr}</div><div class="hmeta">${c.site} &#183; ${c.att}</div></div><div class="spill s-${c.status}">${c.status}</div></div>`}).join('');
+  if(count)count.textContent=cases.length?`${filtered.length} of ${cases.length} case${cases.length!==1?'s':''}`:' ';
+  if(!cases.length){
+    list.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/></svg><p>No cases logged yet.<br>Head to Log Case to get started.</p></div>';
+    return;
+  }
+  if(!filtered.length){list.innerHTML='<div class="empty"><p>No cases match your filters.</p></div>';return}
+  list.innerHTML=filtered.map(c=>{
+    const procs=c.procs?.length?c.procs.map(p=>p.d).join(', '):'No procedures listed';
+    const d=new Date(c.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    return`<div class="hist-item" onclick="openCaseEdit(${c.id})">
+      <div style="flex:1;min-width:0">
+        <div class="hprocs">${procs}</div>
+        <div class="hmeta">${d} &middot; ${c.role||'—'} &middot; Year ${c.yr||'—'}</div>
+        <div class="hmeta">${c.site||'—'} &middot; ${c.att||'—'}</div>
+      </div>
+      <div class="spill s-${c.status}">${c.status}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── CASE EDIT MODAL ──
+let editingCase=null;
+const CE_ROLES=['Surgeon','Assistant','Teaching Assistant','Observer'];
+const CE_SITES=['Larkin Community Hospital','Larkin Palm Springs','Affiliated Site'];
+const CE_ATTENDINGS=['Dr. Smith','Dr. Johnson','Dr. Williams','Dr. Brown'];
+const CE_PATIENTS=['Adult','Pediatric'];
+const CE_YEARS=['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6'];
+
+function openCaseEdit(id){
+  const c=cases.find(x=>x.id===id);
+  if(!c)return;
+  editingCase=JSON.parse(JSON.stringify(c)); // deep copy
+  renderCaseEditModal();
+  document.getElementById('case-edit-modal').classList.add('on');
+}
+function closeCaseEdit(){
+  document.getElementById('case-edit-modal').classList.remove('on');
+  editingCase=null;
+}
+function renderCaseEditModal(){
+  if(!editingCase)return;
+  const c=editingCase;
+  document.getElementById('case-edit-scroll').innerHTML=`
+    <div class="ce-field">
+      <div class="ce-label">Date</div>
+      <input type="date" class="ce-date-input" id="ce-date" value="${c.date||''}" onchange="editingCase.date=this.value">
+    </div>
+    <div class="ce-field">
+      <div class="ce-label">Procedures</div>
+      <div id="ce-procs">${renderCeProcs()}</div>
+      <button class="ce-add-btn" onclick="openSearchForEdit()">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add procedure
+      </button>
+    </div>
+    <div class="ce-field">
+      <div class="ce-label">Role</div>
+      <div class="ce-chips">${CE_ROLES.map(o=>`<div class="ce-chip${c.role===o?' active':''}" onclick="setCeField('role','${o}',this,'ce-role')">${o}</div>`).join('')}</div>
+    </div>
+    <div class="ce-field">
+      <div class="ce-label">Site</div>
+      <div class="ce-chips">${CE_SITES.map(o=>`<div class="ce-chip${c.site===o?' active':''}" onclick="setCeField('site','${o}',this,'ce-site')">${o}</div>`).join('')}</div>
+    </div>
+    <div class="ce-field">
+      <div class="ce-label">Attending</div>
+      <div class="ce-chips">${CE_ATTENDINGS.map(o=>`<div class="ce-chip${c.att===o?' active':''}" onclick="setCeField('att','${o}',this,'ce-att')">${o}</div>`).join('')}</div>
+    </div>
+    <div class="ce-field">
+      <div class="ce-label">Patient</div>
+      <div class="ce-chips">${CE_PATIENTS.map(o=>`<div class="ce-chip${c.pt===o?' active':''}" onclick="setCeField('pt','${o}',this,'ce-pt')">${o}</div>`).join('')}</div>
+    </div>
+    <div class="ce-field">
+      <div class="ce-label">Year of Residency</div>
+      <div class="ce-chips">${CE_YEARS.map(o=>`<div class="ce-chip${('Year '+c.yr)===o?' active':''}" onclick="setCeField('yr','${o.replace('Year ','')}',this,'ce-yr')">${o}</div>`).join('')}</div>
+    </div>`;
+}
+function renderCeProcs(){
+  if(!editingCase?.procs?.length)return'<div style="font-size:13px;color:var(--text3);padding:4px 0">No procedures added</div>';
+  return editingCase.procs.map((p,i)=>`
+    <div class="ce-proc-row">
+      <div class="ce-proc-code">${p.c}</div>
+      <div class="ce-proc-info"><div class="ce-proc-desc">${p.d}</div><div class="ce-proc-area">${p.a||''}</div></div>
+      <div class="ce-proc-del" onclick="ceProcDel(${i})">&#x2715;</div>
+    </div>`).join('');
+}
+function ceProcDel(i){
+  editingCase.procs.splice(i,1);
+  document.getElementById('ce-procs').innerHTML=renderCeProcs();
+}
+function setCeField(field,value,el,groupClass){
+  editingCase[field]=value;
+  const group=el.closest('.ce-chips');
+  group.querySelectorAll('.ce-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+}
+// Open the search modal in "edit case" mode
+let searchModalMode='addmore'; // 'addmore' | 'editcase'
+function openSearchForEdit(){
+  searchModalMode='editcase';
+  document.getElementById('search-modal-input').value='';
+  document.getElementById('search-modal-results').innerHTML='';
+  document.getElementById('search-modal').classList.add('on');
+  setTimeout(()=>document.getElementById('search-modal-input').focus(),120);
+}
+function closeSearchModal(){
+  document.getElementById('search-modal').classList.remove('on');
+  document.getElementById('search-modal-input').value='';
+  document.getElementById('search-modal-results').innerHTML='';
+  searchModalMode='addmore';
+}
+function addMoreCode(code,desc,area){
+  if(searchModalMode==='editcase'){
+    closeSearchModal();
+    if(!editingCase.procs)editingCase.procs=[];
+    if(!editingCase.procs.find(p=>p.c===code)){
+      editingCase.procs.push({c:code,d:desc,a:area});
+      document.getElementById('ce-procs').innerHTML=renderCeProcs();
+      toast('Procedure added','ok');
+    } else {toast('Already added','');}
+    return;
+  }
+  closeSearchModal();
+  if(!caseData.procedures.find(p=>p.c===code)){
+    caseData.procedures.push({c:code,d:desc,a:area});
+    showCptFound(caseData.procedures);
+    showAddMoreScreen();
+    toast('Code added','ok');
+  } else {toast('Already added','');}
+}
+function deleteCase(){
+  if(!editingCase)return;
+  if(!confirm('Delete this case? This cannot be undone.'))return;
+  cases=cases.filter(c=>c.id!==editingCase.id);
+  localStorage.setItem('cf5-cases',JSON.stringify(cases));
+  document.getElementById('hdr-n').textContent=cases.length;
+  closeCaseEdit();
+  renderHistory();
+  toast('Case deleted','');
+}
+async function resubmitCase(){
+  if(!editingCase)return;
+  const btn=document.getElementById('resubmit-btn');
+  const overlay=document.getElementById('submit-overlay');
+  btn.disabled=true;
+  overlay.classList.add('on');
+  await sleep(1800);
+  // Save edits back to cases array
+  const idx=cases.findIndex(c=>c.id===editingCase.id);
+  if(idx>-1){
+    cases[idx]={...editingCase,status:'submitted',ts:new Date().toISOString()};
+    localStorage.setItem('cf5-cases',JSON.stringify(cases));
+    document.getElementById('hdr-n').textContent=cases.length;
+  }
+  overlay.classList.remove('on');
+  btn.disabled=false;
+  closeCaseEdit();
+  renderHistory();
+  toast('Case re-submitted successfully','ok');
 }
 function doLogin(){
   const email=document.getElementById('l-email').value.trim();
