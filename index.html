@@ -403,11 +403,19 @@ function startOrb(){if(animFrame)cancelAnimationFrame(animFrame);lastTs=performa
 // MIC
 let micStream=null,audioCtx2=null;
 async function startMic(stream){
-  micStream=stream;audioCtx2=new(window.AudioContext||window.webkitAudioContext)();
+  // Close any previous AudioContext before creating a new one
+  if(audioCtx2){try{audioCtx2.close();}catch(e){} audioCtx2=null;}
+  micStream=stream;
+  audioCtx2=new(window.AudioContext||window.webkitAudioContext)();
+  // iOS requires AudioContext to be resumed after a user gesture
+  if(audioCtx2.state==='suspended') await audioCtx2.resume();
   const src=audioCtx2.createMediaStreamSource(stream);
   analyser=audioCtx2.createAnalyser();analyser.fftSize=64;
   dataArray=new Uint8Array(analyser.frequencyBinCount);src.connect(analyser);
 }
+// Closes AudioContext / analyser but keeps hardware track alive for reuse
+function stopVisualizer(){if(audioCtx2){audioCtx2.close();audioCtx2=null}micStream=null;analyser=null;dataArray=null;audioLevel=0}
+// Full teardown — only call in resetFlow()
 function stopMic(){if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}if(audioCtx2){audioCtx2.close();audioCtx2=null}analyser=null;dataArray=null;audioLevel=0}
 // SPEECH
 let savedMicStream=null; // reused across voice sessions to avoid extra permission prompts
@@ -730,7 +738,7 @@ let addMoreRec = null, addMoreRecOn = false, addMoreFinal = '', addMoreInt = '';
 
 function showAddMoreScreen(){
   orbState='idle';
-  stopMic();
+  stopVisualizer();
   document.getElementById('orb-hint').classList.remove('hide');
   document.getElementById('q-bubble').classList.remove('show');
   document.getElementById('q-bubble').textContent='';
