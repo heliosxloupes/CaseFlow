@@ -413,7 +413,12 @@ async function handleOrbTap(){
 }
 async function startInitialListening(){
   try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});await startMic(stream)}
-  catch(e){toast('Microphone access required — allow mic and try again','err');return}
+  catch(e){
+    showBubble('🎙️ Microphone access is blocked. Tap the lock icon in your browser address bar, set Microphone to Allow, then refresh.');
+    document.getElementById('q-bubble').classList.add('show');
+    setStateLabel('Mic permission required');
+    return;
+  }
   buildIndex();
   if(!recObj)recObj=makeRec(e=>{txInt='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)txFinal+=' '+e.results[i][0].transcript;else txInt+=e.results[i][0].transcript}showBubble((txFinal+' '+txInt).trim()||'Listening…')},()=>{if(recOn)recObj.start()});
   if(!recObj){toast('Speech recognition not available','err');return}
