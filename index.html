@@ -486,6 +486,9 @@ function localExtract(text){
 function nextQuestion(){
   currentQ++;if(currentQ>=pendingQs.length){showSummary();return}
   const q=pendingQs[currentQ];hideAnswerUI();
+  // Hide orb during follow-up questions — not needed, takes up space
+  document.getElementById('orb-wrap').style.display='none';
+  document.getElementById('q-bubble').classList.add('show');
   setTimeout(()=>{
     showBubble(q.question);document.getElementById('q-bubble').classList.add('show');
     if(q.type==='chips')showChips(q.options);
@@ -929,7 +932,9 @@ function showCptFound(procs){
 }
 function setStateLabel(t){document.getElementById('state-label').textContent=t}
 function showSummary(){
-  hideAnswerUI();document.getElementById('q-bubble').classList.remove('show');
+  hideAnswerUI();
+  document.getElementById('orb-wrap').style.display='none';
+  document.getElementById('q-bubble').classList.remove('show');
   const rows=[{l:'Procedure',v:caseData.procedures.map(p=>p.d).join(', ')||''},{l:'Date',v:formatDate(caseData.date)},{l:'Role',v:caseData.role},{l:'Site',v:caseData.site},{l:'Attending',v:caseData.attending},{l:'Patient',v:caseData.patientType},{l:'Year',v:caseData.caseYear}];
   document.getElementById('summary-card').innerHTML=rows.map(r=>`<div class="sum-row"><div class="sum-lbl">${r.l}</div><div class="sum-val ${r.v?'':'empty'}">${r.v||'&#8212;'}</div></div>`).join('');
   setTimeout(()=>{document.getElementById('summary-card').classList.add('show');document.getElementById('final-actions').classList.add('show')},200);
@@ -961,7 +966,9 @@ function resetFlow(){
   orbState='idle';hideAll();
   document.getElementById('cpt-select-box').innerHTML='';
   document.getElementById('add-more-box').innerHTML='';
-  document.getElementById('orb-wrap').classList.remove('inactive');
+  const orbWrap = document.getElementById('orb-wrap');
+  orbWrap.classList.remove('inactive');
+  orbWrap.style.display='';
   document.getElementById('q-bubble').classList.remove('show');document.getElementById('q-bubble').textContent='';
   document.getElementById('orb-hint').classList.remove('hide');setStateLabel('');
   document.getElementById('new-case-btn').style.display='none';
