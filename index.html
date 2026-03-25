@@ -690,7 +690,9 @@ function showAddMoreScreen(){
   document.getElementById('q-bubble').textContent='';
   setStateLabel('');
   hideAnswerUI();
-  document.getElementById('orb-wrap').classList.add('inactive');
+  const _ow = document.getElementById('orb-wrap');
+  _ow.classList.add('inactive');
+  _ow.style.display='none';
 
   showCptFound(caseData.procedures);
 
