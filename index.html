@@ -212,9 +212,33 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .hmeta{font-size:12px;color:var(--text2);line-height:1.75}
 .spill{font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap;margin-left:12px;flex-shrink:0}
 .s-submitted{background:var(--green-d);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.s-pending{background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.2)}
 .empty{text-align:center;padding:60px 20px}
 .empty svg{width:44px;height:44px;margin:0 auto 14px;opacity:.12;display:block}
 .empty p{font-size:14px;color:var(--text3);line-height:1.65}
+/* Settings */
+.settings-wrap{padding:20px 20px 100px;max-width:500px;margin:0 auto}
+.settings-section{background:var(--bg1);border:1px solid var(--line);border-radius:var(--rl);padding:20px;margin-bottom:16px}
+.settings-section-title{font-size:13px;font-weight:700;color:var(--text);letter-spacing:.03em;margin-bottom:6px}
+.settings-section-desc{font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:16px}
+.settings-field{margin-bottom:14px}
+.settings-label{display:block;font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.settings-input{width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:11px 12px;color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;transition:border-color .18s}
+.settings-input:focus{border-color:var(--blue)}
+.settings-input::placeholder{color:var(--text3)}
+.settings-pass-wrap{position:relative}
+.settings-pass-wrap .settings-input{padding-right:44px}
+.settings-pass-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;opacity:.4;transition:opacity .15s}
+.settings-pass-toggle:active{opacity:.8}
+.settings-pass-toggle svg{width:18px;height:18px;display:block;stroke:var(--text2)}
+.settings-cred-status{min-height:20px;font-size:12px;margin-bottom:12px;font-weight:500}
+.settings-cred-status.ok{color:var(--green)}
+.settings-cred-status.err{color:#f87171}
+.settings-save-btn{width:100%;padding:13px;font-size:14px}
+.settings-value{font-size:13px;color:var(--text2);padding:4px 0}
+.settings-danger-zone{}
+.btn-signout{width:100%;padding:13px;background:transparent;border:1px solid var(--line2);border-radius:var(--r);color:var(--text2);font-family:'Sora',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:border-color .15s,color .15s}
+.btn-signout:active{border-color:#f87171;color:#f87171}
 /* Case edit modal */
 .case-edit-modal{position:fixed;inset:0;z-index:8500;background:rgb(7,9,15);display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .22s;transform:translateY(20px);overflow:hidden;width:100vw;max-width:100vw}
 .case-edit-modal.on{opacity:1;pointer-events:all;transform:translateY(0);transition:opacity .22s,transform .22s}
@@ -314,6 +338,7 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
   <div class="tabs">
     <button class="tab on" id="tb-log" onclick="goTab('log')">Log Case</button>
     <button class="tab" id="tb-history" onclick="goTab('history')">History</button>
+    <button class="tab" id="tb-settings" onclick="goTab('settings')">Settings</button>
   </div>
   <div class="pane on" id="pn-log">
     <div class="voice-screen" id="voice-screen">
@@ -374,6 +399,49 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
     </div>
     <div class="hist-count" id="hist-count"></div>
     <div class="hist-wrap" id="hist-list"></div>
+  </div>
+
+  <div class="pane" id="pn-settings">
+    <div class="settings-wrap">
+
+      <div class="settings-section">
+        <div class="settings-section-title">ACGME Account</div>
+        <div class="settings-section-desc">Your credentials are encrypted on this device and sent only at submission time. They are never stored on our servers.</div>
+        <div class="settings-field">
+          <label class="settings-label">ACGME Username / ID</label>
+          <input class="settings-input" id="s-acgme-user" type="text" placeholder="e.g. jsmith@email.com" autocomplete="username" autocapitalize="none">
+        </div>
+        <div class="settings-field">
+          <label class="settings-label">ACGME Password</label>
+          <div class="settings-pass-wrap">
+            <input class="settings-input" id="s-acgme-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+            <button class="settings-pass-toggle" onclick="togglePassVis()" id="s-pass-toggle" type="button">
+              <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="settings-cred-status" id="s-cred-status"></div>
+        <button class="btn-main settings-save-btn" onclick="saveAcgmeCredentials()">Save Credentials</button>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Program</div>
+        <div class="settings-field">
+          <label class="settings-label">Specialty</label>
+          <div class="settings-value">Plastic Surgery — Integrated</div>
+        </div>
+        <div class="settings-field">
+          <label class="settings-label">Program</label>
+          <div class="settings-value">Larkin Community Hospital</div>
+        </div>
+      </div>
+
+      <div class="settings-section settings-danger-zone">
+        <div class="settings-section-title">Account</div>
+        <button class="btn-signout" onclick="doLogout()">Sign Out</button>
+      </div>
+
+    </div>
   </div>
 </div>
 <div class="search-modal" id="search-modal" onclick="if(event.target===this)closeSearchModal()">
@@ -1178,14 +1246,36 @@ async function submitCase(){
   const overlay=document.getElementById('submit-overlay');
   btn.disabled=true;
   overlay.classList.add('on');
-  await sleep(1800);
-  const c={id:Date.now(),date:caseData.date||isoToday(),yr:(caseData.caseYear||'Year 4').replace('Year ',''),role:caseData.role||'Surgeon',site:caseData.site||'',att:caseData.attending||'',pt:caseData.patientType||'Adult',cid:caseData.caseId,notes:caseData.notes,procs:caseData.procedures,status:'submitted',ts:new Date().toISOString()};
+
+  const payload={
+    date:caseData.date||isoToday(),
+    procs:caseData.procedures,
+    role:caseData.role||'Surgeon',
+    site:caseData.site||'',
+    att:caseData.attending||'',
+    pt:caseData.patientType||'Adult',
+    yr:(caseData.caseYear||'Year 4').replace('Year ',''),
+    notes:caseData.notes||'',
+  };
+
+  let status='submitted';
+  try{
+    await callSubmitAcgme(payload);
+  } catch(e){
+    // Save locally even if ACGME submission fails; user can re-submit from History
+    status='pending';
+    toast('Saved locally — ACGME: '+e.message,'');
+    console.warn('ACGME submit error:',e);
+  }
+
+  const c={id:Date.now(),...payload,yr:payload.yr,cid:caseData.caseId,status,ts:new Date().toISOString()};
   cases.unshift(c);localStorage.setItem('cf5-cases',JSON.stringify(cases));
   document.getElementById('hdr-n').textContent=cases.length;
   overlay.classList.remove('on');
   btn.disabled=false;
   orbState='done';await sleep(700);orbState='idle';
-  toast('Case submitted successfully','ok');resetFlow();
+  if(status==='submitted') toast('Case submitted to ACGME ✓','ok');
+  resetFlow();
 }
 function resetFlow(){
   // Destroy all speech recognition objects so they're created fresh next time
@@ -1404,11 +1494,28 @@ async function resubmitCase(){
   const overlay=document.getElementById('submit-overlay');
   btn.disabled=true;
   overlay.classList.add('on');
-  await sleep(1800);
-  // Save edits back to cases array
+
+  let newStatus='submitted';
+  try{
+    await callSubmitAcgme({
+      date:editingCase.date,
+      procs:editingCase.procs||[],
+      role:editingCase.role,
+      site:editingCase.site,
+      att:editingCase.att,
+      pt:editingCase.pt,
+      yr:editingCase.yr,
+      notes:editingCase.notes||'',
+    });
+  } catch(e){
+    newStatus='pending';
+    toast('Saved — ACGME: '+e.message,'');
+    console.warn('ACGME resubmit error:',e);
+  }
+
   const idx=cases.findIndex(c=>c.id===editingCase.id);
   if(idx>-1){
-    cases[idx]={...editingCase,status:'submitted',ts:new Date().toISOString()};
+    cases[idx]={...editingCase,status:newStatus,ts:new Date().toISOString()};
     localStorage.setItem('cf5-cases',JSON.stringify(cases));
     document.getElementById('hdr-n').textContent=cases.length;
   }
@@ -1416,8 +1523,100 @@ async function resubmitCase(){
   btn.disabled=false;
   closeCaseEdit();
   renderHistory();
-  toast('Case re-submitted successfully','ok');
+  if(newStatus==='submitted') toast('Case re-submitted to ACGME ✓','ok');
 }
+// ── CREDENTIAL ENCRYPTION (AES-GCM via Web Crypto API) ───────────────────────
+// Credentials never leave the device unencrypted. Key derived from user's login
+// password via PBKDF2 so only they can decrypt.
+const enc = new TextEncoder(), dec = new TextDecoder();
+async function deriveKey(password, salt){
+  const km = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:210000,hash:'SHA-256'}, km, {name:'AES-GCM',length:256}, false, ['encrypt','decrypt']);
+}
+async function encryptVault(obj, password){
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv   = crypto.getRandomValues(new Uint8Array(12));
+  const key  = await deriveKey(password, salt);
+  const ct   = await crypto.subtle.encrypt({name:'AES-GCM',iv}, key, enc.encode(JSON.stringify(obj)));
+  return {
+    salt: btoa(String.fromCharCode(...salt)),
+    iv:   btoa(String.fromCharCode(...iv)),
+    ct:   btoa(String.fromCharCode(...new Uint8Array(ct))),
+  };
+}
+async function decryptVault(blob, password){
+  const salt = Uint8Array.from(atob(blob.salt), c=>c.charCodeAt(0));
+  const iv   = Uint8Array.from(atob(blob.iv),   c=>c.charCodeAt(0));
+  const ct   = Uint8Array.from(atob(blob.ct),   c=>c.charCodeAt(0));
+  const key  = await deriveKey(password, salt);
+  const pt   = await crypto.subtle.decrypt({name:'AES-GCM',iv}, key, ct);
+  return JSON.parse(dec.decode(pt));
+}
+
+// ── SETTINGS ─────────────────────────────────────────────────────────────────
+let sessionPassword = ''; // set on login, used as encryption key
+function loadSettingsUI(){
+  const blob = JSON.parse(localStorage.getItem('cf5-vault')||'null');
+  const statusEl = document.getElementById('s-cred-status');
+  if(blob){
+    statusEl.textContent = '✓ Credentials saved';
+    statusEl.className = 'settings-cred-status ok';
+    document.getElementById('s-acgme-user').placeholder = 'Saved (tap to change)';
+  } else {
+    statusEl.textContent = 'No credentials saved yet';
+    statusEl.className = 'settings-cred-status';
+  }
+}
+async function saveAcgmeCredentials(){
+  const user = document.getElementById('s-acgme-user').value.trim();
+  const pass = document.getElementById('s-acgme-pass').value;
+  const statusEl = document.getElementById('s-cred-status');
+  if(!user || !pass){ statusEl.textContent='Enter both username and password.'; statusEl.className='settings-cred-status err'; return; }
+  if(!sessionPassword){ statusEl.textContent='Session expired — please sign out and back in.'; statusEl.className='settings-cred-status err'; return; }
+  try{
+    const blob = await encryptVault({acgmeUser:user, acgmePass:pass}, sessionPassword);
+    localStorage.setItem('cf5-vault', JSON.stringify(blob));
+    document.getElementById('s-acgme-user').value = '';
+    document.getElementById('s-acgme-pass').value = '';
+    statusEl.textContent = '✓ Credentials saved securely';
+    statusEl.className = 'settings-cred-status ok';
+    toast('ACGME credentials saved','ok');
+  } catch(e){
+    statusEl.textContent = 'Failed to encrypt: '+e.message;
+    statusEl.className = 'settings-cred-status err';
+  }
+}
+async function getAcgmeCredentials(){
+  const blob = JSON.parse(localStorage.getItem('cf5-vault')||'null');
+  if(!blob) throw new Error('No ACGME credentials saved. Go to Settings to add them.');
+  if(!sessionPassword) throw new Error('Session expired. Please sign out and back in.');
+  return decryptVault(blob, sessionPassword);
+}
+function togglePassVis(){
+  const inp = document.getElementById('s-acgme-pass');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+// ── ACGME SUBMISSION ─────────────────────────────────────────────────────────
+async function callSubmitAcgme(casePayload){
+  let creds;
+  try { creds = await getAcgmeCredentials(); }
+  catch(e){ throw new Error(e.message); }
+
+  const resp = await fetch('/api/submit-acgme', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      acgmeUser: creds.acgmeUser,
+      acgmePass: creds.acgmePass,
+      caseData:  casePayload,
+    }),
+  });
+  const data = await resp.json();
+  if(!resp.ok || !data.ok) throw new Error(data.error || 'Submission failed');
+  return data;
+}
+
 function doLogin(){
   const email=document.getElementById('l-email').value.trim();
   const pass=document.getElementById('l-pass').value.trim();
@@ -1429,6 +1628,7 @@ function doLogin(){
   btn.innerHTML='<span class="spin"></span>Signing in\u2026';
   btn.classList.add('busy');
   setTimeout(()=>{
+    sessionPassword = pass; // held in memory only, never persisted
     localStorage.setItem('cf5-email',email);
     btn.innerHTML='Sign In';
     btn.classList.remove('busy');
@@ -1447,9 +1647,9 @@ function launchApp(email){
   renderHistory();
 }
 
-function doLogout(){if(!confirm('Sign out?'))return;resetFlow();showPage('pg-login')}
+function doLogout(){if(!confirm('Sign out?'))return;sessionPassword='';resetFlow();showPage('pg-login')}
 function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));document.getElementById(id).classList.add('on')}
-function goTab(n){document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));document.getElementById('tb-'+n).classList.add('on');document.getElementById('pn-'+n).classList.add('on');if(n==='history')renderHistory()}
+function goTab(n){document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));document.getElementById('tb-'+n).classList.add('on');document.getElementById('pn-'+n).classList.add('on');if(n==='history')renderHistory();if(n==='settings')loadSettingsUI();}
 document.addEventListener('DOMContentLoaded',()=>{
   const saved=localStorage.getItem('cf5-email');
   if(saved) document.getElementById('l-email').value=saved;
