@@ -407,6 +407,7 @@ const QUESTIONS=[
   {key:'caseYear',isEmpty:()=>!caseData.caseYear,question:'What year of residency are you in?',type:'chips',options:['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6']},
 ];
 async function handleOrbTap(){
+  if(addMoreRecOn){ stopAddMoreVoice(); return; }
   if(document.getElementById('add-more-box').classList.contains('show')) return;
   if(orbState==='idle') await startInitialListening();
   else if(orbState==='listening') stopInitialListening();
