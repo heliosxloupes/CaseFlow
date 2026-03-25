@@ -191,6 +191,7 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{border-color:rgba(52,211,153,.28);color:var(--green)}
 .toast.err{border-color:rgba(248,113,113,.28);color:var(--red)}
+.new-case-btn{display:flex;align-items:center;gap:5px;background:var(--blue-d);border:1px solid var(--blue-b);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--blue);font-family:'Sora',sans-serif;font-weight:500;cursor:pointer;transition:background .15s}
 </style>
 </head>
 <body>
@@ -212,9 +213,13 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 
 <div class="page" id="pg-app">
   <div class="app-bar">
-    <div class="app-logo">Case<em>Flow</em></div>
+    <div class="app-logo" onclick="resetFlow()" style="cursor:pointer">Case<em>Flow</em></div>
     <div class="bar-right">
       <div class="chip"><b id="hdr-n">0</b> cases</div>
+      <button class="new-case-btn" id="new-case-btn" onclick="resetFlow()" style="display:none">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Case
+      </button>
       <div class="user-chip" onclick="doLogout()"><div class="udot"></div><span id="hdr-u">&#8212;</span></div>
     </div>
   </div>
@@ -416,6 +421,7 @@ async function startInitialListening(){
   orbState='listening';document.getElementById('orb-hint').classList.add('hide');
   showBubble('Describe your case…');setStateLabel('Tap orb to stop');hideAll();
   document.getElementById('q-bubble').classList.add('show');
+  document.getElementById('new-case-btn').style.display='flex';
 }
 function stopInitialListening(){
   recOn=false;if(recObj)recObj.stop();stopMic();
@@ -928,14 +934,25 @@ async function submitCase(){
   toast('Case submitted successfully','ok');resetFlow();
 }
 function resetFlow(){
+  // Destroy all speech recognition objects so they're created fresh next time
+  recOn=false;
+  if(recObj){try{recObj.abort();}catch(e){} recObj=null;}
+  fuOn=false;
+  if(fuRec){try{fuRec.abort();}catch(e){} fuRec=null;}
+  addMoreRecOn=false;
+  if(addMoreRec){try{addMoreRec.abort();}catch(e){} addMoreRec=null;}
+  stopMic();
+  txFinal='';txInt='';fuFinal='';fuInt='';addMoreFinal='';addMoreInt='';
   caseData={description:'',procedures:[],alternatives:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:''};
-  pendingQs=[];currentQ=-1;txFinal='';txInt='';recOn=false;if(recObj)recObj.stop();stopMic();
+  pendingQs=[];currentQ=-1;
   orbState='idle';hideAll();
   document.getElementById('cpt-select-box').innerHTML='';
   document.getElementById('add-more-box').innerHTML='';
   document.getElementById('orb-wrap').classList.remove('inactive');
   document.getElementById('q-bubble').classList.remove('show');document.getElementById('q-bubble').textContent='';
   document.getElementById('orb-hint').classList.remove('hide');setStateLabel('');
+  document.getElementById('new-case-btn').style.display='none';
+  goTab('log');
 }
 function renderHistory(){
   const list=document.getElementById('hist-list');
