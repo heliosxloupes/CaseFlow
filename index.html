@@ -410,14 +410,15 @@ async function startMic(stream){
 }
 function stopMic(){if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}if(audioCtx2){audioCtx2.close();audioCtx2=null}analyser=null;dataArray=null;audioLevel=0}
 // SPEECH
+let savedMicStream=null; // reused across voice sessions to avoid extra permission prompts
 let recObj=null,recOn=false,txFinal='',txInt='';
 let fuRec=null,fuOn=false,fuFinal='',fuInt='';
 function makeRec(onResult,onEnd){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR)return null;
   const r=new SR();
-  // iOS Safari does not support continuous mode reliably — use single-shot + auto-restart
-  r.continuous=false;
+  // continuous:true gives full-sentence capture using iPhone's native speech engine (same as Siri/dictation)
+  r.continuous=true;
   r.interimResults=true;
   r.lang='en-US';
   r.onresult=onResult;
@@ -426,14 +427,13 @@ function makeRec(onResult,onEnd){
     if(e.error==='not-allowed'||e.error==='permission-denied'){
       toast('Mic access denied — allow mic in Safari settings','err');
     } else if(e.error==='no-speech'||e.error==='aborted'){
-      // normal — will restart via onend
+      // normal
     } else {
       showBubble('Voice error: '+e.error+'. Try tapping the orb again.');
       document.getElementById('q-bubble').classList.add('show');
     }
   };
-  // iOS fires onend after each utterance — restart with a small delay to avoid race condition
-  if(onEnd) r.onend=()=>setTimeout(onEnd, 150);
+  if(onEnd) r.onend=()=>setTimeout(onEnd, 100);
   return r;
 }
 // CONVERSATION
@@ -454,10 +454,12 @@ async function handleOrbTap(){
   else if(orbState==='listening') stopInitialListening();
 }
 async function startInitialListening(){
-  // getUserMedia is only for the orb visualizer — not required for transcription
-  try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});await startMic(stream)}
-  catch(e){
-    // Hard block only on permission denied; device-not-found just skips visualizer
+  // Request mic once — save stream globally so add-more voice can reuse it without re-prompting
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    savedMicStream=stream;
+    await startMic(stream);
+  } catch(e){
     if(e && (e.name==='NotAllowedError'||e.name==='PermissionDeniedError')){
       showBubble('Microphone access is blocked. Tap the lock icon in your browser address bar, set Microphone to Allow, then refresh.');
       document.getElementById('q-bubble').classList.add('show');
@@ -851,8 +853,12 @@ async function startAddMoreVoice(){
   showBubble('Tell me the procedures you performed.');
   document.getElementById('q-bubble').classList.add('show');
 
-  // Skip getUserMedia here — mic was already approved during initial recording.
-  // Visualizer runs without amplitude data (orb animates on orbState alone).
+  // Reuse saved stream for visualizer — no extra permission prompt
+  try{
+    const stream = savedMicStream || await navigator.mediaDevices.getUserMedia({audio:true});
+    if(!savedMicStream) savedMicStream=stream;
+    await startMic(stream);
+  } catch(e){ console.warn('Visualizer skipped:', e); }
 
   addMoreFinal=''; addMoreInt='';
   if(!addMoreRec){
@@ -1065,6 +1071,7 @@ function resetFlow(){
   addMoreRecOn=false;
   if(addMoreRec){try{addMoreRec.abort();}catch(e){} addMoreRec=null;}
   stopMic();
+  savedMicStream=null;
   txFinal='';txInt='';fuFinal='';fuInt='';addMoreFinal='';addMoreInt='';
   caseData={description:'',procedures:[],alternatives:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:''};
   pendingQs=[];currentQ=-1;
