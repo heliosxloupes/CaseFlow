@@ -462,7 +462,18 @@ async function handleOrbTap(){
   else if(orbState==='listening') stopInitialListening();
 }
 async function startInitialListening(){
-  // Reuse saved stream if tracks are still live; only request new stream when needed
+  // Build speech recognition first (synchronous, preserves iOS gesture context)
+  buildIndex();
+  if(!recObj)recObj=makeRec(e=>{txInt='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)txFinal+=' '+e.results[i][0].transcript;else txInt+=e.results[i][0].transcript}showBubble((txFinal+' '+txInt).trim()||'Listening…')},()=>{if(recOn){try{recObj.start();}catch(e){console.warn('rec restart:',e)}}});
+  if(!recObj){showBubble('Speech recognition not supported in this browser — try Chrome on Android or Safari on iOS.');document.getElementById('q-bubble').classList.add('show');return}
+  txFinal='';txInt='';recOn=true;
+  // Start recognition synchronously while still in gesture context
+  try{recObj.start();}catch(e){console.error('recObj.start error:',e);showBubble('Mic start error: '+e.message);document.getElementById('q-bubble').classList.add('show');return;}
+  orbState='listening';document.getElementById('orb-hint').classList.add('hide');
+  showBubble('Describe your case…');setStateLabel('Tap orb to stop');hideAll();
+  document.getElementById('q-bubble').classList.add('show');
+  document.getElementById('new-case-btn').style.display='flex';
+  // Start visualizer async after (does not need gesture context)
   const needNewStream = !savedMicStream || savedMicStream.getTracks().some(t=>t.readyState==='ended');
   if(needNewStream){
     try{
@@ -470,24 +481,16 @@ async function startInitialListening(){
       savedMicStream=stream;
     } catch(e){
       if(e && (e.name==='NotAllowedError'||e.name==='PermissionDeniedError')){
-        showBubble('Microphone access is blocked. Tap the lock icon in your browser address bar, set Microphone to Allow, then refresh.');
+        showBubble('Microphone access is blocked. Allow mic in Safari settings then refresh.');
         document.getElementById('q-bubble').classList.add('show');
         setStateLabel('Mic permission required');
+        recOn=false;try{recObj.abort();}catch(_){} recObj=null;
         return;
       }
       console.warn('getUserMedia failed (visualizer disabled):', e);
     }
   }
-  if(savedMicStream) await startMic(savedMicStream);
-  buildIndex();
-  if(!recObj)recObj=makeRec(e=>{txInt='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)txFinal+=' '+e.results[i][0].transcript;else txInt+=e.results[i][0].transcript}showBubble((txFinal+' '+txInt).trim()||'Listening…')},()=>{if(recOn){try{recObj.start();}catch(e){console.warn('rec restart:',e)}}});
-  if(!recObj){showBubble('Speech recognition not supported in this browser — try Chrome on Android or Safari on iOS.');document.getElementById('q-bubble').classList.add('show');return}
-  txFinal='';txInt='';recOn=true;
-  try{recObj.start();}catch(e){console.error('recObj.start error:',e);showBubble('Mic start error: '+e.message);document.getElementById('q-bubble').classList.add('show');return;}
-  orbState='listening';document.getElementById('orb-hint').classList.add('hide');
-  showBubble('Describe your case…');setStateLabel('Tap orb to stop');hideAll();
-  document.getElementById('q-bubble').classList.add('show');
-  document.getElementById('new-case-btn').style.display='flex';
+  if(savedMicStream) startMic(savedMicStream); // fire-and-forget, visualizer only
 }
 function stopInitialListening(){
   recOn=false;if(recObj){try{recObj.abort();}catch(e){} recObj=null;}
@@ -858,21 +861,7 @@ function addMoreCode(code, desc, area){
 async function startAddMoreVoice(){
   if(addMoreRecOn){ stopAddMoreVoice(); return; }
 
-  // Hide add-more and found boxes, activate orb
-  document.getElementById('add-more-box').classList.remove('show');
-  document.getElementById('cpt-found-box').classList.remove('show');
-  showBubble('Tell me the procedures you performed.');
-  document.getElementById('q-bubble').classList.add('show');
-
-  // Reuse saved stream if live; request new one only if tracks have ended
-  const needNew = !savedMicStream || savedMicStream.getTracks().some(t=>t.readyState==='ended');
-  if(needNew){
-    try{
-      savedMicStream = await navigator.mediaDevices.getUserMedia({audio:true});
-    } catch(e){ console.warn('Visualizer skipped:', e); }
-  }
-  if(savedMicStream) await startMic(savedMicStream);
-
+  // Build recognition synchronously first — iOS requires .start() inside gesture context
   addMoreFinal=''; addMoreInt='';
   if(!addMoreRec){
     addMoreRec = makeRec(
@@ -889,14 +878,30 @@ async function startAddMoreVoice(){
     );
   }
   if(!addMoreRec){ toast('Speech not available — try Chrome or Safari','err'); return; }
+
   addMoreRecOn=true;
-  try{ addMoreRec.start(); } catch(e){ console.error('addMoreRec.start error:',e); toast('Mic start error: '+e.message,'err'); return; }
+  // Start recognition while still in gesture context (before any await)
+  try{ addMoreRec.start(); } catch(e){ console.error('addMoreRec.start error:',e); toast('Mic start error: '+e.message,'err'); addMoreRecOn=false; return; }
+
+  // Update UI
+  document.getElementById('add-more-box').classList.remove('show');
+  document.getElementById('cpt-found-box').classList.remove('show');
+  showBubble('Tell me the procedures you performed.');
+  document.getElementById('q-bubble').classList.add('show');
   orbState='listening';
   const orbWrap = document.getElementById('orb-wrap');
   orbWrap.style.display='';
   orbWrap.classList.remove('inactive');
   document.getElementById('orb-hint').classList.add('hide');
   setStateLabel('Tap orb to stop');
+
+  // Start visualizer async after (does not need gesture context)
+  const needNew = !savedMicStream || savedMicStream.getTracks().some(t=>t.readyState==='ended');
+  if(needNew){
+    try{ savedMicStream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+    catch(e){ console.warn('Visualizer skipped:', e); }
+  }
+  if(savedMicStream) startMic(savedMicStream); // fire-and-forget
 }
 
 
