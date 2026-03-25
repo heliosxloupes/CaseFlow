@@ -50,40 +50,65 @@ body{min-height:100%;font-family:'Sora',sans-serif;color:var(--text);background:
 .tabs{display:flex;border-bottom:1px solid var(--line);background:var(--bg);position:sticky;top:56px;z-index:50}
 .tab{flex:1;padding:14px 0;font-size:13px;font-weight:500;color:var(--text3);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:'Sora',sans-serif;transition:color .15s,border-color .15s}
 .tab.on{color:var(--text);border-bottom-color:var(--blue)}
-.pane{display:none;max-width:480px;margin:0 auto;width:100%}
-.pane.on{display:block}
-.voice-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 112px);padding:24px 24px 40px}
-.orb-wrap{position:relative;width:240px;height:240px;margin-bottom:32px;cursor:pointer;flex-shrink:0;transition:transform .2s}
+.pane{display:none;width:100%}
+.pane.on{display:block;min-height:calc(100vh - 112px)}
+.voice-screen{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:calc(100vh - 112px);
+  width:100%;
+  padding:24px;
+}
+.orb-wrap{
+  position:relative;
+  width:clamp(260px, 40vmin, 420px);
+  height:clamp(260px, 40vmin, 420px);
+  margin-bottom:36px;
+  cursor:pointer;flex-shrink:0;transition:transform .2s;
+}
 .orb-wrap:active{transform:scale(.96)}
 .orb-wrap.inactive{opacity:.35;pointer-events:none}
 canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:50%}
-.orb-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:7px;pointer-events:none;transition:opacity .3s}
+.orb-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;pointer-events:none;transition:opacity .3s}
 .orb-hint.hide{opacity:0}
-.orb-hint svg{width:36px;height:36px;fill:rgba(255,255,255,.45)}
-.orb-hint span{font-size:12px;color:rgba(255,255,255,.35);letter-spacing:.08em;text-transform:uppercase}
-.question-bubble{background:var(--bg2);border:1px solid var(--line2);border-radius:20px 20px 20px 4px;padding:16px 20px;font-size:17px;font-weight:400;color:var(--text);line-height:1.55;text-align:left;max-width:340px;width:100%;margin-bottom:16px;min-height:52px;opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s}
+.orb-hint svg{width:52px;height:52px;fill:rgba(255,255,255,.5)}
+.orb-hint span{font-size:13px;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;font-weight:500}
+.question-bubble{background:var(--bg2);border:1px solid var(--line2);border-radius:20px 20px 20px 4px;padding:16px 20px;font-size:17px;font-weight:400;color:var(--text);line-height:1.55;text-align:left;max-width:min(380px,90vw);width:100%;margin-bottom:16px;min-height:52px;opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s}
 .question-bubble.show{opacity:1;transform:translateY(0)}
-.answer-chips{display:flex;flex-wrap:wrap;gap:8px;max-width:340px;width:100%;margin-bottom:16px;opacity:0;transition:opacity .3s .1s}
+.answer-chips{display:flex;flex-wrap:wrap;gap:8px;max-width:min(380px,90vw);width:100%;margin-bottom:16px;opacity:0;transition:opacity .3s .1s}
 .answer-chips.show{opacity:1}
+.answer-input-wrap{display:flex;gap:8px;max-width:min(380px,90vw);width:100%;margin-bottom:16px;opacity:0;transition:opacity .3s .1s}
+.answer-input-wrap.show{opacity:1}
+.voice-answer-row{display:flex;align-items:center;gap:12px;max-width:min(380px,90vw);width:100%;margin-bottom:12px;opacity:0;transition:opacity .3s .15s}
+.voice-answer-row.show{opacity:1}
+.cpt-search-box{max-width:min(380px,90vw);width:100%;margin-bottom:12px;opacity:0;transition:opacity .3s .1s}
+.cpt-search-box.show{opacity:1}
+.cpt-found-box{background:var(--blue-d);border:1px solid var(--blue-b);border-radius:var(--r);padding:14px 16px;max-width:min(380px,90vw);width:100%;margin-bottom:12px;opacity:0;transition:opacity .3s}
+.cpt-found-box.show{opacity:1}
+.cpt-select-box{max-width:min(380px,90vw);width:100%;margin-bottom:12px;opacity:0;transition:opacity .3s .1s}
+.cpt-select-box.show{opacity:1}
+.add-more-box{max-width:min(380px,90vw);width:100%;margin-bottom:12px;opacity:0;transition:opacity .3s .1s}
+.add-more-box.show{opacity:1}
+.summary-card{background:var(--bg1);border:1px solid var(--line);border-radius:var(--rl);overflow:hidden;max-width:min(380px,90vw);width:100%;margin-bottom:16px;opacity:0;transition:opacity .4s}
+.summary-card.show{opacity:1}
+.final-actions{display:flex;gap:10px;max-width:min(380px,90vw);width:100%;margin-top:4px;opacity:0;transition:opacity .3s .1s}
+.final-actions.show{opacity:1}
+
 .chip-opt{background:var(--bg2);border:1px solid var(--line2);border-radius:20px;padding:9px 16px;font-size:13px;color:var(--text2);cursor:pointer;font-family:'Sora',sans-serif;font-weight:500;transition:background .15s,border-color .15s,color .15s}
 .chip-opt:active,.chip-opt.selected{background:var(--blue-d);border-color:var(--blue);color:var(--blue)}
-.answer-input-wrap{display:flex;gap:8px;max-width:340px;width:100%;margin-bottom:16px;opacity:0;transition:opacity .3s .1s}
-.answer-input-wrap.show{opacity:1}
+
 .answer-text-input{flex:1;background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);padding:12px 14px;color:var(--text);font-family:'Sora',sans-serif;font-size:15px;outline:none;transition:border-color .18s}
 .answer-text-input:focus{border-color:var(--blue)}
 .answer-text-input::placeholder{color:var(--text3)}
 .send-btn{background:var(--blue);border:none;border-radius:var(--r);padding:12px 16px;cursor:pointer;color:#fff;font-size:18px;transition:opacity .15s}
 .send-btn:active{opacity:.8}
-.voice-answer-row{display:flex;align-items:center;gap:12px;max-width:340px;width:100%;margin-bottom:12px;opacity:0;transition:opacity .3s .15s}
-.voice-answer-row.show{opacity:1}
+
 .mic-small-btn{width:48px;height:48px;border-radius:50%;background:var(--bg3);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,border-color .15s;flex-shrink:0}
 .mic-small-btn.rec{background:rgba(248,113,113,.12);border-color:var(--red)}
 .mic-small-btn svg{width:20px;height:20px;fill:var(--text2);transition:fill .15s}
 .mic-small-btn.rec svg{fill:var(--red)}
 .voice-answer-tx{flex:1;font-size:14px;color:var(--text2);font-style:italic;min-height:20px;line-height:1.4}
 .voice-answer-tx.has-text{color:var(--text);font-style:normal}
-.cpt-search-box{max-width:340px;width:100%;margin-bottom:12px;opacity:0;transition:opacity .3s .1s}
-.cpt-search-box.show{opacity:1}
+
 .srch-wrap{position:relative}
 .srch-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.35;pointer-events:none}
 .srch-ico svg{width:15px;height:15px;fill:var(--text2)}
@@ -101,15 +126,13 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .srch-add{font-size:18px;color:var(--text3);padding-top:2px}
 .no-results{padding:14px;font-size:13px;color:var(--text3);text-align:center}
 .srch-count{padding:8px 14px;font-size:11px;color:var(--text3);border-bottom:1px solid var(--line)}
-.cpt-found-box{background:var(--blue-d);border:1px solid var(--blue-b);border-radius:var(--r);padding:14px 16px;max-width:340px;width:100%;margin-bottom:12px;opacity:0;transition:opacity .3s}
-.cpt-found-box.show{opacity:1}
+
 .cpt-found-label{font-size:10px;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-bottom:10px}
 .cpt-found-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
 .cpt-found-item:last-child{border-bottom:none}
 .cpt-found-code{font-size:12px;font-weight:600;color:var(--blue);min-width:46px;padding-top:2px}
 .cpt-found-desc{flex:1;font-size:13px;color:var(--text);line-height:1.35}
-.cpt-select-box{max-width:340px;width:100%;margin-bottom:12px;opacity:0;transition:opacity .3s .1s}
-.cpt-select-box.show{opacity:1}
+
 .cpt-select-head{font-size:14px;color:var(--text);font-weight:500;margin-bottom:12px;line-height:1.5}
 .cpt-select-option{background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s}
 .cpt-select-option:active,.cpt-select-option:hover{border-color:var(--blue);background:var(--bg3)}
@@ -122,8 +145,7 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .cpt-confirm-btn{width:100%;padding:14px;background:var(--blue);border:none;border-radius:var(--r);color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:10px;opacity:0;transition:opacity .2s,transform .1s;pointer-events:none}
 .cpt-confirm-btn.visible{opacity:1;pointer-events:all}
 .cpt-confirm-btn:active{transform:scale(.98)}
-.add-more-box{max-width:340px;width:100%;margin-bottom:12px;opacity:0;transition:opacity .3s .1s}
-.add-more-box.show{opacity:1}
+
 .add-more-head{font-size:14px;color:var(--text);font-weight:500;margin-bottom:12px;line-height:1.5}
 .add-more-row{display:flex;gap:10px;margin-bottom:10px}
 .add-more-btn{flex:1;padding:12px;border-radius:var(--r);font-family:'Sora',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--line2);background:var(--bg2);color:var(--text2);display:flex;align-items:center;justify-content:center;gap:8px;transition:border-color .15s,color .15s}
@@ -142,21 +164,19 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
 .cpt-sel-code{font-size:12px;font-weight:600;color:var(--blue);margin-bottom:4px}
 .cpt-sel-name{font-size:14px;color:var(--text);font-weight:500;margin-bottom:4px}
 .cpt-sel-note{font-size:12px;color:var(--text2);line-height:1.5}
-.state-label{font-size:13px;color:var(--text3);margin-top:4px;min-height:18px;letter-spacing:.02em}
-.summary-card{background:var(--bg1);border:1px solid var(--line);border-radius:var(--rl);overflow:hidden;max-width:340px;width:100%;margin-bottom:16px;opacity:0;transition:opacity .4s}
-.summary-card.show{opacity:1}
+.state-label{font-size:15px;color:var(--text3);margin-top:8px;min-height:22px;letter-spacing:.02em;text-align:center}
+
 .sum-row{display:flex;align-items:flex-start;padding:12px 16px;border-bottom:1px solid var(--line);gap:12px}
 .sum-row:last-child{border-bottom:none}
 .sum-lbl{font-size:11px;color:var(--text3);min-width:80px;padding-top:2px;flex-shrink:0}
 .sum-val{font-size:14px;color:var(--text);flex:1;font-weight:500;line-height:1.4}
 .sum-val.empty{color:var(--text3);font-weight:400;font-style:italic}
-.final-actions{display:flex;gap:10px;max-width:340px;width:100%;margin-top:4px;opacity:0;transition:opacity .3s .1s}
-.final-actions.show{opacity:1}
+
 .btn-redo{flex:1;padding:14px;background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);color:var(--text2);font-family:'Sora',sans-serif;font-size:14px;font-weight:500;cursor:pointer}
 .btn-go{flex:2;padding:14px;background:var(--green);border:none;border-radius:var(--r);color:#071a10;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s}
 .btn-go:active{opacity:.85}
 .btn-go:disabled{opacity:.35;pointer-events:none}
-.hist-wrap{padding:20px 20px 40px}
+.hist-wrap{padding:20px 20px 40px;max-width:600px;margin:0 auto}
 .hist-item{background:var(--bg1);border:1px solid var(--line);border-radius:var(--rl);padding:16px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start}
 .hprocs{font-size:14px;font-weight:500;margin-bottom:5px;line-height:1.4}
 .hmeta{font-size:12px;color:var(--text2);line-height:1.75}
@@ -189,66 +209,13 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
     <div class="login-note">Sign in with your ACGME credentials.<br>Your session is stored locally on this device.</div>
   </div>
 </div>
-<div class="page" id="pg-profile">
-  <div class="login-wrap">
-    <div class="brand">
-      <div class="brand-name">Case<em>Flow</em></div>
-      <div class="brand-tag">One-time setup</div>
-    </div>
-    <p style="font-size:14px;color:var(--text2);margin-bottom:28px;line-height:1.6">Select your specialty so CaseFlow shows you the right CPT codes.</p>
-    <label class="lbl">Specialty</label>
-    <select class="ifield" id="p-specialty" style="cursor:pointer;-webkit-appearance:none;appearance:none">
-      <option value="" disabled selected>Select your specialty…</option>
-      <option value="allergy-immunology">Allergy and Immunology</option>
-      <option value="anesthesiology">Anesthesiology</option>
-      <option value="colon-rectal-surgery">Colon and Rectal Surgery</option>
-      <option value="dermatology">Dermatology</option>
-      <option value="emergency-medicine">Emergency Medicine</option>
-      <option value="family-medicine">Family Medicine</option>
-      <option value="internal-medicine">Internal Medicine</option>
-      <option value="neurological-surgery">Neurological Surgery</option>
-      <option value="neurology">Neurology</option>
-      <option value="nuclear-medicine">Nuclear Medicine</option>
-      <option value="obstetrics-gynecology">Obstetrics and Gynecology</option>
-      <option value="ophthalmology">Ophthalmology</option>
-      <option value="orthopaedic-surgery">Orthopaedic Surgery</option>
-      <option value="otolaryngology">Otolaryngology – Head and Neck Surgery</option>
-      <option value="pathology">Pathology</option>
-      <option value="pediatrics">Pediatrics</option>
-      <option value="physical-medicine">Physical Medicine and Rehabilitation</option>
-      <option value="plastic-surgery">Plastic Surgery</option>
-      <option value="preventive-medicine">Preventive Medicine</option>
-      <option value="psychiatry">Psychiatry</option>
-      <option value="radiation-oncology">Radiation Oncology</option>
-      <option value="radiology">Radiology</option>
-      <option value="general-surgery">Surgery (General)</option>
-      <option value="thoracic-surgery">Thoracic Surgery</option>
-      <option value="urology">Urology</option>
-    </select>
-    <label class="lbl" style="margin-top:16px">Residency Year</label>
-    <select class="ifield" id="p-year" style="cursor:pointer;-webkit-appearance:none;appearance:none">
-      <option value="" disabled selected>Select your year…</option>
-      <option value="1">PGY-1</option>
-      <option value="2">PGY-2</option>
-      <option value="3">PGY-3</option>
-      <option value="4">PGY-4</option>
-      <option value="5">PGY-5</option>
-      <option value="6">PGY-6</option>
-      <option value="7">PGY-7</option>
-    </select>
-    <button class="btn-main" id="p-btn" onclick="saveProfile()" style="margin-top:8px">Get Started</button>
-    <div class="login-err" id="p-err"></div>
-    <div class="login-note" style="margin-top:24px">You can update this anytime in your profile settings.</div>
-  </div>
-</div>
 
 <div class="page" id="pg-app">
   <div class="app-bar">
     <div class="app-logo">Case<em>Flow</em></div>
     <div class="bar-right">
-      <div class="chip" id="hdr-specialty" style="display:none"></div>
       <div class="chip"><b id="hdr-n">0</b> cases</div>
-      <div class="user-chip" onclick="showProfileMenu()"><div class="udot"></div><span id="hdr-u">&#8212;</span></div>
+      <div class="user-chip" onclick="doLogout()"><div class="udot"></div><span id="hdr-u">&#8212;</span></div>
     </div>
   </div>
   <div class="tabs">
@@ -299,8 +266,8 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="caseflow-data.js" defer></script>
-<script defer>
+<script src="caseflow-data.js"></script>
+<script>
 // CPT_DB and KW_MAP loaded from caseflow-data.js — 4761 ACGME Plastic Surgery codes
 // Build lookup index
 let CPT_INDEX=null;
@@ -461,8 +428,7 @@ async function processDescription(text){
   caseData.description=text;caseData.date=isoToday();buildIndex();
   let extracted=null;
   try{
-    const profile=getProfile();
-    const res=await fetch('/api/parse-case',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:profile.specialty||'plastic-surgery',year:profile.year||'4'})});
+    const res=await fetch('/api/parse-case',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:'plastic-surgery'})});
     if(!res.ok)throw new Error();extracted=await res.json()
   }
   catch(e){extracted=localExtract(text)}
@@ -878,11 +844,6 @@ function doneAddingCodes(){
   currentQ = -1;
   setTimeout(()=>nextQuestion(), 400);
 }
-  // Continue with remaining questions (skip procedures since we have them)
-  pendingQs = QUESTIONS.filter(q => q.key!=='procedures' && q.isEmpty());
-  currentQ = -1;
-  setTimeout(()=>nextQuestion(), 400);
-}
 
 function showCptFound(procs){
   const box=document.getElementById('cpt-found-box');
@@ -932,122 +893,35 @@ function doLogin(){
   if(!email.includes('@')){err.textContent='Please enter a valid email address.';return}
   err.textContent='';
   const btn=document.getElementById('l-btn');
-  btn.innerHTML='<span class="spin"></span>Signing in…';btn.classList.add('busy');
+  btn.innerHTML='<span class="spin"></span>Signing in\u2026';
+  btn.classList.add('busy');
   setTimeout(()=>{
     localStorage.setItem('cf5-email',email);
-    localStorage.setItem('cf5-pass',pass);
-    btn.innerHTML='Sign In';btn.classList.remove('busy');
-    // First time? Go to profile setup. Otherwise go straight to app.
-    const profile = getProfile();
-    if(!profile.specialty){
-      showPage('pg-profile');
-    } else {
-      launchApp();
-    }
+    btn.innerHTML='Sign In';
+    btn.classList.remove('busy');
+    launchApp(email);
   },700);
 }
 
-function saveProfile(){
-  const specialty = document.getElementById('p-specialty').value;
-  const year = document.getElementById('p-year').value;
-  const err = document.getElementById('p-err');
-  if(!specialty){err.textContent='Please select your specialty.';return}
-  if(!year){err.textContent='Please select your residency year.';return}
-  err.textContent='';
-  const btn = document.getElementById('p-btn');
-  btn.innerHTML='<span class="spin"></span>Saving…';btn.classList.add('busy');
-  setTimeout(()=>{
-    localStorage.setItem('cf5-specialty', specialty);
-    localStorage.setItem('cf5-year', year);
-    btn.innerHTML='Get Started';btn.classList.remove('busy');
-    launchApp();
-  }, 400);
-}
 
-function getProfile(){
-  return {
-    email:     localStorage.getItem('cf5-email') || '',
-    specialty: localStorage.getItem('cf5-specialty') || '',
-    year:      localStorage.getItem('cf5-year') || '4',
-  };
-}
 
-function launchApp(){
-  const profile = getProfile();
-  const email = profile.email;
-  document.getElementById('hdr-u').textContent = email.split('@')[0];
-  document.getElementById('hdr-n').textContent = cases.length;
-  // Specialty display name lookup from static map — no DOM dependency
-  const SPECIALTY_NAMES = {
-    'allergy-immunology':'Allergy & Immunology','anesthesiology':'Anesthesiology',
-    'colon-rectal-surgery':'Colon & Rectal Surgery','dermatology':'Dermatology',
-    'emergency-medicine':'Emergency Medicine','family-medicine':'Family Medicine',
-    'internal-medicine':'Internal Medicine','neurological-surgery':'Neurological Surgery',
-    'neurology':'Neurology','nuclear-medicine':'Nuclear Medicine',
-    'obstetrics-gynecology':'OB/GYN','ophthalmology':'Ophthalmology',
-    'orthopaedic-surgery':'Orthopaedic Surgery','otolaryngology':'Otolaryngology',
-    'pathology':'Pathology','pediatrics':'Pediatrics',
-    'physical-medicine':'Physical Medicine','plastic-surgery':'Plastic Surgery',
-    'preventive-medicine':'Preventive Medicine','psychiatry':'Psychiatry',
-    'radiation-oncology':'Radiation Oncology','radiology':'Radiology',
-    'general-surgery':'General Surgery','thoracic-surgery':'Thoracic Surgery',
-    'urology':'Urology'
-  };
-  const specialtyName = SPECIALTY_NAMES[profile.specialty] || '';
-  const hdrSpec = document.getElementById('hdr-specialty');
-  if(hdrSpec){
-    hdrSpec.textContent = specialtyName;
-    hdrSpec.style.display = specialtyName ? '' : 'none';
-  }
+function launchApp(email){
+  email = email || localStorage.getItem('cf5-email') || '';
+  document.getElementById('hdr-u').textContent=email.split('@')[0];
+  document.getElementById('hdr-n').textContent=cases.length;
   showPage('pg-app');
   startOrb();
   renderHistory();
 }
-function showProfileMenu(){
-  const profile = getProfile();
-  const SPECIALTY_NAMES = {
-    'allergy-immunology':'Allergy & Immunology','anesthesiology':'Anesthesiology',
-    'colon-rectal-surgery':'Colon & Rectal Surgery','dermatology':'Dermatology',
-    'emergency-medicine':'Emergency Medicine','family-medicine':'Family Medicine',
-    'internal-medicine':'Internal Medicine','neurological-surgery':'Neurological Surgery',
-    'neurology':'Neurology','nuclear-medicine':'Nuclear Medicine',
-    'obstetrics-gynecology':'OB/GYN','ophthalmology':'Ophthalmology',
-    'orthopaedic-surgery':'Orthopaedic Surgery','otolaryngology':'Otolaryngology',
-    'pathology':'Pathology','pediatrics':'Pediatrics',
-    'physical-medicine':'Physical Medicine','plastic-surgery':'Plastic Surgery',
-    'preventive-medicine':'Preventive Medicine','psychiatry':'Psychiatry',
-    'radiation-oncology':'Radiation Oncology','radiology':'Radiology',
-    'general-surgery':'General Surgery','thoracic-surgery':'Thoracic Surgery',
-    'urology':'Urology'
-  };
-  const specialtyName = SPECIALTY_NAMES[profile.specialty] || 'Not set';
-  const action = confirm(`Signed in as ${profile.email}\nSpecialty: ${specialtyName}\nYear: PGY-${profile.year||'?'}\n\nTap OK to change specialty · Cancel to sign out`);
-  if(action){
-    showPage('pg-profile');
-    if(profile.specialty) document.getElementById('p-specialty').value = profile.specialty;
-    if(profile.year) document.getElementById('p-year').value = profile.year;
-    document.getElementById('p-btn').textContent = 'Save Changes';
-  } else {
-    doLogout();
-  }
-}
-function doLogout(){
-  if(!confirm('Sign out of CaseFlow?'))return;
-  resetFlow();showPage('pg-login');
-}
+
+function doLogout(){if(!confirm('Sign out?'))return;resetFlow();showPage('pg-login')}
 function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));document.getElementById(id).classList.add('on')}
 function goTab(n){document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));document.getElementById('tb-'+n).classList.add('on');document.getElementById('pn-'+n).classList.add('on');if(n==='history')renderHistory()}
 document.addEventListener('DOMContentLoaded',()=>{
   const saved=localStorage.getItem('cf5-email');
   if(saved) document.getElementById('l-email').value=saved;
-  // Pre-fill profile if values exist
-  const savedSpecialty=localStorage.getItem('cf5-specialty');
-  const savedYear=localStorage.getItem('cf5-year');
-  if(savedSpecialty) document.getElementById('p-specialty').value=savedSpecialty;
-  if(savedYear) document.getElementById('p-year').value=savedYear;
   document.getElementById('l-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
   document.getElementById('l-email').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('l-pass').focus()});
-  document.getElementById('p-specialty').addEventListener('change',()=>document.getElementById('p-err').textContent='');
   startOrb();
   function tryBuildIndex(){
     if(typeof CPT_DB!=='undefined'){buildIndex();}
