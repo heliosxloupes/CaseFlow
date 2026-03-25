@@ -478,7 +478,7 @@ async function startInitialListening(){
   document.getElementById('new-case-btn').style.display='flex';
 }
 function stopInitialListening(){
-  recOn=false;if(recObj)recObj.stop();stopMic();
+  recOn=false;if(recObj){try{recObj.abort();}catch(e){} recObj=null;}stopMic();
   const text=(txFinal+' '+txInt).trim();
   if(!text){orbState='idle';document.getElementById('orb-hint').classList.remove('hide');showBubble('');setStateLabel('');return}
   orbState='thinking';showBubble('Finding your CPT codes…');setStateLabel('');
@@ -571,7 +571,7 @@ function startFuRec(){
   document.getElementById('a-voice-tx').textContent='Listening…';
 }
 function stopFuRec(){
-  fuOn=false;if(fuRec)fuRec.stop();document.getElementById('mic-small').classList.remove('rec');
+  fuOn=false;if(fuRec){try{fuRec.abort();}catch(e){} fuRec=null;}document.getElementById('mic-small').classList.remove('rec');
   const val=(fuFinal+' '+fuInt).trim();
   if(val){document.getElementById('a-voice-tx').textContent=val;document.getElementById('a-voice-tx').classList.add('has-text');document.getElementById('a-text-input').value=val;setTimeout(()=>submitTextAnswer(),350)}
   else{document.getElementById('a-voice-tx').textContent='Tap mic or type above';document.getElementById('a-voice-tx').classList.remove('has-text')}
@@ -892,7 +892,7 @@ async function startAddMoreVoice(){
 
 async function stopAddMoreVoice(){
   addMoreRecOn=false;
-  if(addMoreRec) addMoreRec.stop();
+  if(addMoreRec){try{addMoreRec.abort();}catch(e){} addMoreRec=null;}
   stopMic();
 
   const text = (addMoreFinal+' '+addMoreInt).trim();
