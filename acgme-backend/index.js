@@ -289,6 +289,39 @@ app.post('/debug/b2c-login', async (req, res) => {
   }
 });
 
+// Debug: test B2C ROPC (Resource Owner Password Credentials) flow - direct token endpoint
+app.post('/debug/b2c-ropc', async (req, res) => {
+  const { username, password } = req.body || {};
+  if (!username || !password) return res.status(400).json({ error: 'username and password required' });
+  try {
+    const fetch = require('node-fetch');
+    const { URLSearchParams } = require('url');
+    const B2C_TENANT = 'acgmeras.b2clogin.com';
+    const B2C_POLICY = 'b2c_1a_signup_signin';
+    const B2C_CLIENT = 'dcdddbd1-2b64-4940-9983-6a6442c526aa';
+    const tokenUrl = `https://${B2C_TENANT}/acgmeras.onmicrosoft.com/${B2C_POLICY}/oauth2/v2.0/token`;
+    const body = new URLSearchParams({
+      grant_type: 'password',
+      username,
+      password,
+      scope: `openid profile offline_access ${B2C_CLIENT}`,
+      client_id: B2C_CLIENT,
+      response_type: 'token id_token',
+    });
+    const r = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+    const text = await r.text();
+    let parsed = null;
+    try { parsed = JSON.parse(text); } catch(_){}
+    return res.json({ status: r.status, body: text.slice(0, 500), parsed });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Debug: verify a token without needing a DB — helps diagnose JWT_SECRET mismatches
 app.post('/debug/verify-token', (req, res) => {
   const { token } = req.body || {};
