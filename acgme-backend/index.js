@@ -187,14 +187,22 @@ app.post('/debug/b2c-login', async (req, res) => {
     const sa2RawHeaders = sa2Res.headers.raw();
     const cookiesAfterSA2 = mergeCookies(cookiesAfterCF, sa2Cookies);
 
-    // Step 5: GET second confirmed using transId from password form SETTINGS + cfCsrf
-    // Try SelfAsserted (same as step 3b) in case cfApiType=CombinedSigninAndSignup is not the right endpoint
+    // Step 5: GET second confirmed using transId and apiType from password form SETTINGS + cfCsrf
     const transFromCookieAfterSA2 = decodeTransCookie(cookiesAfterSA2) || transIdAfterEmail;
-    const cf2Url = `${apiBase}/api/${b2cApiType}/confirmed`
-      + `?rememberMe=false&csrf_token=${encodeURIComponent(cfCsrf||'')}&tx=${cfTransId}&p=${B2C_POLICY}`;
+    // cfApiType defaults to b2cApiType if SETTINGS parse failed; use cfApiType (CombinedSigninAndSignup per SETTINGS)
+    const cf2ApiTypeToUse = cfApiType || b2cApiType;
+    const cf2Url = `${apiBase}/api/${cf2ApiTypeToUse}/confirmed`
+      + `?rememberMe=false&csrf_token=${encodeURIComponent(cfCsrf||'')}&tx=${encodeURIComponent(cfTransId)}&p=${B2C_POLICY}`;
     const cf2Res = await ft(cf2Url, {
-      headers: { 'User-Agent': UA, 'Cookie': cookiesAfterSA2, 'Referer': confirmedUrl, 'Accept': 'text/html,application/xhtml+xml' },
-      redirect: 'manual',
+      headers: {
+        'User-Agent': UA,
+        'Cookie': cookiesAfterSA2,
+        'Referer': confirmedUrl,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Origin': `https://${B2C_TENANT}`,
+      },
+      redirect: 'follow',
     }, 15000);
     const cf2Text = await cf2Res.text();
     const cf2Cookies = cf2Res.headers.raw()['set-cookie'] || [];
