@@ -1732,10 +1732,9 @@ async function saveAcgmeCredentials(){
   const pass = document.getElementById('s-acgme-pass').value;
   const statusEl = document.getElementById('s-cred-status');
   if(!user || !pass){ statusEl.textContent='Enter both username and password.'; statusEl.className='settings-cred-status err'; return; }
-  if(!sessionPassword){ statusEl.textContent='Session expired — please sign out and back in.'; statusEl.className='settings-cred-status err'; return; }
   try{
-    // If Railway backend is configured, verify credentials against ACGME first
     if(ACGME_BACKEND_URL){
+      // Primary path: verify + store in Railway backend
       statusEl.textContent = 'Verifying with ACGME…';
       statusEl.className = 'settings-cred-status';
       const token = localStorage.getItem('cf5-token');
@@ -1746,12 +1745,14 @@ async function saveAcgmeCredentials(){
       });
       const data = await resp.json();
       if(!resp.ok) throw new Error(data.error||'ACGME verification failed');
-    }
-
-    // Also keep local encrypted copy as fallback
-    if(sessionPassword){
+      // Mark locally that credentials are saved (no password stored client-side)
+      localStorage.setItem('cf5-vault', JSON.stringify({saved:true}));
+    } else if(sessionPassword){
+      // Fallback: local encrypted vault
       const blob = await encryptVault({acgmeUser:user, acgmePass:pass}, sessionPassword);
       localStorage.setItem('cf5-vault', JSON.stringify(blob));
+    } else {
+      throw new Error('No backend configured and session expired. Please sign out and back in.');
     }
 
     document.getElementById('s-acgme-user').value = '';
