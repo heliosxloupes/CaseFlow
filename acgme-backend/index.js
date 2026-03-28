@@ -233,6 +233,7 @@ app.post('/debug/b2c-login', async (req, res) => {
       loginUrl: loginUrl.slice(0, 200),
       b2cApiType,
       csrfFound: !!csrf, transIdFound: !!transId,
+      originalCsrfFirst20: csrf?.slice(0, 20),
       step1CookieNames: cookies.map(c => c.split('=')[0]),
       // Step 3a: Email POST
       emailPostStatus: saRes.status, emailPostBody: saText,
@@ -242,14 +243,15 @@ app.post('/debug/b2c-login', async (req, res) => {
       confirmedStatus: cfRes.status, confirmedLocation: cfLocation.slice(0, 200),
       confirmedHtmlLength: cfText.length,
       confirmedApiType: cfApiType,
-      cfTransIdSameAsOriginal: cfTransId === transId,
+      cfCsrfFirst20: cfCsrf?.slice(0, 20),
+      cfCsrfChanged: cfCsrf !== csrf,
+      passwordFormFirst1000: cfText.slice(0, 1000),
       // Step 4: Password POST
       pwPostStatus: step4bStatus, pwPostBody: step4bBody?.slice(0, 200),
       sa2CookieNames: sa2Cookies.map(c => c.split('=')[0]),
       // Step 5: Second confirmed (should have id_token)
       transIdAfterEmail: (transIdAfterEmail || '').slice(0, 60),
       transIdChanged: transIdAfterEmail !== transId,
-      transFromCookie: (transFromCookie || '').slice(0, 60),
       cf2Url: cf2Url.slice(0, 200),
       cf2Status: cf2Res.status, cf2Location: cf2Location.slice(0, 200),
       cf2HtmlLength: cf2Text.length,
