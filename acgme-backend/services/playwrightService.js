@@ -223,13 +223,11 @@ async function startLogin(username, password) {
       // Click "Send Code" / "Send verification code" to trigger OTP delivery to user's email/phone
       console.log('[PW] MFA page detected — looking for Send Code button...');
       try {
-        const sendBtn = page.locator(
-          'button:has-text("Send"), button:has-text("send"), input[value*="Send"], button[id*="send"], button[id*="Send"], #sendCode'
-        ).first();
+        const sendBtn = page.locator('#sendCode, button:has-text("Send Code"), button:has-text("Send")').first();
         if (await sendBtn.count() > 0) {
           await sendBtn.click();
-          console.log('[PW] Clicked Send Code, waiting for verificationCode input to appear...');
-          await page.waitForSelector('#verificationCode', { state: 'visible', timeout: 15000 }).catch(() => {});
+          console.log('[PW] Clicked #sendCode, waiting for verificationCode to become visible...');
+          await page.waitForSelector('#verificationCode', { state: 'visible', timeout: 20000 }).catch(() => {});
         }
       } catch (e) {
         console.log('[PW] Send Code warning:', e.message);
@@ -289,7 +287,7 @@ async function completeMFA(sessionId, code) {
     await otpInput.fill(code);
 
     // Submit — B2C "Verify Code" button
-    await page.locator('#continue, button:has-text("Verify"), button:has-text("verify"), button#verifyCode, button[type="submit"]').first().click();
+    await page.locator('#verifyCode, button:has-text("Verify Code"), button:has-text("Verify")').first().click();
 
     // Wait for ACGME to load
     await page.waitForURL(`${ACGME_ORIGIN}/ads/**`, { timeout: 35000 });
