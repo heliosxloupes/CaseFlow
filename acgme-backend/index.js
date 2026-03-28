@@ -183,7 +183,9 @@ app.post('/debug/b2c-login', async (req, res) => {
       saCookieNames: saCookies.map(c => c.split('=')[0]),
       confirmedUrl: confirmedUrl.slice(0, 200),
       confirmedStatus: cfRes.status, confirmedLocation: cfLocation.slice(0, 200),
-      confirmedHtmlFirst200: cfText.slice(0, 200),
+      confirmedHtmlLength: cfText.length,
+      confirmedHtmlFirst2000: cfText.slice(0, 2000),
+      confirmedHtmlLast500: cfText.slice(-500),
       idTokenFound: !!idToken, codeFound: !!code, formAction: (action || 'none').slice(0, 150),
       acgmeStatus, acgmeCookieCount, acgmeCookieNames,
     });
