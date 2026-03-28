@@ -1393,7 +1393,11 @@ async function submitCase(){
   } catch(e){
     // Save locally even if ACGME submission fails; user can re-submit from History
     status='pending';
-    showErrBanner('Case saved locally. ACGME submission failed:\n\n'+e.message+'\n\nYou can re-submit from Case History once this is resolved. Tap to dismiss.');
+    if(e.mfaRequired){
+      showErrBanner('Case saved. ACGME session expired — tap to go to Settings and reconnect.', ()=>{goTab('settings');toggleAcgmeForm();});
+    } else {
+      showErrBanner('Case saved locally. ACGME submission failed:\n\n'+e.message+'\n\nYou can re-submit from Case History. Tap to dismiss.');
+    }
     console.warn('ACGME submit error:',e);
   }
 
@@ -1911,7 +1915,15 @@ async function callSubmitAcgme(casePayload){
       body:JSON.stringify(body),
     });
     const data=await resp.json();
-    if(!resp.ok) throw new Error(data.error||'Submission failed');
+    if(!resp.ok){
+      // If MFA is required, prompt user to reconnect in Settings
+      if(data.mfaRequired){
+        const err=new Error('ACGME session expired — verification required. Go to Settings → ACGME Auto-Submit → Edit to reconnect.');
+        err.mfaRequired=true;
+        throw err;
+      }
+      throw new Error(data.error||'Submission failed');
+    }
   }
 }
 
@@ -1989,7 +2001,7 @@ function formatDate(d){if(!d)return'Today';return new Date(d+'T12:00:00').toLoca
 function esc(s){return s.replace(/'/g,"\'").replace(/"/g,'&quot;')}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast on '+type;setTimeout(()=>t.className='toast '+type,3200)}
-function showErrBanner(msg){const b=document.getElementById('err-banner');document.getElementById('err-banner-text').textContent=msg;b.style.display='block';}
+function showErrBanner(msg,onClick){const b=document.getElementById('err-banner');document.getElementById('err-banner-text').textContent=msg;b.style.display='block';b.onclick=onClick?function(){onClick();closeErrBanner();}:closeErrBanner;}
 function closeErrBanner(){document.getElementById('err-banner').style.display='none';}
 if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}
 </script>
