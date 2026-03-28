@@ -200,16 +200,30 @@ async function startLogin(username, password) {
     // ── Wait for outcome ──────────────────────────────────────────────────────
     console.log('[PW] Waiting for login outcome...');
     const outcome = await Promise.race([
-      page.waitForURL(`${ACGME_ORIGIN}/ads/**`, { timeout: 35000 }).then(() => 'success'),
+      page.waitForURL(`${ACGME_ORIGIN}/ads/**`, { timeout: 45000 }).then(() => 'success'),
+      // Broad MFA selector: any visible text/number input that appears after password step
       page.waitForSelector(
-        '#otpCode, input[name="otpCode"], input[placeholder*="code"], input[type="tel"], #verificationCode, input[name*="Code"]',
-        { timeout: 30000, state: 'visible' }
+        '#otpCode, input[name="otpCode"], input[id*="Code"], input[name*="Code"], input[id*="otp"], input[name*="otp"], input[type="tel"], input[autocomplete="one-time-code"], input[id*="verify"], input[name*="verify"]',
+        { timeout: 40000, state: 'visible' }
       ).then(() => 'mfa'),
       page.waitForSelector(
-        '#errorMessage, .error.pageLevel:visible, [aria-live="assertive"]:visible',
-        { timeout: 30000, state: 'visible' }
+        '#errorMessage',
+        { timeout: 40000, state: 'visible' }
       ).then(() => 'error'),
     ]).catch(() => 'timeout');
+
+    // Capture a diagnostic screenshot of the current page state
+    try {
+      const screenshotB64 = await page.screenshot({ encoding: 'base64', fullPage: true });
+      const currentUrl = page.url();
+      const pageTitle  = await page.title().catch(() => '');
+      const inputIds   = await page.evaluate(() =>
+        Array.from(document.querySelectorAll('input')).map(i => `id=${i.id} name=${i.name} type=${i.type}`)
+      ).catch(() => []);
+      console.log(`[PW] Page state: ${currentUrl} | title: ${pageTitle} | outcome: ${outcome}`);
+      console.log(`[PW] Inputs found: ${JSON.stringify(inputIds)}`);
+      console.log(`[PW] Screenshot (base64 first 100): ${screenshotB64.slice(0, 100)}`);
+    } catch (_) {}
 
     console.log(`[PW] Login outcome: ${outcome}`);
 

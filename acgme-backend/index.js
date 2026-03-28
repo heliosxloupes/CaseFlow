@@ -53,6 +53,79 @@ app.get('/health/db', async (req, res) => {
   }
 });
 
+// Debug: run Playwright login and return page state for diagnosis
+app.post('/debug/pw-login', async (req, res) => {
+  const { username, password } = req.body || {};
+  if (!username || !password) return res.status(400).json({ error: 'username and password required' });
+
+  const { chromium } = require('playwright');
+  const B2C_TENANT   = 'acgmeras.b2clogin.com';
+  const B2C_POLICY   = 'b2c_1a_signup_signin';
+  const B2C_CLIENT   = 'dcdddbd1-2b64-4940-9983-6a6442c526aa';
+  const B2C_REDIRECT = 'https://apps.acgme.org/ads/';
+  const steps = [];
+
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--single-process'],
+  });
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  });
+  const page = await context.newPage();
+
+  async function snap(label) {
+    const url    = page.url();
+    const title  = await page.title().catch(() => '');
+    const inputs = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('input')).map(i =>
+        ({ id: i.id, name: i.name, type: i.type, placeholder: i.placeholder, visible: i.offsetParent !== null })
+      )
+    ).catch(() => []);
+    const html200 = await page.content().then(h => h.slice(0, 2000)).catch(() => '');
+    const shot = await page.screenshot({ encoding: 'base64', fullPage: true }).catch(() => '');
+    steps.push({ label, url, title, inputs, html200, screenshot: shot.slice(0, 500) });
+  }
+
+  try {
+    const authorizeUrl = `https://${B2C_TENANT}/acgmeras.onmicrosoft.com/${B2C_POLICY}/oauth2/v2.0/authorize`
+      + `?client_id=${B2C_CLIENT}&redirect_uri=${encodeURIComponent(B2C_REDIRECT)}`
+      + `&response_type=code%20id_token&scope=openid%20profile%20offline_access&response_mode=form_post&nonce=dbg${Date.now()}`;
+
+    await page.goto(authorizeUrl, { timeout: 30000, waitUntil: 'domcontentloaded' });
+    await snap('after_authorize_goto');
+
+    // Fill email
+    const emailSel = '#signInName, input[name="signInName"], input[name="logonIdentifier"], input[type="email"]';
+    await page.waitForSelector(emailSel, { timeout: 15000 });
+    await page.fill(emailSel, username);
+    await snap('after_fill_email');
+
+    await page.locator('#continue, button#continue, button:has-text("Continue"), button[type="submit"]').first().click();
+    await page.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => {});
+    await snap('after_continue_click');
+
+    // Fill password
+    const passSel = '#password, input[name="password"], input[type="password"]';
+    await page.waitForSelector(passSel, { timeout: 15000 }).catch(() => {});
+    await page.fill(passSel, password).catch(() => {});
+    await snap('after_fill_password');
+
+    await page.locator('#next, button#next, button:has-text("Sign in"), button[type="submit"]').first().click();
+
+    // Wait 10 seconds to see where we end up
+    await new Promise(r => setTimeout(r, 10000));
+    await snap('after_signin_10s');
+
+    await browser.close();
+    return res.json({ steps });
+  } catch (err) {
+    await snap('error_state').catch(() => {});
+    await browser.close().catch(() => {});
+    return res.json({ error: err.message, steps });
+  }
+});
+
 // Debug: test B2C login flow step-by-step
 app.post('/debug/b2c-login', async (req, res) => {
   const { username, password } = req.body || {};
