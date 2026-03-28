@@ -111,11 +111,21 @@ app.post('/debug/b2c-login', async (req, res) => {
     if (!csrf)    csrf    = loginHtml.match(/"csrf"\s*:\s*"([^"]+)"/)?.[1] || null;
     if (!transId) transId = loginHtml.match(/"transId"\s*:\s*"([^"]+)"/)?.[1] || loginUrl.match(/[?&]tx=([^&]+)/)?.[1] || null;
 
+    // Merge cookies: later values override earlier ones for same name
+    function mergeCookies(existing, newer) {
+      const map = {};
+      [...existing, ...newer].forEach(c => {
+        const part = c.split(';')[0]; const eq = part.indexOf('=');
+        if (eq > 0) map[part.slice(0, eq).trim()] = part;
+      });
+      return Object.values(map).join('; ');
+    }
+
     // Step 3: POST credentials — use apiBase (case-correct from SETTINGS)
     const saUrl = `${apiBase}/SelfAsserted?tx=${transId||''}&p=${B2C_POLICY}`;
     const saHeaders = {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': UA, 'Cookie': parseCookies(cookies),
+      'User-Agent': UA, 'Cookie': mergeCookies(cookies, []),
       'Referer': loginUrl, 'Origin': `https://${B2C_TENANT}`, 'X-Requested-With': 'XMLHttpRequest',
     };
     if (csrf) saHeaders['X-CSRF-TOKEN'] = csrf;
@@ -123,20 +133,19 @@ app.post('/debug/b2c-login', async (req, res) => {
     const saRes = await ft(saUrl, { method: 'POST', headers: saHeaders, body: saBody.toString(), redirect: 'manual' }, 12000);
     const saText = await saRes.text();
     const saCookies = saRes.headers.raw()['set-cookie'] || [];
-
-    const allCookiesAfterSA = [...cookies, ...saCookies];
+    const cookiesAfterSA = mergeCookies(cookies, saCookies); // merged string
 
     // Step 4: GET confirmed — apiBase already set from SETTINGS above
     const confirmedUrl = `${apiBase}/api/CombinedSigninAndSignup/confirmed`
       + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf||'')}&tx=${transId||''}&p=${B2C_POLICY}`;
     const cfRes = await ft(confirmedUrl, {
-      headers: { 'User-Agent': UA, 'Cookie': parseCookies(allCookiesAfterSA), 'Referer': loginUrl },
+      headers: { 'User-Agent': UA, 'Cookie': cookiesAfterSA, 'Referer': loginUrl },
       redirect: 'manual',
     }, 12000);
     const cfText = await cfRes.text();
     const cfCookies = cfRes.headers.raw()['set-cookie'] || [];
     const cfLocation = cfRes.headers.get('location') || '';
-    const allCookiesAfterCF = [...allCookiesAfterSA, ...cfCookies];
+    const cookiesAfterCF = mergeCookies(cookies, [...saCookies, ...cfCookies]);
 
     // Step 5: POST id_token if present
     const idToken = cfText.match(/name="id_token"\s+value="([^"]+)"/i)?.[1];
@@ -150,7 +159,7 @@ app.post('/debug/b2c-login', async (req, res) => {
       const stateM = cfText.match(/name="state"\s+value="([^"]+)"/i);
       if (stateM) tokenBody.append('state', stateM[1]);
       const acgmeRes = await ft(action || 'https://apps.acgme.org/ads/', {
-        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA, 'Cookie': parseCookies(allCookiesAfterCF) },
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA, 'Cookie': cookiesAfterCF },
         body: tokenBody.toString(), redirect: 'follow',
       }, 12000);
       const acgmeCookies = acgmeRes.headers.raw()['set-cookie'] || [];
@@ -171,6 +180,7 @@ app.post('/debug/b2c-login', async (req, res) => {
       csrfFound: !!csrf, transIdFound: !!transId,
       transIdValue: (transId||'').slice(0, 60),
       selfAssertedStatus: saRes.status, selfAssertedBody: saText,
+      saCookieNames: saCookies.map(c => c.split('=')[0]),
       confirmedUrl: confirmedUrl.slice(0, 200),
       confirmedStatus: cfRes.status, confirmedLocation: cfLocation.slice(0, 200),
       confirmedHtmlFirst200: cfText.slice(0, 200),

@@ -2,313 +2,239 @@ const fetch = require('node-fetch');
 const { URLSearchParams } = require('url');
 const AbortController = require('abort-controller');
 
-const BASE_URL = 'https://apps.acgme.org';
+const BASE_URL    = 'https://apps.acgme.org';
+const B2C_TENANT  = 'acgmeras.b2clogin.com';
+const B2C_POLICY  = 'b2c_1a_signup_signin';
+const B2C_CLIENT  = 'dcdddbd1-2b64-4940-9983-6a6442c526aa';
+const B2C_REDIRECT= 'https://apps.acgme.org/ads/';
+const B2C_BASE    = `https://${B2C_TENANT}/acgmeras.onmicrosoft.com/${B2C_POLICY}`;
+const UA          = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15';
 
-const B2C_TENANT   = 'acgmeras.b2clogin.com';
-const B2C_POLICY   = 'b2c_1a_signup_signin';
-const B2C_CLIENT   = 'dcdddbd1-2b64-4940-9983-6a6442c526aa';
-const B2C_REDIRECT = 'https://apps.acgme.org/ads/';
-const B2C_BASE     = `https://${B2C_TENANT}/acgmeras.onmicrosoft.com/${B2C_POLICY}`;
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15';
-
-// ── helpers ──────────────────────────────────────────────────────────────────
-
-function parseCookies(setCookieArray) {
-  return setCookieArray.map(c => c.split(';')[0]).join('; ');
-}
-
-function mergeSetCookies(existing, newCookies) {
-  // Keep a map of name→value, later cookies override earlier ones
+/** Merge arrays of Set-Cookie strings; later entries override earlier by name */
+function mergeCookies(...arrays) {
   const map = {};
-  [...existing, ...newCookies].forEach(c => {
-    const part = c.split(';')[0];
-    const eq = part.indexOf('=');
-    if (eq > 0) map[part.slice(0, eq).trim()] = part;
+  [].concat(...arrays).forEach(c => {
+    const pair = c.split(';')[0];
+    const eq   = pair.indexOf('=');
+    if (eq > 0) map[pair.slice(0, eq).trim()] = pair;
   });
   return Object.values(map).join('; ');
 }
 
-/** Fetch with a hard timeout (ms) */
-async function fetchWithTimeout(url, opts, timeoutMs = 15000) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
+/** Build Cookie header string from an array of Set-Cookie strings */
+function cookieHeader(arr) {
+  return mergeCookies(arr);
+}
+
+async function fetchT(url, opts, ms = 15000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
   try {
-    return await fetch(url, { ...opts, signal: controller.signal });
+    return await fetch(url, { ...opts, signal: ctrl.signal });
   } finally {
-    clearTimeout(id);
+    clearTimeout(t);
   }
 }
 
-// ── Step 1 – Start the OAuth flow ────────────────────────────────────────────
+// ── B2C Login Flow ────────────────────────────────────────────────────────────
 
-/**
- * Initiates the Azure B2C authorize flow.
- * Returns: { loginUrl, loginHtml, cookies }
- */
-async function startB2CFlow() {
+async function loginToACGME(username, password) {
+  // ── STEP 1: GET authorize page (manual redirects to avoid following back to ACGME) ──
   const authorizeUrl = `${B2C_BASE}/oauth2/v2.0/authorize`
     + `?client_id=${B2C_CLIENT}`
     + `&redirect_uri=${encodeURIComponent(B2C_REDIRECT)}`
     + `&response_type=code%20id_token`
     + `&scope=openid%20profile%20offline_access`
     + `&response_mode=form_post`
-    + `&nonce=caseflow${Date.now()}`;
+    + `&nonce=cf${Date.now()}`;
 
-  console.log('[B2C] Step 1 – authorize URL:', authorizeUrl.slice(0, 120));
-
-  // Follow redirects manually so we don't chase the final ACGME redirect
   let url = authorizeUrl;
-  let cookies = [];
-  let html = '';
-  let finalUrl = url;
+  let allSetCookies = [];
+  let loginHtml = '';
+  let loginUrl = '';
 
-  for (let i = 0; i < 10; i++) {
-    const res = await fetchWithTimeout(url, {
-      headers: { 'User-Agent': UA, 'Accept': 'text/html', 'Cookie': parseCookies(cookies) },
+  for (let hop = 0; hop < 10; hop++) {
+    const r = await fetchT(url, {
+      headers: { 'User-Agent': UA, 'Accept': 'text/html', 'Cookie': cookieHeader(allSetCookies) },
       redirect: 'manual',
-    }, 10000);
+    }, 12000);
 
-    const newCookies = res.headers.raw()['set-cookie'] || [];
-    cookies = [...cookies, ...newCookies];
+    const sc = r.headers.raw()['set-cookie'] || [];
+    allSetCookies = allSetCookies.concat(sc);
 
-    const location = res.headers.get('location') || '';
-    console.log(`[B2C] Step 1 hop ${i}: status=${res.status} location=${location.slice(0, 100)}`);
+    const loc = r.headers.get('location') || '';
+    console.log(`[B2C] Hop ${hop}: ${r.status} → ${loc.slice(0, 80) || '(no redirect)'}`);
 
-    if (res.status >= 200 && res.status < 300) {
-      html = await res.text();
-      finalUrl = url;
+    if (r.status >= 200 && r.status < 300) {
+      loginHtml = await r.text();
+      loginUrl  = url;
       break;
     }
 
-    if (res.status >= 300 && res.status < 400) {
-      // Don't follow if it redirects back to the ACGME redirect_uri (end of flow)
-      if (location.startsWith(B2C_REDIRECT)) {
-        throw new Error('B2C immediately redirected to ACGME without showing login page — unexpected flow.');
+    if (r.status >= 300 && r.status < 400) {
+      if (loc.startsWith(B2C_REDIRECT)) {
+        throw new Error('B2C redirected to ACGME without showing login page — unexpected flow.');
       }
-      url = location.startsWith('http') ? location : `https://${B2C_TENANT}${location}`;
+      url = loc.startsWith('http') ? loc : `https://${B2C_TENANT}${loc}`;
       continue;
     }
 
-    throw new Error(`B2C authorize step failed with status ${res.status}`);
+    throw new Error(`B2C authorize failed at hop ${hop} with status ${r.status}`);
   }
 
-  if (!html) throw new Error('B2C login page never returned HTML after 10 hops');
+  if (!loginHtml) throw new Error('B2C never returned the login page HTML');
 
-  return { loginUrl: finalUrl, loginHtml: html, cookies };
-}
+  // ── STEP 2: Extract CSRF, transId, and API base from SETTINGS ──
+  let csrf = null, transId = null, apiBase = B2C_BASE;
 
-// ── Step 2 – Extract CSRF / transId / apiBase ────────────────────────────────
-
-function extractB2CConfig(html, url) {
-  let csrf = null;
-  let transId = null;
-  let apiBase = B2C_BASE; // fallback (lowercase)
-
-  // Try SETTINGS JSON block first — this has the authoritative values
-  const settingsMatch = html.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i);
-  if (settingsMatch) {
+  const sm = loginHtml.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i);
+  if (sm) {
     try {
-      const s = JSON.parse(settingsMatch[1]);
+      const s = JSON.parse(sm[1]);
       csrf    = s.csrf    || null;
       transId = s.transId || null;
-      // hosts.tenant gives the CASE-CORRECT path for API endpoints
-      // e.g. "/acgmeras.onmicrosoft.com/B2C_1A_signup_signin"
-      if (s.hosts && s.hosts.tenant) {
+      if (s.hosts?.tenant) {
         apiBase = `https://${B2C_TENANT}${s.hosts.tenant}`;
       }
     } catch (_) {}
   }
+  if (!csrf)    csrf    = loginHtml.match(/"csrf"\s*:\s*"([^"]+)"/)?.[1]    || null;
+  if (!transId) transId = loginHtml.match(/"transId"\s*:\s*"([^"]+)"/)?.[1] || loginUrl.match(/[?&]tx=([^&]+)/)?.[1] || null;
 
-  // Fallback: inline JSON strings
-  if (!csrf)    csrf    = (html.match(/"csrf"\s*:\s*"([^"]+)"/)?.[1]) || null;
-  if (!transId) transId = (html.match(/"transId"\s*:\s*"([^"]+)"/)?.[1]) || null;
-  if (!transId) transId = (url.match(/[?&]tx=([^&]+)/)?.[1]) || null;
+  console.log(`[B2C] CSRF: ${csrf ? 'found' : 'MISSING'} | transId: ${transId ? 'found' : 'MISSING'} | apiBase: ${apiBase}`);
 
-  console.log('[B2C] Step 2 – csrf:', csrf ? 'found' : 'MISSING',
-              '| transId:', transId ? 'found' : 'MISSING',
-              '| apiBase:', apiBase);
-  return { csrf, transId, apiBase };
-}
+  if (!transId) {
+    throw new Error('Could not extract B2C transId. ACGME login flow may have changed.');
+  }
 
-// ── Step 3 – POST credentials to SelfAsserted ────────────────────────────────
-
-async function postCredentials(username, password, csrf, transId, loginUrl, cookies, apiBase) {
-  const selfAssertedUrl = `${apiBase}/SelfAsserted?tx=${transId || ''}&p=${B2C_POLICY}`;
-  console.log('[B2C] Step 3 – POST to SelfAsserted:', selfAssertedUrl.slice(0, 120));
-
-  const body = new URLSearchParams({
-    signInName: username,
-    password,
-    request_type: 'RESPONSE',
-  });
-
-  const headers = {
+  // ── STEP 3: POST credentials to SelfAsserted ──
+  const selfAssertedUrl = `${apiBase}/SelfAsserted?tx=${transId}&p=${B2C_POLICY}`;
+  const saHeaders = {
     'Content-Type': 'application/x-www-form-urlencoded',
     'User-Agent': UA,
-    'Cookie': parseCookies(cookies),
+    'Cookie': cookieHeader(allSetCookies),
     'Referer': loginUrl,
     'Origin': `https://${B2C_TENANT}`,
     'X-Requested-With': 'XMLHttpRequest',
   };
-  if (csrf) headers['X-CSRF-TOKEN'] = csrf;
+  if (csrf) saHeaders['X-CSRF-TOKEN'] = csrf;
 
-  const res = await fetchWithTimeout(selfAssertedUrl, {
-    method: 'POST',
-    headers,
-    body: body.toString(),
-    redirect: 'manual',
-  }, 15000);
+  const saBody = new URLSearchParams({ signInName: username, password, request_type: 'RESPONSE' });
+  const saRes  = await fetchT(selfAssertedUrl, { method: 'POST', headers: saHeaders, body: saBody.toString(), redirect: 'manual' }, 15000);
+  const saText = await saRes.text();
+  const saSetCookies = saRes.headers.raw()['set-cookie'] || [];
+  allSetCookies = allSetCookies.concat(saSetCookies);
 
-  const newCookies = res.headers.raw()['set-cookie'] || [];
-  const allCookies = [...cookies, ...newCookies];
-  const resText = await res.text();
+  console.log(`[B2C] SelfAsserted: ${saRes.status} | body: ${saText.slice(0, 150)}`);
+  console.log(`[B2C] SelfAsserted new cookies: [${saSetCookies.map(c => c.split('=')[0]).join(', ')}]`);
 
-  console.log('[B2C] Step 3 – status:', res.status, '| body:', resText.slice(0, 300));
-
-  if (res.status !== 200 && res.status !== 302) {
-    throw new Error(`B2C credential POST failed with status ${res.status}`);
+  if (saRes.status !== 200 && saRes.status !== 302) {
+    throw new Error(`B2C SelfAsserted failed with status ${saRes.status}`);
   }
-
-  // B2C SelfAsserted returns JSON: {"status":"200"} on success
   try {
-    const json = JSON.parse(resText);
-    if (json.status && json.status !== '200') {
-      throw new Error(`ACGME login rejected: ${json.message || json.status}`);
+    const saJson = JSON.parse(saText);
+    if (saJson.status && saJson.status !== '200') {
+      throw new Error(`ACGME credentials rejected: ${saJson.message || saJson.status}`);
     }
   } catch (e) {
-    if (e.message.startsWith('ACGME login rejected')) throw e;
-    // Not JSON — may be a 302 redirect page, continue
+    if (e.message.startsWith('ACGME credentials rejected')) throw e;
   }
 
-  return { allCookies };
-}
-
-// ── Step 4 – GET /confirmed to trigger the OIDC redirect ─────────────────────
-
-async function getConfirmedPage(csrf, transId, loginUrl, cookies, apiBase) {
+  // ── STEP 4: GET /confirmed to get the id_token form ──
   const confirmedUrl = `${apiBase}/api/CombinedSigninAndSignup/confirmed`
-    + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf || '')}&tx=${transId || ''}&p=${B2C_POLICY}`;
+    + `?rememberMe=false`
+    + `&csrf_token=${encodeURIComponent(csrf || '')}`
+    + `&tx=${transId}`
+    + `&p=${B2C_POLICY}`;
 
-  console.log('[B2C] Step 4 – GET confirmed:', confirmedUrl.slice(0, 120));
-
-  const res = await fetchWithTimeout(confirmedUrl, {
-    headers: { 'User-Agent': UA, 'Cookie': parseCookies(cookies), 'Referer': loginUrl },
+  const cfRes = await fetchT(confirmedUrl, {
+    headers: {
+      'User-Agent': UA,
+      'Cookie': cookieHeader(allSetCookies),
+      'Referer': loginUrl,
+      'Accept': 'text/html,application/xhtml+xml',
+    },
     redirect: 'manual',
   }, 15000);
 
-  const newCookies = res.headers.raw()['set-cookie'] || [];
-  const html = await res.text();
-  const location = res.headers.get('location') || '';
+  const cfText    = await cfRes.text();
+  const cfSetCookies = cfRes.headers.raw()['set-cookie'] || [];
+  const cfLocation   = cfRes.headers.get('location') || '';
+  allSetCookies = allSetCookies.concat(cfSetCookies);
 
-  console.log('[B2C] Step 4 – status:', res.status, '| location:', location.slice(0, 100));
-  console.log('[B2C] Step 4 – html snippet:', html.slice(0, 400));
+  console.log(`[B2C] Confirmed: ${cfRes.status} | location: ${cfLocation.slice(0, 100)}`);
+  console.log(`[B2C] Confirmed HTML snippet: ${cfText.slice(0, 300)}`);
 
-  return { html, location, allCookies: [...cookies, ...newCookies] };
-}
+  // ── STEP 5: POST id_token / code to ACGME ──
+  const idToken = cfText.match(/name="id_token"\s+value="([^"]+)"/i)?.[1];
+  const code    = cfText.match(/name="code"\s+value="([^"]+)"/i)?.[1];
+  const state   = cfText.match(/name="state"\s+value="([^"]+)"/i)?.[1];
+  const action  = cfText.match(/<form[^>]+action="([^"]+)"/i)?.[1]?.replace(/&amp;/g, '&') || B2C_REDIRECT;
 
-// ── Step 5 – Post id_token to ACGME ──────────────────────────────────────────
+  let sessionCookie = cookieHeader(allSetCookies);
 
-async function postTokenToACGME(html, cookies) {
-  const idToken = html.match(/name="id_token"\s+value="([^"]+)"/i)?.[1];
-  const code    = html.match(/name="code"\s+value="([^"]+)"/i)?.[1];
-  const state   = html.match(/name="state"\s+value="([^"]+)"/i)?.[1];
-  const action  = html.match(/<form[^>]+action="([^"]+)"/i)?.[1]?.replace(/&amp;/g, '&');
+  if (idToken || code) {
+    const tokenBody = new URLSearchParams();
+    if (idToken) tokenBody.append('id_token', idToken);
+    if (code)    tokenBody.append('code', code);
+    if (state)   tokenBody.append('state', state);
 
-  if (!idToken && !code) {
-    console.log('[B2C] Step 5 – No id_token/code in confirmed page, skipping ACGME POST');
-    return parseCookies(cookies);
-  }
-
-  const target = action || B2C_REDIRECT;
-  console.log('[B2C] Step 5 – POST to ACGME:', target);
-
-  const body = new URLSearchParams();
-  if (idToken) body.append('id_token', idToken);
-  if (code)    body.append('code', code);
-  if (state)   body.append('state', state);
-
-  const res = await fetchWithTimeout(target, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': UA,
-      'Cookie': parseCookies(cookies),
-    },
-    body: body.toString(),
-    redirect: 'follow',
-  }, 15000);
-
-  const acgmeCookies = res.headers.raw()['set-cookie'] || [];
-  console.log('[B2C] Step 5 – ACGME status:', res.status, '| new cookies:', acgmeCookies.length);
-
-  return mergeSetCookies(cookies, acgmeCookies);
-}
-
-// ── Main login function ───────────────────────────────────────────────────────
-
-async function loginToACGME(username, password) {
-  const { loginUrl, loginHtml, cookies: loginCookies } = await startB2CFlow();
-  const { csrf, transId, apiBase } = extractB2CConfig(loginHtml, loginUrl);
-
-  if (!transId) {
-    console.log('[B2C] loginHtml snippet:', loginHtml.slice(0, 800));
-    throw new Error('Could not extract B2C transId from login page. ACGME may have changed their login flow.');
-  }
-
-  const { allCookies: cookiesAfterCred } = await postCredentials(username, password, csrf, transId, loginUrl, loginCookies, apiBase);
-  const { html: confirmedHtml, location, allCookies: cookiesAfterConfirm } = await getConfirmedPage(csrf, transId, loginUrl, cookiesAfterCred, apiBase);
-
-  let sessionCookie;
-  if (confirmedHtml.includes('id_token') || confirmedHtml.includes('code')) {
-    sessionCookie = await postTokenToACGME(confirmedHtml, cookiesAfterConfirm);
-  } else if (location && location.startsWith('http')) {
-    // Some B2C configs redirect directly
-    const followRes = await fetchWithTimeout(location, {
-      headers: { 'User-Agent': UA, 'Cookie': parseCookies(cookiesAfterConfirm) },
+    console.log(`[B2C] Posting token to ACGME: ${action}`);
+    const acgmeRes = await fetchT(action, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': UA,
+        'Cookie': cookieHeader(allSetCookies),
+      },
+      body: tokenBody.toString(),
       redirect: 'follow',
     }, 15000);
-    const followCookies = followRes.headers.raw()['set-cookie'] || [];
-    sessionCookie = mergeSetCookies(cookiesAfterConfirm, followCookies);
-    console.log('[B2C] Followed redirect to:', location.slice(0, 80), '| status:', followRes.status);
-  } else {
-    sessionCookie = parseCookies(cookiesAfterConfirm);
+
+    const acgmeSetCookies = acgmeRes.headers.raw()['set-cookie'] || [];
+    allSetCookies = allSetCookies.concat(acgmeSetCookies);
+    sessionCookie = cookieHeader(allSetCookies);
+    console.log(`[B2C] ACGME POST status: ${acgmeRes.status} | cookies: [${acgmeSetCookies.map(c => c.split('=')[0]).join(', ')}]`);
+  } else if (cfLocation && cfLocation.startsWith('http')) {
+    console.log(`[B2C] Following redirect: ${cfLocation.slice(0, 100)}`);
+    const followRes = await fetchT(cfLocation, {
+      headers: { 'User-Agent': UA, 'Cookie': cookieHeader(allSetCookies) },
+      redirect: 'follow',
+    }, 15000);
+    const followSetCookies = followRes.headers.raw()['set-cookie'] || [];
+    allSetCookies = allSetCookies.concat(followSetCookies);
+    sessionCookie = cookieHeader(allSetCookies);
   }
 
+  console.log(`[B2C] Final cookie keys: ${cookieHeader(allSetCookies).split('; ').map(p => p.split('=')[0]).join(', ')}`);
+
   if (!sessionCookie.includes('ASP.NET_SessionId') && !sessionCookie.includes('.AspNet')) {
-    console.log('[B2C] Final cookies:', sessionCookie.slice(0, 200));
     throw new Error(
-      'Login did not produce an ACGME session cookie. ' +
-      'If your account requires Duo/MFA, automatic login is not yet supported.'
+      'Login succeeded in B2C but no ACGME session cookie was returned. ' +
+      'If your account requires Duo/MFA, automatic submission is not yet supported.'
     );
   }
 
   return sessionCookie;
 }
 
-// ── Step 2: Get Insert page data ─────────────────────────────────────────────
+// ── Case Submission ───────────────────────────────────────────────────────────
 
 async function getInsertPageData(sessionCookie) {
-  const res = await fetchWithTimeout(`${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`, {
-    headers: {
-      'Cookie': sessionCookie,
-      'User-Agent': UA,
-      'Accept': 'text/html,application/xhtml+xml',
-    },
+  const res = await fetchT(`${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`, {
+    headers: { 'Cookie': sessionCookie, 'User-Agent': UA, 'Accept': 'text/html' },
   }, 15000);
 
-  if (!res.ok) throw new Error(`Failed to load Insert page: ${res.status}`);
+  if (!res.ok) throw new Error(`Failed to load ACGME Insert page: ${res.status}`);
 
-  const html = await res.text();
-
+  const html       = await res.text();
   const tokenMatch = html.match(/name="__RequestVerificationToken"\s+[^>]*value="([^"]+)"/);
-  if (!tokenMatch) throw new Error('Could not find request verification token on Insert page');
+  if (!tokenMatch) throw new Error('Could not find __RequestVerificationToken on Insert page');
 
-  const hidden = scrapeHiddenFields(html);
-  return { token: tokenMatch[1], hidden };
+  return { token: tokenMatch[1], hidden: scrapeHiddenFields(html) };
 }
-
-// ── Step 3: Submit a case ─────────────────────────────────────────────────────
 
 async function submitCase(sessionCookie, caseData) {
   const { token, hidden } = await getInsertPageData(sessionCookie);
@@ -330,7 +256,7 @@ async function submitCase(sessionCookie, caseData) {
     SearchTerm:      'False',
   });
 
-  const submitRes = await fetchWithTimeout(`${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`, {
+  const res = await fetchT(`${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -343,26 +269,22 @@ async function submitCase(sessionCookie, caseData) {
     redirect: 'manual',
   }, 15000);
 
-  if (submitRes.status === 302) {
-    const location = submitRes.headers.get('location') || '';
-    if (location.includes('Insert') || location.includes('CaseLogs')) {
+  if (res.status === 302) {
+    const loc = res.headers.get('location') || '';
+    if (loc.includes('Insert') || loc.includes('CaseLogs')) {
       return { success: true, message: 'Case submitted successfully' };
     }
   }
-
-  if (submitRes.status === 200) {
-    const responseHtml = await submitRes.text();
-    if (responseHtml.includes('submitted successfully') || responseHtml.includes('case was submitted')) {
+  if (res.status === 200) {
+    const html = await res.text();
+    if (html.includes('submitted successfully') || html.includes('case was submitted')) {
       return { success: true, message: 'Case submitted successfully' };
     }
-    const errorMatch = responseHtml.match(/class="[^"]*error[^"]*"[^>]*>([^<]+)</i);
-    if (errorMatch) throw new Error(`ACGME error: ${errorMatch[1].trim()}`);
+    const err = html.match(/class="[^"]*error[^"]*"[^>]*>([^<]+)</i);
+    if (err) throw new Error(`ACGME error: ${err[1].trim()}`);
   }
-
-  throw new Error(`Unexpected response status: ${submitRes.status}`);
+  throw new Error(`Unexpected submission response: ${res.status}`);
 }
-
-// ── Lookup data ───────────────────────────────────────────────────────────────
 
 async function getLookupData(sessionCookie, type, params = {}) {
   const endpoints = {
@@ -372,36 +294,23 @@ async function getLookupData(sessionCookie, type, params = {}) {
     codes:     '/ads/CaseLogs/CaseEntryMobile/GetCodes',
     caseCount: '/ads/CaseLogs/CaseEntryMobile/GetProcedureCaseCount',
   };
-
   const endpoint = endpoints[type];
   if (!endpoint) throw new Error(`Unknown lookup type: ${type}`);
-
   const query = new URLSearchParams(params).toString();
-  const url = `${BASE_URL}${endpoint}${query ? '?' + query : ''}`;
-
-  const res = await fetchWithTimeout(url, {
-    headers: {
-      'Cookie': sessionCookie,
-      'User-Agent': UA,
-      'Accept': 'application/json, text/javascript, */*',
-      'X-Requested-With': 'XMLHttpRequest',
-    },
+  const url   = `${BASE_URL}${endpoint}${query ? '?' + query : ''}`;
+  const res   = await fetchT(url, {
+    headers: { 'Cookie': sessionCookie, 'User-Agent': UA, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
   }, 15000);
-
   if (!res.ok) throw new Error(`Lookup failed: ${res.status}`);
   return res.json();
 }
 
-// ── HTML helpers ──────────────────────────────────────────────────────────────
-
 function scrapeHiddenFields(html) {
   const fields = {};
-  const regex = /<input[^>]+type="hidden"[^>]+name="([^"]+)"[^>]+value="([^"]*)"[^>]*>/gi;
+  const regex  = /<input[^>]+type="hidden"[^>]+name="([^"]+)"[^>]+value="([^"]*)"[^>]*>/gi;
   let match;
   while ((match = regex.exec(html)) !== null) {
-    if (match[1] !== '__RequestVerificationToken') {
-      fields[match[1]] = match[2];
-    }
+    if (match[1] !== '__RequestVerificationToken') fields[match[1]] = match[2];
   }
   return fields;
 }
