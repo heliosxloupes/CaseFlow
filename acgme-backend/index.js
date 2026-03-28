@@ -124,16 +124,50 @@ app.post('/debug/b2c-login', async (req, res) => {
     const saText = await saRes.text();
     const saCookies = saRes.headers.raw()['set-cookie'] || [];
 
+    const allCookiesAfterSA = [...cookies, ...saCookies];
+
+    // Step 4: GET confirmed
+    const confirmedUrl = `${B2C_BASE}/api/CombinedSigninAndSignup/confirmed`
+      + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf||'')}&tx=${transId||''}&p=${B2C_POLICY}`;
+    const cfRes = await ft(confirmedUrl, {
+      headers: { 'User-Agent': UA, 'Cookie': parseCookies(allCookiesAfterSA), 'Referer': loginUrl },
+      redirect: 'manual',
+    }, 12000);
+    const cfText = await cfRes.text();
+    const cfCookies = cfRes.headers.raw()['set-cookie'] || [];
+    const cfLocation = cfRes.headers.get('location') || '';
+    const allCookiesAfterCF = [...allCookiesAfterSA, ...cfCookies];
+
+    // Step 5: POST id_token if present
+    const idToken = cfText.match(/name="id_token"\s+value="([^"]+)"/i)?.[1];
+    const code    = cfText.match(/name="code"\s+value="([^"]+)"/i)?.[1];
+    const action  = cfText.match(/<form[^>]+action="([^"]+)"/i)?.[1]?.replace(/&amp;/g, '&');
+    let acgmeStatus = null, acgmeCookieCount = 0, acgmeCookieNames = [];
+    if (idToken || code) {
+      const tokenBody = new URLSearchParams();
+      if (idToken) tokenBody.append('id_token', idToken);
+      if (code) tokenBody.append('code', code);
+      const stateM = cfText.match(/name="state"\s+value="([^"]+)"/i);
+      if (stateM) tokenBody.append('state', stateM[1]);
+      const acgmeRes = await ft(action || 'https://apps.acgme.org/ads/', {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA, 'Cookie': parseCookies(allCookiesAfterCF) },
+        body: tokenBody.toString(), redirect: 'follow',
+      }, 12000);
+      const acgmeCookies = acgmeRes.headers.raw()['set-cookie'] || [];
+      acgmeStatus = acgmeRes.status;
+      acgmeCookieCount = acgmeCookies.length;
+      acgmeCookieNames = acgmeCookies.map(c => c.split('=')[0]);
+    }
+
     return res.json({
       hops,
       loginUrl: loginUrl.slice(0, 150),
-      loginHtmlSnippet: loginHtml.slice(0, 600),
-      csrfFound: !!csrf,
-      transIdFound: !!transId,
-      selfAssertedUrl: saUrl.slice(0, 150),
-      selfAssertedStatus: saRes.status,
-      selfAssertedBody: saText.slice(0, 400),
-      cookieCount: cookies.length + saCookies.length,
+      csrfFound: !!csrf, transIdFound: !!transId,
+      selfAssertedStatus: saRes.status, selfAssertedBody: saText.slice(0, 200),
+      confirmedStatus: cfRes.status, confirmedLocation: cfLocation.slice(0, 150),
+      confirmedHtmlSnippet: cfText.slice(0, 600),
+      idTokenFound: !!idToken, codeFound: !!code, formAction: (action || 'none').slice(0, 100),
+      acgmeStatus, acgmeCookieCount, acgmeCookieNames,
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
