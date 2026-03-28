@@ -179,13 +179,16 @@ app.post('/debug/b2c-login', async (req, res) => {
       settings: settingsParsed,   // Full SETTINGS object from B2C page
       csrfFound: !!csrf, transIdFound: !!transId,
       transIdValue: (transId||'').slice(0, 60),
+      step1CookieNames: cookies.map(c => c.split('=')[0]),
       selfAssertedStatus: saRes.status, selfAssertedBody: saText,
       saCookieNames: saCookies.map(c => c.split('=')[0]),
+      cookiesSentToConfirmed: cookiesAfterSA.slice(0, 400),
       confirmedUrl: confirmedUrl.slice(0, 200),
       confirmedStatus: cfRes.status, confirmedLocation: cfLocation.slice(0, 200),
       confirmedHtmlLength: cfText.length,
-      confirmedHtmlFirst2000: cfText.slice(0, 2000),
-      confirmedHtmlLast500: cfText.slice(-500),
+      confirmedSettingsApi: cfText.match(/"api"\s*:\s*"([^"]+)"/)?.[1] || 'not found',
+      confirmedSettingsTransId: cfText.match(/"transId"\s*:\s*"([^"]+)"/)?.[1]?.slice(0, 50) || 'not found',
+      confirmedHtmlLast300: cfText.slice(-300),
       idTokenFound: !!idToken, codeFound: !!code, formAction: (action || 'none').slice(0, 150),
       acgmeStatus, acgmeCookieCount, acgmeCookieNames,
     });
