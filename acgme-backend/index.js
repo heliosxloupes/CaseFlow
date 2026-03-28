@@ -24,12 +24,33 @@ app.use('/api/auth', authRoutes);
 app.use('/api/cases', authenticate, caseRoutes);
 app.use('/api/lookups', authenticate, lookupRoutes);
 
-app.get('/health', (req, res) => res.json({
-  status: 'ok',
-  jwtConfigured: !!process.env.JWT_SECRET,
-  dbConfigured: !!process.env.DATABASE_URL,
-  encryptionConfigured: !!process.env.ENCRYPTION_KEY,
-}));
+app.get('/health', (req, res) => {
+  const dbUrl = process.env.DATABASE_URL || '';
+  res.json({
+    status: 'ok',
+    jwtConfigured: !!process.env.JWT_SECRET,
+    dbConfigured: !!dbUrl,
+    dbUrlPrefix: dbUrl.slice(0, 40) || 'EMPTY',
+    encryptionConfigured: !!process.env.ENCRYPTION_KEY,
+  });
+});
+
+// Test actual DB connection
+app.get('/health/db', async (req, res) => {
+  const db = require('./db');
+  const dbUrl = process.env.DATABASE_URL || '';
+  try {
+    await db.query('SELECT 1');
+    res.json({ connected: true, dbUrlPrefix: dbUrl.slice(0, 50) });
+  } catch (err) {
+    res.status(500).json({
+      connected: false,
+      error: err.message,
+      dbUrlPrefix: dbUrl.slice(0, 50),
+      dbConfigured: !!dbUrl,
+    });
+  }
+});
 
 // Debug: verify a token without needing a DB — helps diagnose JWT_SECRET mismatches
 app.post('/debug/verify-token', (req, res) => {
