@@ -181,6 +181,7 @@ app.post('/debug/b2c-login', async (req, res) => {
     const sa2Cookies = sa2Res.headers.raw()['set-cookie'] || [];
     step4bStatus = sa2Res.status;
     step4bBody = sa2Text;
+    const sa2Headers = Object.fromEntries([...sa2Res.headers.entries()]);
     const cookiesAfterSA2 = mergeCookies(cookiesAfterCF, sa2Cookies);
 
     // Step 5: GET second confirmed using the same transIdAfterEmail and original csrf
@@ -194,6 +195,7 @@ app.post('/debug/b2c-login', async (req, res) => {
     const cf2Text = await cf2Res.text();
     const cf2Cookies = cf2Res.headers.raw()['set-cookie'] || [];
     const cf2Location = cf2Res.headers.get('location') || '';
+    const cf2ResponseHeaders = Object.fromEntries([...cf2Res.headers.entries()]);
     const cookiesAfterCF2 = mergeCookies(cookiesAfterSA2, cf2Cookies);
 
     // Step 6: POST id_token / code to ACGME
@@ -252,8 +254,10 @@ app.post('/debug/b2c-login', async (req, res) => {
       // Step 5: Second confirmed (should have id_token)
       transIdAfterEmail: (transIdAfterEmail || '').slice(0, 60),
       transIdChanged: transIdAfterEmail !== transId,
+      sa2ResponseHeaders: sa2Headers,
       cf2Url: cf2Url.slice(0, 200),
       cf2Status: cf2Res.status, cf2Location: cf2Location.slice(0, 200),
+      cf2ResponseHeaders,
       cf2HtmlLength: cf2Text.length,
       cf2ApiType: cf2Text.match(/"api"\s*:\s*"([^"]+)"/)?.[1] || 'not found',
       cf2First300: cf2Text.slice(0, 300),
