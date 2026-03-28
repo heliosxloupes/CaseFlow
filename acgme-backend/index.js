@@ -135,13 +135,13 @@ app.post('/debug/b2c-login', async (req, res) => {
     const saCookies = saRes.headers.raw()['set-cookie'] || [];
     const cookiesAfterSA = mergeCookies(cookies, saCookies); // merged string
 
-    // Step 4: GET confirmed — apiBase already set from SETTINGS above
+    // Step 4: GET confirmed — follow redirects to see final destination
     const confirmedUrl = `${apiBase}/api/CombinedSigninAndSignup/confirmed`
       + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf||'')}&tx=${transId||''}&p=${B2C_POLICY}`;
     const cfRes = await ft(confirmedUrl, {
-      headers: { 'User-Agent': UA, 'Cookie': cookiesAfterSA, 'Referer': loginUrl },
-      redirect: 'manual',
-    }, 12000);
+      headers: { 'User-Agent': UA, 'Cookie': cookiesAfterSA, 'Referer': loginUrl, 'Accept': 'text/html,application/xhtml+xml' },
+      redirect: 'follow',
+    }, 15000);
     const cfText = await cfRes.text();
     const cfCookies = cfRes.headers.raw()['set-cookie'] || [];
     const cfLocation = cfRes.headers.get('location') || '';
@@ -184,6 +184,7 @@ app.post('/debug/b2c-login', async (req, res) => {
       saCookieNames: saCookies.map(c => c.split('=')[0]),
       cookiesSentToConfirmed: cookiesAfterSA.slice(0, 400),
       confirmedUrl: confirmedUrl.slice(0, 200),
+      confirmedFinalUrl: cfRes.url?.slice(0, 200),
       confirmedStatus: cfRes.status, confirmedLocation: cfLocation.slice(0, 200),
       confirmedHtmlLength: cfText.length,
       confirmedSettingsApi: cfText.match(/"api"\s*:\s*"([^"]+)"/)?.[1] || 'not found',
