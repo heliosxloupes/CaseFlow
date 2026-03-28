@@ -113,9 +113,15 @@ app.post('/debug/pw-login', async (req, res) => {
 
     await page.locator('#next, button#next, button:has-text("Sign in"), button[type="submit"]').first().click();
 
-    // Wait 10 seconds to see where we end up
-    await new Promise(r => setTimeout(r, 10000));
-    await snap('after_signin_10s');
+    // Wait 12 seconds and capture MFA page state with buttons
+    await new Promise(r => setTimeout(r, 12000));
+    const buttons = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('button, input[type="button"], input[type="submit"]')).map(b =>
+        ({ id: b.id, text: b.textContent?.trim(), type: b.type, value: b.value })
+      )
+    ).catch(() => []);
+    await snap('after_signin_12s');
+    steps[steps.length - 1].buttons = buttons;
 
     await browser.close();
     return res.json({ steps });

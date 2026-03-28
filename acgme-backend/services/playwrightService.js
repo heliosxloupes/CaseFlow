@@ -199,33 +199,17 @@ async function startLogin(username, password) {
 
     // ── Wait for outcome ──────────────────────────────────────────────────────
     console.log('[PW] Waiting for login outcome...');
+
+    // Use 'attached' (not 'visible') — verificationCode starts hidden; we'll trigger Send Code
     const outcome = await Promise.race([
       page.waitForURL(`${ACGME_ORIGIN}/ads/**`, { timeout: 45000 }).then(() => 'success'),
-      // Broad MFA selector: any visible text/number input that appears after password step
-      page.waitForSelector(
-        '#otpCode, input[name="otpCode"], input[id*="Code"], input[name*="Code"], input[id*="otp"], input[name*="otp"], input[type="tel"], input[autocomplete="one-time-code"], input[id*="verify"], input[name*="verify"]',
-        { timeout: 40000, state: 'visible' }
-      ).then(() => 'mfa'),
-      page.waitForSelector(
-        '#errorMessage',
-        { timeout: 40000, state: 'visible' }
-      ).then(() => 'error'),
+      page.waitForSelector('#verificationCode', { timeout: 40000, state: 'attached' }).then(() => 'mfa'),
+      page.waitForSelector('#errorMessage', { timeout: 40000, state: 'visible' }).then(() => 'error'),
     ]).catch(() => 'timeout');
 
-    // Capture a diagnostic screenshot of the current page state
-    try {
-      const screenshotB64 = await page.screenshot({ encoding: 'base64', fullPage: true });
-      const currentUrl = page.url();
-      const pageTitle  = await page.title().catch(() => '');
-      const inputIds   = await page.evaluate(() =>
-        Array.from(document.querySelectorAll('input')).map(i => `id=${i.id} name=${i.name} type=${i.type}`)
-      ).catch(() => []);
-      console.log(`[PW] Page state: ${currentUrl} | title: ${pageTitle} | outcome: ${outcome}`);
-      console.log(`[PW] Inputs found: ${JSON.stringify(inputIds)}`);
-      console.log(`[PW] Screenshot (base64 first 100): ${screenshotB64.slice(0, 100)}`);
-    } catch (_) {}
-
-    console.log(`[PW] Login outcome: ${outcome}`);
+    const currentUrl = page.url();
+    const pageTitle  = await page.title().catch(() => '');
+    console.log(`[PW] Outcome: ${outcome} | title: ${pageTitle} | url: ${currentUrl.slice(0, 80)}`);
 
     // ── Handle outcomes ───────────────────────────────────────────────────────
     if (outcome === 'success') {
@@ -236,7 +220,21 @@ async function startLogin(username, password) {
     }
 
     if (outcome === 'mfa') {
-      // Keep browser open, store pending session
+      // Click "Send Code" / "Send verification code" to trigger OTP delivery to user's email/phone
+      console.log('[PW] MFA page detected — looking for Send Code button...');
+      try {
+        const sendBtn = page.locator(
+          'button:has-text("Send"), button:has-text("send"), input[value*="Send"], button[id*="send"], button[id*="Send"], #sendCode'
+        ).first();
+        if (await sendBtn.count() > 0) {
+          await sendBtn.click();
+          console.log('[PW] Clicked Send Code, waiting for verificationCode input to appear...');
+          await page.waitForSelector('#verificationCode', { state: 'visible', timeout: 15000 }).catch(() => {});
+        }
+      } catch (e) {
+        console.log('[PW] Send Code warning:', e.message);
+      }
+
       const sessionId = crypto.randomBytes(16).toString('hex');
       const timer = setTimeout(async () => {
         const s = pendingMfaSessions.get(sessionId);
@@ -285,14 +283,13 @@ async function completeMFA(sessionId, code) {
   try {
     console.log(`[PW] Entering MFA code for session ${sessionId}...`);
 
-    // Fill in the OTP
-    const otpInput = page.locator(
-      '#otpCode, input[name="otpCode"], input[type="tel"], #verificationCode, input[name*="Code"], input[placeholder*="code"]'
-    ).first();
+    // Fill in the OTP — ACGME B2C uses #verificationCode
+    await page.waitForSelector('#verificationCode', { state: 'visible', timeout: 10000 }).catch(() => {});
+    const otpInput = page.locator('#verificationCode, input[name="otpCode"], input[type="tel"]').first();
     await otpInput.fill(code);
 
-    // Submit
-    await page.locator('#continue, button#continue, button:has-text("Verify"), button:has-text("Sign in"), button[type="submit"]').first().click();
+    // Submit — B2C "Verify Code" button
+    await page.locator('#continue, button:has-text("Verify"), button:has-text("verify"), button#verifyCode, button[type="submit"]').first().click();
 
     // Wait for ACGME to load
     await page.waitForURL(`${ACGME_ORIGIN}/ads/**`, { timeout: 35000 });
