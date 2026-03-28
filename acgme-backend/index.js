@@ -126,8 +126,11 @@ app.post('/debug/b2c-login', async (req, res) => {
 
     const allCookiesAfterSA = [...cookies, ...saCookies];
 
-    // Step 4: GET confirmed
-    const confirmedUrl = `${B2C_BASE}/api/CombinedSigninAndSignup/confirmed`
+    // Step 4: GET confirmed — use case-correct apiBase from SETTINGS.hosts.tenant
+    const apiBase = settingsParsed?.hosts?.tenant
+      ? `https://${B2C_TENANT}${settingsParsed.hosts.tenant}`
+      : B2C_BASE;
+    const confirmedUrl = `${apiBase}/api/CombinedSigninAndSignup/confirmed`
       + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf||'')}&tx=${transId||''}&p=${B2C_POLICY}`;
     const cfRes = await ft(confirmedUrl, {
       headers: { 'User-Agent': UA, 'Cookie': parseCookies(allCookiesAfterSA), 'Referer': loginUrl },

@@ -98,37 +98,43 @@ async function startB2CFlow() {
   return { loginUrl: finalUrl, loginHtml: html, cookies };
 }
 
-// ── Step 2 – Extract CSRF / transId ─────────────────────────────────────────
+// ── Step 2 – Extract CSRF / transId / apiBase ────────────────────────────────
 
 function extractB2CConfig(html, url) {
   let csrf = null;
   let transId = null;
+  let apiBase = B2C_BASE; // fallback (lowercase)
 
-  // Try SETTINGS JSON block first
+  // Try SETTINGS JSON block first — this has the authoritative values
   const settingsMatch = html.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i);
   if (settingsMatch) {
     try {
       const s = JSON.parse(settingsMatch[1]);
-      csrf = s.csrf || null;
+      csrf    = s.csrf    || null;
       transId = s.transId || null;
+      // hosts.tenant gives the CASE-CORRECT path for API endpoints
+      // e.g. "/acgmeras.onmicrosoft.com/B2C_1A_signup_signin"
+      if (s.hosts && s.hosts.tenant) {
+        apiBase = `https://${B2C_TENANT}${s.hosts.tenant}`;
+      }
     } catch (_) {}
   }
 
   // Fallback: inline JSON strings
   if (!csrf)    csrf    = (html.match(/"csrf"\s*:\s*"([^"]+)"/)?.[1]) || null;
   if (!transId) transId = (html.match(/"transId"\s*:\s*"([^"]+)"/)?.[1]) || null;
-
-  // Fallback: URL param tx=
   if (!transId) transId = (url.match(/[?&]tx=([^&]+)/)?.[1]) || null;
 
-  console.log('[B2C] Step 2 – csrf:', csrf ? 'found' : 'MISSING', '| transId:', transId ? 'found' : 'MISSING');
-  return { csrf, transId };
+  console.log('[B2C] Step 2 – csrf:', csrf ? 'found' : 'MISSING',
+              '| transId:', transId ? 'found' : 'MISSING',
+              '| apiBase:', apiBase);
+  return { csrf, transId, apiBase };
 }
 
 // ── Step 3 – POST credentials to SelfAsserted ────────────────────────────────
 
-async function postCredentials(username, password, csrf, transId, loginUrl, cookies) {
-  const selfAssertedUrl = `${B2C_BASE}/SelfAsserted?tx=${transId || ''}&p=${B2C_POLICY}`;
+async function postCredentials(username, password, csrf, transId, loginUrl, cookies, apiBase) {
+  const selfAssertedUrl = `${apiBase}/SelfAsserted?tx=${transId || ''}&p=${B2C_POLICY}`;
   console.log('[B2C] Step 3 – POST to SelfAsserted:', selfAssertedUrl.slice(0, 120));
 
   const body = new URLSearchParams({
@@ -180,8 +186,8 @@ async function postCredentials(username, password, csrf, transId, loginUrl, cook
 
 // ── Step 4 – GET /confirmed to trigger the OIDC redirect ─────────────────────
 
-async function getConfirmedPage(csrf, transId, loginUrl, cookies) {
-  const confirmedUrl = `${B2C_BASE}/api/CombinedSigninAndSignup/confirmed`
+async function getConfirmedPage(csrf, transId, loginUrl, cookies, apiBase) {
+  const confirmedUrl = `${apiBase}/api/CombinedSigninAndSignup/confirmed`
     + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf || '')}&tx=${transId || ''}&p=${B2C_POLICY}`;
 
   console.log('[B2C] Step 4 – GET confirmed:', confirmedUrl.slice(0, 120));
@@ -243,15 +249,15 @@ async function postTokenToACGME(html, cookies) {
 
 async function loginToACGME(username, password) {
   const { loginUrl, loginHtml, cookies: loginCookies } = await startB2CFlow();
-  const { csrf, transId } = extractB2CConfig(loginHtml, loginUrl);
+  const { csrf, transId, apiBase } = extractB2CConfig(loginHtml, loginUrl);
 
   if (!transId) {
     console.log('[B2C] loginHtml snippet:', loginHtml.slice(0, 800));
     throw new Error('Could not extract B2C transId from login page. ACGME may have changed their login flow.');
   }
 
-  const { allCookies: cookiesAfterCred } = await postCredentials(username, password, csrf, transId, loginUrl, loginCookies);
-  const { html: confirmedHtml, location, allCookies: cookiesAfterConfirm } = await getConfirmedPage(csrf, transId, loginUrl, cookiesAfterCred);
+  const { allCookies: cookiesAfterCred } = await postCredentials(username, password, csrf, transId, loginUrl, loginCookies, apiBase);
+  const { html: confirmedHtml, location, allCookies: cookiesAfterConfirm } = await getConfirmedPage(csrf, transId, loginUrl, cookiesAfterCred, apiBase);
 
   let sessionCookie;
   if (confirmedHtml.includes('id_token') || confirmedHtml.includes('code')) {
