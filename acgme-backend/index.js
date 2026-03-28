@@ -182,6 +182,7 @@ app.post('/debug/b2c-login', async (req, res) => {
       step1CookieNames: cookies.map(c => c.split('=')[0]),
       selfAssertedStatus: saRes.status, selfAssertedBody: saText,
       saCookieNames: saCookies.map(c => c.split('=')[0]),
+      saCookiesFull: saCookies.map(c => c.slice(0, 200)),
       cookiesSentToConfirmed: cookiesAfterSA.slice(0, 400),
       confirmedUrl: confirmedUrl.slice(0, 200),
       confirmedFinalUrl: cfRes.url?.slice(0, 200),
