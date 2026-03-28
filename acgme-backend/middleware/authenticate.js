@@ -15,6 +15,10 @@ async function authenticate(req, res, next) {
   }
 
   const token = authHeader.split(' ')[1];
+  if (!process.env.JWT_SECRET) {
+    return res.status(500).json({ error: 'JWT_SECRET not configured on server' });
+  }
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
@@ -26,20 +30,32 @@ async function authenticate(req, res, next) {
 
     // Token has email (current Vercel flow) — look up or create user
     if (decoded.email) {
-      const { rows } = await db.query(
-        `INSERT INTO users (email)
-         VALUES ($1)
-         ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
-         RETURNING id`,
-        [decoded.email]
-      );
-      req.userId = rows[0].id;
-      return next();
+      try {
+        const { rows } = await db.query(
+          `INSERT INTO users (email)
+           VALUES ($1)
+           ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
+           RETURNING id`,
+          [decoded.email]
+        );
+        req.userId = rows[0].id;
+        return next();
+      } catch (dbErr) {
+        console.error('DB error in authenticate:', dbErr.message);
+        return res.status(500).json({ error: 'Database connection failed. Check DATABASE_URL in Railway env vars.' });
+      }
     }
 
     return res.status(401).json({ error: 'Invalid token payload' });
   } catch (err) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+    // Distinguish JWT errors from everything else
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired — please sign out and back in.' });
+    }
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Token signature invalid — JWT_SECRET mismatch between Vercel and Railway. Check both env vars.' });
+    }
+    return res.status(401).json({ error: `Auth error: ${err.message}` });
   }
 }
 

@@ -24,7 +24,25 @@ app.use('/api/auth', authRoutes);
 app.use('/api/cases', authenticate, caseRoutes);
 app.use('/api/lookups', authenticate, lookupRoutes);
 
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/health', (req, res) => res.json({
+  status: 'ok',
+  jwtConfigured: !!process.env.JWT_SECRET,
+  dbConfigured: !!process.env.DATABASE_URL,
+  encryptionConfigured: !!process.env.ENCRYPTION_KEY,
+}));
+
+// Debug: verify a token without needing a DB — helps diagnose JWT_SECRET mismatches
+app.post('/debug/verify-token', (req, res) => {
+  const { token } = req.body || {};
+  if (!token) return res.status(400).json({ error: 'token required' });
+  try {
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    res.json({ valid: true, payload: decoded });
+  } catch (err) {
+    res.status(401).json({ valid: false, error: err.message });
+  }
+});
 
 app.use(errorHandler);
 
