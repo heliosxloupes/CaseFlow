@@ -505,6 +505,19 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
           </div>
           <div class="settings-cred-status" id="s-cred-status"></div>
           <button class="btn-main settings-save-btn" onclick="saveAcgmeCredentials()" style="margin-bottom:16px">Save Credentials</button>
+
+          <!-- MFA section — shown only when backend requires MFA -->
+          <div id="s-mfa-section" style="display:none;margin-bottom:16px">
+            <div style="background:var(--bg3);border:1px solid var(--blue-b);border-radius:var(--r);padding:14px 16px;margin-bottom:12px">
+              <div style="font-size:13px;font-weight:600;color:var(--blue);margin-bottom:6px">Verification Required</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.6">Check your email or phone for the ACGME verification code and enter it below.</div>
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Verification Code</label>
+              <input class="settings-input" id="s-mfa-code" type="text" placeholder="Enter 6-digit code" autocomplete="one-time-code" inputmode="numeric" maxlength="10">
+            </div>
+            <button class="btn-main settings-save-btn" onclick="completeMfaLogin()" style="margin-bottom:8px">Verify Code</button>
+          </div>
         </div>
 
         <!-- Primary CTA when not set up -->
@@ -1727,6 +1740,9 @@ function toggleAcgmeForm(){
     }
   }
 }
+// Stores the MFA sessionId while we wait for the user's OTP code
+let _pendingMfaSessionId = null;
+
 async function saveAcgmeCredentials(){
   const user = document.getElementById('s-acgme-user').value.trim();
   const pass = document.getElementById('s-acgme-pass').value;
@@ -1734,9 +1750,10 @@ async function saveAcgmeCredentials(){
   if(!user || !pass){ statusEl.textContent='Enter both username and password.'; statusEl.className='settings-cred-status err'; return; }
   try{
     if(ACGME_BACKEND_URL){
-      // Primary path: verify + store in Railway backend
-      statusEl.textContent = 'Verifying with ACGME…';
+      statusEl.textContent = 'Opening ACGME login…';
       statusEl.className = 'settings-cred-status';
+      const saveBtn = document.querySelector('#s-acgme-form .settings-save-btn');
+      if(saveBtn){ saveBtn.classList.add('busy'); saveBtn.textContent = 'Connecting…'; }
       const token = localStorage.getItem('cf5-token');
       const resp = await fetch(`${ACGME_BACKEND_URL}/api/auth/save-credentials`,{
         method:'POST',
@@ -1744,27 +1761,74 @@ async function saveAcgmeCredentials(){
         body:JSON.stringify({acgmeUsername:user, acgmePassword:pass}),
       });
       const data = await resp.json();
+      if(saveBtn){ saveBtn.classList.remove('busy'); saveBtn.textContent = 'Save Credentials'; }
       if(!resp.ok) throw new Error(data.error||'ACGME verification failed');
-      // Mark locally that credentials are saved (no password stored client-side)
+
+      if(data.mfaRequired && data.sessionId){
+        // MFA needed — show the OTP input
+        _pendingMfaSessionId = data.sessionId;
+        statusEl.textContent = '';
+        document.getElementById('s-mfa-section').style.display = 'block';
+        document.getElementById('s-mfa-code').focus();
+        toast('Check your email/phone for a verification code','');
+        return;
+      }
+
+      // No MFA — success
       localStorage.setItem('cf5-vault', JSON.stringify({saved:true}));
     } else if(sessionPassword){
-      // Fallback: local encrypted vault
       const blob = await encryptVault({acgmeUser:user, acgmePass:pass}, sessionPassword);
       localStorage.setItem('cf5-vault', JSON.stringify(blob));
     } else {
       throw new Error('No backend configured and session expired. Please sign out and back in.');
     }
 
-    document.getElementById('s-acgme-user').value = '';
-    document.getElementById('s-acgme-pass').value = '';
-    statusEl.textContent = '';
-    document.getElementById('s-acgme-form').classList.remove('open');
-    loadSettingsUI();
-    toast('ACGME credentials saved ✓','ok');
+    _finishAcgmeConnect();
   } catch(e){
     statusEl.textContent = e.message;
     statusEl.className = 'settings-cred-status err';
   }
+}
+
+async function completeMfaLogin(){
+  const code = document.getElementById('s-mfa-code').value.trim();
+  const statusEl = document.getElementById('s-cred-status');
+  if(!code){ statusEl.textContent='Enter the verification code.'; statusEl.className='settings-cred-status err'; return; }
+  if(!_pendingMfaSessionId){ statusEl.textContent='No pending MFA session. Please start over.'; statusEl.className='settings-cred-status err'; return; }
+  try{
+    statusEl.textContent = 'Verifying code…';
+    statusEl.className = 'settings-cred-status';
+    const mfaBtn = document.querySelector('#s-mfa-section .btn-main');
+    if(mfaBtn){ mfaBtn.classList.add('busy'); mfaBtn.textContent = 'Verifying…'; }
+    const token = localStorage.getItem('cf5-token');
+    const resp = await fetch(`${ACGME_BACKEND_URL}/api/auth/complete-mfa`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+      body:JSON.stringify({sessionId:_pendingMfaSessionId, code}),
+    });
+    const data = await resp.json();
+    if(!resp.ok) throw new Error(data.error||'MFA verification failed');
+    localStorage.setItem('cf5-vault', JSON.stringify({saved:true}));
+    _pendingMfaSessionId = null;
+    _finishAcgmeConnect();
+  } catch(e){
+    const mfaBtn = document.querySelector('#s-mfa-section .btn-main');
+    if(mfaBtn){ mfaBtn.classList.remove('busy'); mfaBtn.textContent = 'Verify Code'; }
+    document.getElementById('s-cred-status').textContent = e.message;
+    document.getElementById('s-cred-status').className = 'settings-cred-status err';
+  }
+}
+
+function _finishAcgmeConnect(){
+  document.getElementById('s-acgme-user').value = '';
+  document.getElementById('s-acgme-pass').value = '';
+  document.getElementById('s-mfa-code').value = '';
+  document.getElementById('s-cred-status').textContent = '';
+  document.getElementById('s-mfa-section').style.display = 'none';
+  _pendingMfaSessionId = null;
+  document.getElementById('s-acgme-form').classList.remove('open');
+  loadSettingsUI();
+  toast('ACGME account connected ✓','ok');
 }
 async function getAcgmeCredentials(){
   // When backend is configured, credentials live in the Railway DB — no local decryption needed.
