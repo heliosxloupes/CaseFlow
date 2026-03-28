@@ -254,7 +254,9 @@ app.post('/debug/b2c-login', async (req, res) => {
       cfSetCookieNames: cfCookies.map(c => c.split('=')[0]),
       csrfCookieValueAfterCFFirst20: csrfCookieValueAfterCF.slice(0, 20),
       csrfCookieMatchesCfCsrf: csrfCookieValueAfterCF === cfCsrf,
-      passwordFormFirst1000: cfText.slice(0, 1000),
+      passwordFormFirst2000: cfText.slice(0, 2000),
+      passwordFormSettingsRaw: cfText.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i)?.[1]?.slice(0, 800) || 'not found',
+      passwordFormHosts: cfText.match(/"hosts"\s*:\s*(\{[^}]+\})/)?.[1] || 'not found',
       // Step 4: Password POST
       pwPostStatus: step4bStatus, pwPostBody: step4bBody?.slice(0, 200),
       sa2CookieNames: sa2Cookies.map(c => c.split('=')[0]),
