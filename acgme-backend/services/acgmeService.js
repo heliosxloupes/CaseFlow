@@ -133,11 +133,26 @@ async function loginToACGME(username, password) {
     throw new Error(`B2C email step failed with status ${saRes.status}`);
   }
 
-  // ── STEP 3b: GET /confirmed → returns password form with new SETTINGS ──
+  // Decode x-ms-cpim-trans cookie to get the updated transId for subsequent calls
+  function decodeTransCookie(cookieStr) {
+    try {
+      const trans = cookieStr.split('; ').find(c => c.trim().startsWith('x-ms-cpim-trans='));
+      if (!trans) return null;
+      const b64 = trans.split('=').slice(1).join('=');
+      const decoded = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
+      const uid = decoded.T_DIC?.[0]?.I;
+      if (uid) return 'StateProperties=' + Buffer.from(JSON.stringify({ TID: uid })).toString('base64').replace(/=+$/, '');
+      return null;
+    } catch (_) { return null; }
+  }
+  const transIdAfterEmail = decodeTransCookie(cookieHeader(allSetCookies)) || transId;
+  console.log(`[B2C] TransId after email: ${transIdAfterEmail !== transId ? 'CHANGED' : 'same'} | ${transIdAfterEmail.slice(0, 50)}`);
+
+  // ── STEP 3b: GET /confirmed using updated transId from trans cookie ──
   const confirmedUrl1 = `${apiBase}/api/${b2cApiType}/confirmed`
     + `?rememberMe=false`
     + `&csrf_token=${encodeURIComponent(csrf || '')}`
-    + `&tx=${transId}`
+    + `&tx=${transIdAfterEmail}`
     + `&p=${B2C_POLICY}`;
 
   const cf1Res = await fetchT(confirmedUrl1, {
@@ -154,21 +169,20 @@ async function loginToACGME(username, password) {
   const cf1SetCookies = cf1Res.headers.raw()['set-cookie'] || [];
   allSetCookies = allSetCookies.concat(cf1SetCookies);
 
-  // Extract new SETTINGS from password form page
-  let csrf2 = csrf, transId2 = transId, apiType2 = b2cApiType;
+  // Extract api type and csrf from password form page SETTINGS
+  let csrf2 = csrf, apiType2 = b2cApiType;
   const cf1Sm = cf1Text.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i);
   if (cf1Sm) {
     try {
       const s = JSON.parse(cf1Sm[1]);
-      if (s.csrf)    csrf2    = s.csrf;
-      if (s.transId) transId2 = s.transId;
-      if (s.api)     apiType2 = s.api;
+      if (s.csrf) csrf2    = s.csrf;
+      if (s.api)  apiType2 = s.api;
     } catch (_) {}
   }
-  console.log(`[B2C] Password form: ${cf1Res.status} | apiType2: ${apiType2} | csrf2 changed: ${csrf2 !== csrf} | transId2 changed: ${transId2 !== transId}`);
+  console.log(`[B2C] Password form: ${cf1Res.status} | apiType2: ${apiType2} | csrf2 changed: ${csrf2 !== csrf}`);
 
-  // ── STEP 4: POST email+password using credentials from password page ──
-  const sa2Url = `${apiBase}/SelfAsserted?tx=${transId2}&p=${B2C_POLICY}`;
+  // ── STEP 4: POST email+password using transIdAfterEmail (from trans cookie) ──
+  const sa2Url = `${apiBase}/SelfAsserted?tx=${transIdAfterEmail}&p=${B2C_POLICY}`;
   const sa2Headers = {
     'Content-Type': 'application/x-www-form-urlencoded',
     'User-Agent': UA,
@@ -198,11 +212,11 @@ async function loginToACGME(username, password) {
     throw new Error(`B2C password step failed with status ${sa2Res.status}`);
   }
 
-  // ── STEP 5: GET second /confirmed using ORIGINAL csrf (matches x-ms-cpim-csrf cookie) ──
+  // ── STEP 5: GET second /confirmed using transIdAfterEmail and original csrf ──
   const confirmedUrl2 = `${apiBase}/api/${apiType2}/confirmed`
     + `?rememberMe=false`
     + `&csrf_token=${encodeURIComponent(csrf || '')}`
-    + `&tx=${transId2}`
+    + `&tx=${transIdAfterEmail}`
     + `&p=${B2C_POLICY}`;
 
   const cfRes = await fetchT(confirmedUrl2, {

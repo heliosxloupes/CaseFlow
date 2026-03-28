@@ -135,9 +135,23 @@ app.post('/debug/b2c-login', async (req, res) => {
     const saCookies = saRes.headers.raw()['set-cookie'] || [];
     const cookiesAfterSA = mergeCookies(cookies, saCookies);
 
-    // Step 3b: GET confirmed to get the password form (B2C advances the flow)
+    // After email POST: decode x-ms-cpim-trans cookie to get the new transId for confirmed calls
+    function decodeTransCookie(cookieStr) {
+      try {
+        const trans = cookieStr.split('; ').find(c => c.trim().startsWith('x-ms-cpim-trans='));
+        if (!trans) return null;
+        const b64 = trans.split('=').slice(1).join('=');
+        const decoded = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
+        const uid = decoded.T_DIC?.[0]?.I;
+        if (uid) return 'StateProperties=' + Buffer.from(JSON.stringify({ TID: uid })).toString('base64').replace(/=+$/, '');
+        return null;
+      } catch(_) { return null; }
+    }
+    const transIdAfterEmail = decodeTransCookie(cookiesAfterSA) || transId;
+
+    // Step 3b: GET confirmed to get the password form using NEW transId from trans cookie
     const confirmedUrl = `${apiBase}/api/${b2cApiType}/confirmed`
-      + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf||'')}&tx=${transId||''}&p=${B2C_POLICY}`;
+      + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf||'')}&tx=${transIdAfterEmail}&p=${B2C_POLICY}`;
     const cfRes = await ft(confirmedUrl, {
       headers: { 'User-Agent': UA, 'Cookie': cookiesAfterSA, 'Referer': loginUrl, 'Accept': 'text/html,application/xhtml+xml' },
       redirect: 'manual',
@@ -147,14 +161,14 @@ app.post('/debug/b2c-login', async (req, res) => {
     const cfLocation = cfRes.headers.get('location') || '';
     const cookiesAfterCF = mergeCookies(cookies, [...saCookies, ...cfCookies]);
 
-    // Extract new SETTINGS from password form page
+    // Extract new SETTINGS from password form page (for csrf and apiType)
     const cfSettings = cfText.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i);
-    let cfTransId = transId, cfCsrf = csrf, cfApiType = b2cApiType;
-    if (cfSettings) { try { const s = JSON.parse(cfSettings[1]); if (s.transId) cfTransId = s.transId; if (s.csrf) cfCsrf = s.csrf; if (s.api) cfApiType = s.api; } catch(_){} }
+    let cfTransId = transIdAfterEmail, cfCsrf = csrf, cfApiType = b2cApiType;
+    if (cfSettings) { try { const s = JSON.parse(cfSettings[1]); if (s.csrf) cfCsrf = s.csrf; if (s.api) cfApiType = s.api; } catch(_){} }
 
-    // Step 4: POST email+password using credentials from password form page
+    // Step 4: POST email+password using updated transId (from trans cookie after email POST)
     let step4bStatus = null, step4bBody = null;
-    const sa2Url = `${apiBase}/SelfAsserted?tx=${cfTransId}&p=${B2C_POLICY}`;
+    const sa2Url = `${apiBase}/SelfAsserted?tx=${transIdAfterEmail}&p=${B2C_POLICY}`;
     const sa2Headers = {
       'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA,
       'Cookie': cookiesAfterCF, 'Referer': confirmedUrl, 'Origin': `https://${B2C_TENANT}`,
@@ -169,23 +183,10 @@ app.post('/debug/b2c-login', async (req, res) => {
     step4bBody = sa2Text;
     const cookiesAfterSA2 = mergeCookies(cookiesAfterCF, sa2Cookies);
 
-    // Decode x-ms-cpim-trans cookie to find current transId
-    function decodeTransCookie(cookieStr) {
-      try {
-        const trans = cookieStr.split('; ').find(c => c.startsWith('x-ms-cpim-trans='));
-        if (!trans) return null;
-        const b64 = trans.split('=').slice(1).join('=');
-        const decoded = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
-        const uid = decoded.T_DIC?.[0]?.I;
-        if (uid) return 'StateProperties=' + Buffer.from(JSON.stringify({ TID: uid })).toString('base64');
-        return null;
-      } catch(_) { return null; }
-    }
-    const transFromCookie = decodeTransCookie(cookiesAfterSA2) || cfTransId;
-
-    // Step 5: GET second confirmed — use ORIGINAL csrf (cookie-validated) not page SETTINGS csrf
+    // Step 5: GET second confirmed using the same transIdAfterEmail and original csrf
+    const transFromCookie = decodeTransCookie(cookiesAfterSA2) || transIdAfterEmail;
     const cf2Url = `${apiBase}/api/${cfApiType}/confirmed`
-      + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf||'')}&tx=${transFromCookie}&p=${B2C_POLICY}`;
+      + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf||'')}&tx=${transIdAfterEmail}&p=${B2C_POLICY}`;
     const cf2Res = await ft(cf2Url, {
       headers: { 'User-Agent': UA, 'Cookie': cookiesAfterSA2, 'Referer': confirmedUrl, 'Accept': 'text/html,application/xhtml+xml' },
       redirect: 'manual',
@@ -246,8 +247,9 @@ app.post('/debug/b2c-login', async (req, res) => {
       pwPostStatus: step4bStatus, pwPostBody: step4bBody?.slice(0, 200),
       sa2CookieNames: sa2Cookies.map(c => c.split('=')[0]),
       // Step 5: Second confirmed (should have id_token)
+      transIdAfterEmail: (transIdAfterEmail || '').slice(0, 60),
+      transIdChanged: transIdAfterEmail !== transId,
       transFromCookie: (transFromCookie || '').slice(0, 60),
-      transFromCookieChanged: transFromCookie !== cfTransId,
       cf2Url: cf2Url.slice(0, 200),
       cf2Status: cf2Res.status, cf2Location: cf2Location.slice(0, 200),
       cf2HtmlLength: cf2Text.length,
