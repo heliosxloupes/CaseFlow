@@ -42,7 +42,7 @@ async function authenticate(req, res, next) {
         return next();
       } catch (dbErr) {
         console.error('DB error in authenticate:', dbErr.message);
-        return res.status(500).json({ error: 'Database connection failed. Check DATABASE_URL in Railway env vars.' });
+        return res.status(500).json({ error: `DB error: ${dbErr.message}` });
       }
     }
 

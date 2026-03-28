@@ -8,6 +8,7 @@ const caseRoutes = require('./routes/cases');
 const lookupRoutes = require('./routes/lookups');
 const { errorHandler } = require('./middleware/errorHandler');
 const { authenticate } = require('./middleware/authenticate');
+const { migrate } = require('./db/migrate');
 
 const app = express();
 
@@ -68,10 +69,11 @@ app.post('/debug/verify-token', (req, res) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`ACGME backend running on port ${PORT}`);
   const dbUrl = process.env.DATABASE_URL || '';
   console.log(`DATABASE_URL configured: ${!!dbUrl} (starts with: ${dbUrl.slice(0, 30) || 'EMPTY'})`);
   console.log(`JWT_SECRET configured: ${!!process.env.JWT_SECRET}`);
   console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+  await migrate();
 });
