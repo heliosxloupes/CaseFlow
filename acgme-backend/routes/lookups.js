@@ -1,9 +1,9 @@
 const express = require('express');
-const router = express.Router();
-const { getLookupData, loginToACGME } = require('../services/acgmeService');
-const { getSession, setSession } = require('../services/sessionCache');
-const { decrypt } = require('../services/encryptionService');
-const db = require('../db');
+const router  = express.Router();
+const { getLookupData } = require('../services/acgmeService');
+const { decrypt }       = require('../services/encryptionService');
+const pw  = require('../services/playwrightService');
+const db  = require('../db');
 
 // GET /api/lookups/roles?specialtyId=158&activeAsOfDate=3%2F28%2F2026
 router.get('/roles', async (req, res, next) => {
@@ -40,19 +40,24 @@ router.get('/codes', async (req, res, next) => {
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
 async function getOrRefreshSession(userId) {
-  let cookie = getSession(userId);
-  if (cookie) return cookie;
+  const cookieHeader = await pw.getValidCookieHeader(userId);
+  if (cookieHeader) return cookieHeader;
 
   const { rows } = await db.query(
     'SELECT acgme_username, acgme_password_encrypted FROM user_acgme_credentials WHERE user_id = $1',
     [userId]
   );
-  if (!rows.length) throw new Error('No ACGME credentials found.');
+  if (!rows.length) throw new Error('No ACGME credentials found. Please connect your ACGME account in Settings.');
 
   const password = decrypt(rows[0].acgme_password_encrypted);
-  cookie = await loginToACGME(rows[0].acgme_username, password);
-  setSession(userId, cookie);
-  return cookie;
+  const result   = await pw.startLogin(rows[0].acgme_username, password);
+
+  if (result.success) {
+    await pw.storeSessionCookies(userId, result.cookies);
+    return pw.cookiesArrayToHeader(result.cookies);
+  }
+
+  throw new Error('ACGME session expired. Please reconnect your account in Settings → ACGME Account.');
 }
 
 module.exports = router;
