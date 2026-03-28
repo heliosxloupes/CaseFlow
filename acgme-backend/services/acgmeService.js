@@ -39,16 +39,37 @@ async function loginToACGME(username, password) {
   const loginUrl = loginPageRes.url;
 
   // ── 2. Extract CSRF token and form POST URL from the B2C login page ────────
+  console.log('[ACGME] Login page URL after redirects:', loginUrl);
+  console.log('[ACGME] Login page HTML (first 1000 chars):', loginHtml.slice(0, 1000));
+
   const csrfMatch = loginHtml.match(/name="RequestVerificationToken"[^>]*value="([^"]+)"/i)
     || loginHtml.match(/"csrf":"([^"]+)"/);
   const stateMatch = loginHtml.match(/name="state"[^>]*value="([^"]+)"/i)
     || loginHtml.match(/"StateProperties=([^"&]+)"/);
 
   // B2C posts the self-submit form to a URL embedded in the page
-  const formActionMatch = loginHtml.match(/action="([^"]+)"/i);
-  const formAction = formActionMatch
-    ? formActionMatch[1].replace(/&amp;/g, '&')
-    : loginUrl;
+  // The action may be relative — resolve it against the B2C tenant base
+  const formActionMatch = loginHtml.match(/<form[^>]+action="([^"]+)"/i);
+  let formAction;
+  if (formActionMatch) {
+    const raw = formActionMatch[1].replace(/&amp;/g, '&');
+    if (raw.startsWith('http')) {
+      formAction = raw;
+    } else if (raw.startsWith('/')) {
+      formAction = `https://${B2C_TENANT}${raw}`;
+    } else {
+      formAction = `https://${B2C_TENANT}/${raw}`;
+    }
+  } else {
+    // Fallback: try the SelfAsserted endpoint extracted from the login URL
+    const txMatch = loginUrl.match(/[?&]tx=([^&]+)/);
+    if (txMatch) {
+      formAction = `https://${B2C_TENANT}/${B2C_TENANT.split('.')[0]}.onmicrosoft.com/${B2C_POLICY}/SelfAsserted?tx=${txMatch[1]}&p=${B2C_POLICY}`;
+    } else {
+      formAction = loginUrl;
+    }
+  }
+  console.log('[ACGME] Form action URL:', formAction);
 
   const cookieHeader = parseCookies(loginCookies);
 
