@@ -198,10 +198,10 @@ async function loginToACGME(username, password) {
     throw new Error(`B2C password step failed with status ${sa2Res.status}`);
   }
 
-  // ── STEP 5: GET second /confirmed → should have id_token form or redirect ──
+  // ── STEP 5: GET second /confirmed using ORIGINAL csrf (matches x-ms-cpim-csrf cookie) ──
   const confirmedUrl2 = `${apiBase}/api/${apiType2}/confirmed`
     + `?rememberMe=false`
-    + `&csrf_token=${encodeURIComponent(csrf2 || '')}`
+    + `&csrf_token=${encodeURIComponent(csrf || '')}`
     + `&tx=${transId2}`
     + `&p=${B2C_POLICY}`;
 

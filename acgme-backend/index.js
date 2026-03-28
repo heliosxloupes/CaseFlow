@@ -169,9 +169,9 @@ app.post('/debug/b2c-login', async (req, res) => {
     step4bBody = sa2Text;
     const cookiesAfterSA2 = mergeCookies(cookiesAfterCF, sa2Cookies);
 
-    // Step 5: GET second confirmed to get id_token form
+    // Step 5: GET second confirmed — use ORIGINAL csrf (cookie-validated) not page SETTINGS csrf
     const cf2Url = `${apiBase}/api/${cfApiType}/confirmed`
-      + `?rememberMe=false&csrf_token=${encodeURIComponent(cfCsrf||'')}&tx=${cfTransId}&p=${B2C_POLICY}`;
+      + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf||'')}&tx=${cfTransId}&p=${B2C_POLICY}`;
     const cf2Res = await ft(cf2Url, {
       headers: { 'User-Agent': UA, 'Cookie': cookiesAfterSA2, 'Referer': confirmedUrl, 'Accept': 'text/html,application/xhtml+xml' },
       redirect: 'manual',
