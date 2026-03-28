@@ -1734,17 +1734,34 @@ async function saveAcgmeCredentials(){
   if(!user || !pass){ statusEl.textContent='Enter both username and password.'; statusEl.className='settings-cred-status err'; return; }
   if(!sessionPassword){ statusEl.textContent='Session expired — please sign out and back in.'; statusEl.className='settings-cred-status err'; return; }
   try{
-    const blob = await encryptVault({acgmeUser:user, acgmePass:pass}, sessionPassword);
-    localStorage.setItem('cf5-vault', JSON.stringify(blob));
+    // If Railway backend is configured, verify credentials against ACGME first
+    if(ACGME_BACKEND_URL){
+      statusEl.textContent = 'Verifying with ACGME…';
+      statusEl.className = 'settings-cred-status';
+      const token = localStorage.getItem('cf5-token');
+      const resp = await fetch(`${ACGME_BACKEND_URL}/api/auth/save-credentials`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+        body:JSON.stringify({acgmeUsername:user, acgmePassword:pass}),
+      });
+      const data = await resp.json();
+      if(!resp.ok) throw new Error(data.error||'ACGME verification failed');
+    }
+
+    // Also keep local encrypted copy as fallback
+    if(sessionPassword){
+      const blob = await encryptVault({acgmeUser:user, acgmePass:pass}, sessionPassword);
+      localStorage.setItem('cf5-vault', JSON.stringify(blob));
+    }
+
     document.getElementById('s-acgme-user').value = '';
     document.getElementById('s-acgme-pass').value = '';
     statusEl.textContent = '';
-    // Collapse form and refresh status badge
     document.getElementById('s-acgme-form').classList.remove('open');
     loadSettingsUI();
     toast('ACGME credentials saved ✓','ok');
   } catch(e){
-    statusEl.textContent = 'Failed to encrypt: '+e.message;
+    statusEl.textContent = e.message;
     statusEl.className = 'settings-cred-status err';
   }
 }
@@ -1760,23 +1777,70 @@ function togglePassVis(){
 }
 
 // ── ACGME SUBMISSION ─────────────────────────────────────────────────────────
-async function callSubmitAcgme(casePayload){
-  let creds;
-  try { creds = await getAcgmeCredentials(); }
-  catch(e){ throw new Error(e.message); }
+// Set this to your Railway backend URL after deploying.
+// e.g. "https://acgme-backend-production.up.railway.app"
+const ACGME_BACKEND_URL = '';  // ← FILL IN after Railway deploy
 
-  const resp = await fetch('/api/submit-acgme', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      acgmeUser: creds.acgmeUser,
-      acgmePass: creds.acgmePass,
-      caseData:  casePayload,
-    }),
-  });
-  const data = await resp.json();
-  if(!resp.ok || !data.ok) throw new Error(data.error || 'Submission failed');
-  return data;
+// Static ID maps — fill these in using /api/lookups/* once the backend is deployed.
+// These are specific to your program (Larkin / Plastic Surgery - Integrated).
+const ROLE_IDS = {
+  'Surgeon':            '',  // e.g. "119"
+  'Assistant':          '',
+  'Teaching Assistant': '',
+  'Observer':           '',
+};
+const INSTITUTION_IDS = {
+  'Larkin Community Hospital': '',  // e.g. "29262"
+  'Larkin Palm Springs':       '',
+  'Affiliated Site':           '',
+};
+const ATTENDING_IDS = {
+  'Dr. Smith':    '',  // e.g. "633696"
+  'Dr. Johnson':  '',
+  'Dr. Williams': '',
+  'Dr. Brown':    '',
+};
+const PATIENT_IDS = {
+  'Adult':     '',  // e.g. "474"
+  'Pediatric': '',
+};
+
+function formatAcgmeDate(isoDate){
+  // "2026-03-28" → "3/28/2026"
+  const [y,m,d]=(isoDate||isoToday()).split('-');
+  return `${parseInt(m)}/${parseInt(d)}/${y}`;
+}
+
+async function callSubmitAcgme(casePayload){
+  const token=localStorage.getItem('cf5-token');
+  if(!token) throw new Error('Not logged in');
+  if(!ACGME_BACKEND_URL) throw new Error('ACGME backend not configured. Deploy Railway and set ACGME_BACKEND_URL in index.html.');
+
+  // Submit one request per procedure
+  const procs = casePayload.procs || [];
+  if(!procs.length) throw new Error('No procedures to submit');
+
+  for(const proc of procs){
+    const body={
+      procedureDate:   formatAcgmeDate(casePayload.date),
+      procedureYear:   String(casePayload.yr||'4').replace('Year ',''),
+      residentRoleId:  ROLE_IDS[casePayload.role]  || casePayload.role  || '',
+      institutionId:   INSTITUTION_IDS[casePayload.site] || casePayload.site || '',
+      attendingId:     ATTENDING_IDS[casePayload.att]   || casePayload.att   || '',
+      patientTypeId:   PATIENT_IDS[casePayload.pt]      || casePayload.pt    || '',
+      selectedCodes:   proc.c,
+      codeDescription: proc.d,
+      comments:        casePayload.notes||'',
+    };
+
+    const resp=await fetch(`${ACGME_BACKEND_URL}/api/cases/submit`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+      body:JSON.stringify(body),
+    });
+    const data=await resp.json();
+    if(!resp.ok) throw new Error(data.error||'Submission failed');
+  }
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
