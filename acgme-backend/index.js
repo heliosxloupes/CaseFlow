@@ -147,6 +147,46 @@ app.post('/debug/b2c-login', async (req, res) => {
     const cfLocation = cfRes.headers.get('location') || '';
     const cookiesAfterCF = mergeCookies(cookies, [...saCookies, ...cfCookies]);
 
+    // Step 4b: If confirmed returned the login page again (new transId), do ANOTHER SelfAsserted POST
+    let step4bStatus = null, step4bBody = null;
+    const cfSettings = cfText.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i);
+    let cfTransId = null, cfCsrf = null;
+    if (cfSettings) { try { const s = JSON.parse(cfSettings[1]); cfTransId = s.transId; cfCsrf = s.csrf; } catch(_){} }
+
+    if (cfTransId && cfTransId !== transId) {
+      // New session started — post credentials again with new transId
+      const sa2Url = `${apiBase}/SelfAsserted?tx=${cfTransId}&p=${B2C_POLICY}`;
+      const sa2Headers = {
+        'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA,
+        'Cookie': cookiesAfterCF, 'Referer': confirmedUrl, 'Origin': `https://${B2C_TENANT}`,
+        'X-Requested-With': 'XMLHttpRequest',
+      };
+      if (cfCsrf) sa2Headers['X-CSRF-TOKEN'] = cfCsrf;
+      const sa2Body = new URLSearchParams({ signInName: username, password, request_type: 'RESPONSE' });
+      const sa2Res = await ft(sa2Url, { method: 'POST', headers: sa2Headers, body: sa2Body.toString(), redirect: 'manual' }, 12000);
+      const sa2Text = await sa2Res.text();
+      const sa2Cookies = sa2Res.headers.raw()['set-cookie'] || [];
+      step4bStatus = sa2Res.status;
+      step4bBody = sa2Text;
+      cookiesAfterCF = mergeCookies(cookiesAfterCF.split('; ').map(p => p + '; Path=/'), sa2Cookies);
+
+      // If step4b worked, try confirmed again
+      if (sa2Res.status === 200) {
+        const cf2Url = `${apiBase}/api/CombinedSigninAndSignup/confirmed`
+          + `?rememberMe=false&csrf_token=${encodeURIComponent(cfCsrf||'')}&tx=${cfTransId}&p=${B2C_POLICY}`;
+        const cf2Res = await ft(cf2Url, {
+          headers: { 'User-Agent': UA, 'Cookie': cookiesAfterCF, 'Referer': confirmedUrl },
+          redirect: 'follow',
+        }, 12000);
+        const cf2Text = await cf2Res.text();
+        const cf2Cookies = cf2Res.headers.raw()['set-cookie'] || [];
+        step4bBody += ' | CF2 status:' + cf2Res.status + ' | idToken in CF2:' + cf2Text.includes('id_token') + ' | formIn CF2:' + cf2Text.includes('<form');
+        // Update cfText and cfCookies for step 5
+        cfText.__replaced = cf2Text; // for display only
+        cookiesAfterCF = mergeCookies(cookiesAfterCF.split('; ').map(p => p + '; Path=/'), cf2Cookies);
+      }
+    }
+
     // Step 5: POST id_token if present
     const idToken = cfText.match(/name="id_token"\s+value="([^"]+)"/i)?.[1];
     const code    = cfText.match(/name="code"\s+value="([^"]+)"/i)?.[1];
@@ -187,6 +227,8 @@ app.post('/debug/b2c-login', async (req, res) => {
       confirmedUrl: confirmedUrl.slice(0, 200),
       confirmedFinalUrl: cfRes.url?.slice(0, 200),
       confirmedStatus: cfRes.status, confirmedLocation: cfLocation.slice(0, 200),
+      cfNewTransId: cfTransId?.slice(0, 50),
+      step4bStatus, step4bBody: step4bBody?.slice(0, 300),
       confirmedHtmlLength: cfText.length,
       confirmedSettingsApi: cfText.match(/"api"\s*:\s*"([^"]+)"/)?.[1] || 'not found',
       confirmedSettingsTransId: cfText.match(/"transId"\s*:\s*"([^"]+)"/)?.[1]?.slice(0, 50) || 'not found',
