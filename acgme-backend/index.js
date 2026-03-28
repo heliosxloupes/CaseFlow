@@ -165,6 +165,9 @@ app.post('/debug/b2c-login', async (req, res) => {
     const cfSettings = cfText.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i);
     let cfTransId = transIdAfterEmail, cfCsrf = csrf, cfApiType = b2cApiType;
     if (cfSettings) { try { const s = JSON.parse(cfSettings[1]); if (s.csrf) cfCsrf = s.csrf; if (s.api) cfApiType = s.api; if (s.transId) cfTransId = s.transId; } catch(_){} }
+    // Extract x-ms-cpim-csrf value from cookiesAfterCF to see what value it carries into SA2
+    const csrfCookieInCF = cookiesAfterCF.split('; ').find(c => c.trim().startsWith('x-ms-cpim-csrf='));
+    const csrfCookieValueAfterCF = csrfCookieInCF ? csrfCookieInCF.split('=').slice(1).join('=') : 'MISSING';
 
     // Step 4: POST email+password using transId from password form SETTINGS
     let step4bStatus = null, step4bBody = null;
@@ -247,6 +250,9 @@ app.post('/debug/b2c-login', async (req, res) => {
       confirmedApiType: cfApiType,
       cfCsrfFirst20: cfCsrf?.slice(0, 20),
       cfCsrfChanged: cfCsrf !== csrf,
+      cfSetCookieNames: cfCookies.map(c => c.split('=')[0]),
+      csrfCookieValueAfterCFFirst20: csrfCookieValueAfterCF.slice(0, 20),
+      csrfCookieMatchesCfCsrf: csrfCookieValueAfterCF === cfCsrf,
       passwordFormFirst1000: cfText.slice(0, 1000),
       // Step 4: Password POST
       pwPostStatus: step4bStatus, pwPostBody: step4bBody?.slice(0, 200),
