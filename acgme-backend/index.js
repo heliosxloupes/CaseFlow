@@ -188,8 +188,9 @@ app.post('/debug/b2c-login', async (req, res) => {
     const cookiesAfterSA2 = mergeCookies(cookiesAfterCF, sa2Cookies);
 
     // Step 5: GET second confirmed using transId from password form SETTINGS + cfCsrf
+    // Try SelfAsserted (same as step 3b) in case cfApiType=CombinedSigninAndSignup is not the right endpoint
     const transFromCookieAfterSA2 = decodeTransCookie(cookiesAfterSA2) || transIdAfterEmail;
-    const cf2Url = `${apiBase}/api/${cfApiType}/confirmed`
+    const cf2Url = `${apiBase}/api/${b2cApiType}/confirmed`
       + `?rememberMe=false&csrf_token=${encodeURIComponent(cfCsrf||'')}&tx=${cfTransId}&p=${B2C_POLICY}`;
     const cf2Res = await ft(cf2Url, {
       headers: { 'User-Agent': UA, 'Cookie': cookiesAfterSA2, 'Referer': confirmedUrl, 'Accept': 'text/html,application/xhtml+xml' },
