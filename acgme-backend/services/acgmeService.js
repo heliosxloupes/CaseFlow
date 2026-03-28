@@ -3,11 +3,30 @@ const { URLSearchParams } = require('url');
 
 const BASE_URL = 'https://apps.acgme.org';
 
+// Azure B2C tenant details (extracted from ACGME login redirect)
+const B2C_TENANT   = 'acgmeras.b2clogin.com';
+const B2C_POLICY   = 'b2c_1a_signup_signin';
+const B2C_CLIENT   = 'dcdddbd1-2b64-4940-9983-6a6442c526aa';
+const B2C_REDIRECT = 'https://apps.acgme.org/ads/';
+
 /**
- * Step 1: Login to ACGME and return session cookies
+ * Step 1: Login to ACGME via Azure B2C and return session cookies.
+ *
+ * ACGME uses Azure Active Directory B2C (OAuth2/OIDC).
+ * Flow: GET login page → extract CSRF token → POST credentials
+ *       → follow redirect back to apps.acgme.org → capture session cookie.
  */
 async function loginToACGME(username, password) {
-  const loginPageRes = await fetch(`${BASE_URL}/ads/Account/Login`, {
+  // ── 1. Start the OAuth flow — get the B2C login page ──────────────────────
+  const authorizeUrl = `https://${B2C_TENANT}/${B2C_TENANT.split('.')[0]}.onmicrosoft.com/${B2C_POLICY}/oauth2/v2.0/authorize`
+    + `?client_id=${B2C_CLIENT}`
+    + `&redirect_uri=${encodeURIComponent(B2C_REDIRECT)}`
+    + `&response_type=code%20id_token`
+    + `&scope=openid%20profile%20offline_access`
+    + `&response_mode=form_post`
+    + `&nonce=caseflow${Date.now()}`;
+
+  const loginPageRes = await fetch(authorizeUrl, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
       'Accept': 'text/html,application/xhtml+xml',
@@ -17,41 +36,79 @@ async function loginToACGME(username, password) {
 
   const loginHtml = await loginPageRes.text();
   const loginCookies = loginPageRes.headers.raw()['set-cookie'] || [];
+  const loginUrl = loginPageRes.url;
 
-  const tokenMatch = loginHtml.match(/name="__RequestVerificationToken"\s+type="hidden"\s+value="([^"]+)"/);
-  if (!tokenMatch) throw new Error('Could not find login verification token');
+  // ── 2. Extract CSRF token and form POST URL from the B2C login page ────────
+  const csrfMatch = loginHtml.match(/name="RequestVerificationToken"[^>]*value="([^"]+)"/i)
+    || loginHtml.match(/"csrf":"([^"]+)"/);
+  const stateMatch = loginHtml.match(/name="state"[^>]*value="([^"]+)"/i)
+    || loginHtml.match(/"StateProperties=([^"&]+)"/);
 
-  const loginToken = tokenMatch[1];
-  const initialCookie = parseCookies(loginCookies);
+  // B2C posts the self-submit form to a URL embedded in the page
+  const formActionMatch = loginHtml.match(/action="([^"]+)"/i);
+  const formAction = formActionMatch
+    ? formActionMatch[1].replace(/&amp;/g, '&')
+    : loginUrl;
 
-  const loginRes = await fetch(`${BASE_URL}/ads/Account/Login`, {
+  const cookieHeader = parseCookies(loginCookies);
+
+  // ── 3. POST credentials to Azure B2C ──────────────────────────────────────
+  const body = new URLSearchParams({
+    signInName: username,
+    password: password,
+  });
+  if (csrfMatch) body.append('RequestVerificationToken', csrfMatch[1]);
+  if (stateMatch) body.append('StateProperties', stateMatch[1]);
+
+  const credRes = await fetch(formAction, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
-      'Cookie': initialCookie,
-      'Referer': `${BASE_URL}/ads/Account/Login`,
+      'Cookie': cookieHeader,
+      'Referer': loginUrl,
+      'Origin': `https://${B2C_TENANT}`,
     },
-    body: new URLSearchParams({
-      __RequestVerificationToken: loginToken,
-      Username: username,
-      Password: password,
-      RememberMe: 'false',
-    }),
+    body: body.toString(),
     redirect: 'manual',
   });
 
-  const statusCode = loginRes.status;
-  const setCookies = loginRes.headers.raw()['set-cookie'] || [];
+  const credCookies = credRes.headers.raw()['set-cookie'] || [];
+  const allCookies = parseCookies([...loginCookies, ...credCookies]);
 
-  if (statusCode !== 302 && statusCode !== 200) {
-    throw new Error(`Login failed with status ${statusCode}`);
+  // 302 or 200 with redirect = B2C accepted the credentials
+  if (credRes.status !== 302 && credRes.status !== 200) {
+    throw new Error(`Azure B2C login failed with status ${credRes.status}. Check your ACGME username and password.`);
   }
 
-  const sessionCookie = parseCookies([...loginCookies, ...setCookies]);
+  // ── 4. Follow the redirect chain back to apps.acgme.org ───────────────────
+  // B2C sends an id_token via form_post back to the redirect_uri
+  const location = credRes.headers.get('location') || '';
+  if (location.includes('error') || location.includes('AADB2C')) {
+    throw new Error('ACGME login rejected. Check your username and password.');
+  }
 
-  if (!sessionCookie.includes('ASP.NET_SessionId')) {
-    throw new Error('Login failed - no session cookie received. Check your ACGME username and password.');
+  // If B2C returns a form-post with id_token, fetch the next page
+  let sessionCookie = allCookies;
+  if (location) {
+    const followRes = await fetch(location.startsWith('http') ? location : `https://${B2C_TENANT}${location}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+        'Cookie': allCookies,
+      },
+      redirect: 'manual',
+    });
+    const followCookies = followRes.headers.raw()['set-cookie'] || [];
+    sessionCookie = parseCookies([...loginCookies, ...credCookies, ...followCookies]);
+  }
+
+  // ── 5. Confirm we have an ACGME session ────────────────────────────────────
+  if (!sessionCookie.includes('ASP.NET_SessionId') && !sessionCookie.includes('.AspNet')) {
+    throw new Error(
+      'Login did not return an ACGME session. ' +
+      'If your account requires Duo MFA, automatic login is not yet supported — ' +
+      'see Settings for manual session setup.'
+    );
   }
 
   return sessionCookie;

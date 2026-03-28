@@ -1767,9 +1767,16 @@ async function saveAcgmeCredentials(){
   }
 }
 async function getAcgmeCredentials(){
+  // When backend is configured, credentials live in the Railway DB — no local decryption needed.
+  if(ACGME_BACKEND_URL){
+    const saved = JSON.parse(localStorage.getItem('cf5-vault')||'null');
+    if(!saved || !saved.saved) throw new Error('No ACGME credentials saved. Go to Settings → ACGME to add them.');
+    return { backendManaged: true };
+  }
+  // Fallback: local encrypted vault
   const blob = JSON.parse(localStorage.getItem('cf5-vault')||'null');
   if(!blob) throw new Error('No ACGME credentials saved. Go to Settings to add them.');
-  if(!sessionPassword) throw new Error('Session expired. Please sign out and back in.');
+  if(!sessionPassword) throw new Error('No ACGME credentials saved. Go to Settings to add them.');
   return decryptVault(blob, sessionPassword);
 }
 function togglePassVis(){
@@ -1888,13 +1895,7 @@ function launchApp(email){
   renderHistory();
 }
 
-// localStorage-based vault (ready to migrate to DB later)
-async function getAcgmeCredentials(){
-  const blob=JSON.parse(localStorage.getItem('cf5-vault')||'null');
-  if(!blob) throw new Error('No ACGME credentials saved. Go to Settings to add them.');
-  if(!sessionPassword) throw new Error('Session expired — please sign out and back in.');
-  return decryptVault(blob,sessionPassword);
-}
+// getAcgmeCredentials is defined earlier above (near saveAcgmeCredentials)
 
 // no-op stubs so submitCase / resubmitCase don't break when they call these
 function pushCaseToSupabase(){}
