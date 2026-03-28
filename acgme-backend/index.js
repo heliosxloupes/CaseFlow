@@ -105,14 +105,14 @@ app.post('/debug/b2c-login', async (req, res) => {
     }
 
     // Step 2: extract config
-    let csrf = null, transId = null;
+    let csrf = null, transId = null, apiBase = B2C_BASE;
     const sm = loginHtml.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i);
-    if (sm) { try { const s = JSON.parse(sm[1]); csrf = s.csrf; transId = s.transId; } catch(_){} }
+    if (sm) { try { const s = JSON.parse(sm[1]); csrf = s.csrf; transId = s.transId; if (s.hosts?.tenant) apiBase = `https://${B2C_TENANT}${s.hosts.tenant}`; } catch(_){} }
     if (!csrf)    csrf    = loginHtml.match(/"csrf"\s*:\s*"([^"]+)"/)?.[1] || null;
     if (!transId) transId = loginHtml.match(/"transId"\s*:\s*"([^"]+)"/)?.[1] || loginUrl.match(/[?&]tx=([^&]+)/)?.[1] || null;
 
-    // Step 3: POST credentials
-    const saUrl = `${B2C_BASE}/SelfAsserted?tx=${transId||''}&p=${B2C_POLICY}`;
+    // Step 3: POST credentials — use apiBase (case-correct from SETTINGS)
+    const saUrl = `${apiBase}/SelfAsserted?tx=${transId||''}&p=${B2C_POLICY}`;
     const saHeaders = {
       'Content-Type': 'application/x-www-form-urlencoded',
       'User-Agent': UA, 'Cookie': parseCookies(cookies),
@@ -126,10 +126,7 @@ app.post('/debug/b2c-login', async (req, res) => {
 
     const allCookiesAfterSA = [...cookies, ...saCookies];
 
-    // Step 4: GET confirmed — use case-correct apiBase from SETTINGS.hosts.tenant
-    const apiBase = settingsParsed?.hosts?.tenant
-      ? `https://${B2C_TENANT}${settingsParsed.hosts.tenant}`
-      : B2C_BASE;
+    // Step 4: GET confirmed — apiBase already set from SETTINGS above
     const confirmedUrl = `${apiBase}/api/CombinedSigninAndSignup/confirmed`
       + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf||'')}&tx=${transId||''}&p=${B2C_POLICY}`;
     const cfRes = await ft(confirmedUrl, {
