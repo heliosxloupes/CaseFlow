@@ -110,7 +110,7 @@ async function loginToACGME(username, password) {
     throw new Error('Could not extract B2C transId. ACGME login flow may have changed.');
   }
 
-  // ── STEP 3: POST credentials to SelfAsserted ──
+  // ── STEP 3a: POST email ONLY (B2C two-step: email first, then password) ──
   const selfAssertedUrl = `${apiBase}/SelfAsserted?tx=${transId}&p=${B2C_POLICY}`;
   const saHeaders = {
     'Content-Type': 'application/x-www-form-urlencoded',
@@ -122,39 +122,94 @@ async function loginToACGME(username, password) {
   };
   if (csrf) saHeaders['X-CSRF-TOKEN'] = csrf;
 
-  const saBody = new URLSearchParams({ signInName: username, password, request_type: 'RESPONSE' });
+  const saBody = new URLSearchParams({ signInName: username, request_type: 'RESPONSE' });
   const saRes  = await fetchT(selfAssertedUrl, { method: 'POST', headers: saHeaders, body: saBody.toString(), redirect: 'manual' }, 15000);
   const saText = await saRes.text();
   const saSetCookies = saRes.headers.raw()['set-cookie'] || [];
   allSetCookies = allSetCookies.concat(saSetCookies);
 
-  console.log(`[B2C] SelfAsserted: ${saRes.status} | body: ${saText.slice(0, 150)}`);
-  console.log(`[B2C] SelfAsserted new cookies: [${saSetCookies.map(c => c.split('=')[0]).join(', ')}]`);
-
+  console.log(`[B2C] Email POST: ${saRes.status} | body: ${saText.slice(0, 150)}`);
   if (saRes.status !== 200 && saRes.status !== 302) {
-    throw new Error(`B2C SelfAsserted failed with status ${saRes.status}`);
+    throw new Error(`B2C email step failed with status ${saRes.status}`);
   }
+
+  // ── STEP 3b: GET /confirmed → returns password form with new SETTINGS ──
+  const confirmedUrl1 = `${apiBase}/api/${b2cApiType}/confirmed`
+    + `?rememberMe=false`
+    + `&csrf_token=${encodeURIComponent(csrf || '')}`
+    + `&tx=${transId}`
+    + `&p=${B2C_POLICY}`;
+
+  const cf1Res = await fetchT(confirmedUrl1, {
+    headers: {
+      'User-Agent': UA,
+      'Cookie': cookieHeader(allSetCookies),
+      'Referer': loginUrl,
+      'Accept': 'text/html,application/xhtml+xml',
+    },
+    redirect: 'manual',
+  }, 15000);
+
+  const cf1Text = await cf1Res.text();
+  const cf1SetCookies = cf1Res.headers.raw()['set-cookie'] || [];
+  allSetCookies = allSetCookies.concat(cf1SetCookies);
+
+  // Extract new SETTINGS from password form page
+  let csrf2 = csrf, transId2 = transId, apiType2 = b2cApiType;
+  const cf1Sm = cf1Text.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i);
+  if (cf1Sm) {
+    try {
+      const s = JSON.parse(cf1Sm[1]);
+      if (s.csrf)    csrf2    = s.csrf;
+      if (s.transId) transId2 = s.transId;
+      if (s.api)     apiType2 = s.api;
+    } catch (_) {}
+  }
+  console.log(`[B2C] Password form: ${cf1Res.status} | apiType2: ${apiType2} | csrf2 changed: ${csrf2 !== csrf} | transId2 changed: ${transId2 !== transId}`);
+
+  // ── STEP 4: POST email+password using credentials from password page ──
+  const sa2Url = `${apiBase}/SelfAsserted?tx=${transId2}&p=${B2C_POLICY}`;
+  const sa2Headers = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'User-Agent': UA,
+    'Cookie': cookieHeader(allSetCookies),
+    'Referer': confirmedUrl1,
+    'Origin': `https://${B2C_TENANT}`,
+    'X-Requested-With': 'XMLHttpRequest',
+  };
+  if (csrf2) sa2Headers['X-CSRF-TOKEN'] = csrf2;
+
+  const sa2Body = new URLSearchParams({ signInName: username, password, request_type: 'RESPONSE' });
+  const sa2Res  = await fetchT(sa2Url, { method: 'POST', headers: sa2Headers, body: sa2Body.toString(), redirect: 'manual' }, 15000);
+  const sa2Text = await sa2Res.text();
+  const sa2SetCookies = sa2Res.headers.raw()['set-cookie'] || [];
+  allSetCookies = allSetCookies.concat(sa2SetCookies);
+
+  console.log(`[B2C] Password POST: ${sa2Res.status} | body: ${sa2Text.slice(0, 150)}`);
   try {
-    const saJson = JSON.parse(saText);
+    const saJson = JSON.parse(sa2Text);
     if (saJson.status && saJson.status !== '200') {
       throw new Error(`ACGME credentials rejected: ${saJson.message || saJson.status}`);
     }
   } catch (e) {
     if (e.message.startsWith('ACGME credentials rejected')) throw e;
   }
+  if (sa2Res.status !== 200 && sa2Res.status !== 302) {
+    throw new Error(`B2C password step failed with status ${sa2Res.status}`);
+  }
 
-  // ── STEP 4: GET /confirmed using actual API type from SETTINGS ──
-  const confirmedUrl = `${apiBase}/api/${b2cApiType}/confirmed`
+  // ── STEP 5: GET second /confirmed → should have id_token form or redirect ──
+  const confirmedUrl2 = `${apiBase}/api/${apiType2}/confirmed`
     + `?rememberMe=false`
-    + `&csrf_token=${encodeURIComponent(csrf || '')}`
-    + `&tx=${transId}`
+    + `&csrf_token=${encodeURIComponent(csrf2 || '')}`
+    + `&tx=${transId2}`
     + `&p=${B2C_POLICY}`;
 
-  const cfRes = await fetchT(confirmedUrl, {
+  const cfRes = await fetchT(confirmedUrl2, {
     headers: {
       'User-Agent': UA,
       'Cookie': cookieHeader(allSetCookies),
-      'Referer': loginUrl,
+      'Referer': confirmedUrl1,
       'Accept': 'text/html,application/xhtml+xml',
     },
     redirect: 'manual',
@@ -165,10 +220,10 @@ async function loginToACGME(username, password) {
   const cfLocation   = cfRes.headers.get('location') || '';
   allSetCookies = allSetCookies.concat(cfSetCookies);
 
-  console.log(`[B2C] Confirmed: ${cfRes.status} | location: ${cfLocation.slice(0, 100)}`);
-  console.log(`[B2C] Confirmed HTML snippet: ${cfText.slice(0, 300)}`);
+  console.log(`[B2C] Final confirmed: ${cfRes.status} | location: ${cfLocation.slice(0, 100)}`);
+  console.log(`[B2C] Final confirmed HTML snippet: ${cfText.slice(0, 300)}`);
 
-  // ── STEP 5: POST id_token / code to ACGME ──
+  // ── STEP 6: POST id_token / code to ACGME ──
   const idToken = cfText.match(/name="id_token"\s+value="([^"]+)"/i)?.[1];
   const code    = cfText.match(/name="code"\s+value="([^"]+)"/i)?.[1];
   const state   = cfText.match(/name="state"\s+value="([^"]+)"/i)?.[1];

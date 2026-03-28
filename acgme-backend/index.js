@@ -121,7 +121,7 @@ app.post('/debug/b2c-login', async (req, res) => {
       return Object.values(map).join('; ');
     }
 
-    // Step 3: POST credentials — use apiBase (case-correct from SETTINGS)
+    // Step 3a: POST email ONLY first (B2C is a two-step flow: email → password)
     const saUrl = `${apiBase}/SelfAsserted?tx=${transId||''}&p=${B2C_POLICY}`;
     const saHeaders = {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -129,13 +129,13 @@ app.post('/debug/b2c-login', async (req, res) => {
       'Referer': loginUrl, 'Origin': `https://${B2C_TENANT}`, 'X-Requested-With': 'XMLHttpRequest',
     };
     if (csrf) saHeaders['X-CSRF-TOKEN'] = csrf;
-    const saBody = new URLSearchParams({ signInName: username, password, request_type: 'RESPONSE' });
+    const saBody = new URLSearchParams({ signInName: username, request_type: 'RESPONSE' });
     const saRes = await ft(saUrl, { method: 'POST', headers: saHeaders, body: saBody.toString(), redirect: 'manual' }, 12000);
     const saText = await saRes.text();
     const saCookies = saRes.headers.raw()['set-cookie'] || [];
-    const cookiesAfterSA = mergeCookies(cookies, saCookies); // merged string
+    const cookiesAfterSA = mergeCookies(cookies, saCookies);
 
-    // Step 4: GET confirmed — use actual API type from SETTINGS (e.g. SelfAsserted)
+    // Step 3b: GET confirmed to get the password form (B2C advances the flow)
     const confirmedUrl = `${apiBase}/api/${b2cApiType}/confirmed`
       + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf||'')}&tx=${transId||''}&p=${B2C_POLICY}`;
     const cfRes = await ft(confirmedUrl, {
@@ -147,65 +147,65 @@ app.post('/debug/b2c-login', async (req, res) => {
     const cfLocation = cfRes.headers.get('location') || '';
     const cookiesAfterCF = mergeCookies(cookies, [...saCookies, ...cfCookies]);
 
-    // Step 4b: If confirmed returned the login page again (new transId), do ANOTHER SelfAsserted POST
-    let step4bStatus = null, step4bBody = null;
+    // Extract new SETTINGS from password form page
     const cfSettings = cfText.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i);
-    let cfTransId = null, cfCsrf = null;
-    if (cfSettings) { try { const s = JSON.parse(cfSettings[1]); cfTransId = s.transId; cfCsrf = s.csrf; } catch(_){} }
+    let cfTransId = transId, cfCsrf = csrf, cfApiType = b2cApiType;
+    if (cfSettings) { try { const s = JSON.parse(cfSettings[1]); if (s.transId) cfTransId = s.transId; if (s.csrf) cfCsrf = s.csrf; if (s.api) cfApiType = s.api; } catch(_){} }
 
-    if (cfTransId && cfTransId !== transId) {
-      // New session started — post credentials again with new transId
-      const sa2Url = `${apiBase}/SelfAsserted?tx=${cfTransId}&p=${B2C_POLICY}`;
-      const sa2Headers = {
-        'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA,
-        'Cookie': cookiesAfterCF, 'Referer': confirmedUrl, 'Origin': `https://${B2C_TENANT}`,
-        'X-Requested-With': 'XMLHttpRequest',
-      };
-      if (cfCsrf) sa2Headers['X-CSRF-TOKEN'] = cfCsrf;
-      const sa2Body = new URLSearchParams({ signInName: username, password, request_type: 'RESPONSE' });
-      const sa2Res = await ft(sa2Url, { method: 'POST', headers: sa2Headers, body: sa2Body.toString(), redirect: 'manual' }, 12000);
-      const sa2Text = await sa2Res.text();
-      const sa2Cookies = sa2Res.headers.raw()['set-cookie'] || [];
-      step4bStatus = sa2Res.status;
-      step4bBody = sa2Text;
-      cookiesAfterCF = mergeCookies(cookiesAfterCF.split('; ').map(p => p + '; Path=/'), sa2Cookies);
+    // Step 4: POST email+password using credentials from password form page
+    let step4bStatus = null, step4bBody = null;
+    const sa2Url = `${apiBase}/SelfAsserted?tx=${cfTransId}&p=${B2C_POLICY}`;
+    const sa2Headers = {
+      'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA,
+      'Cookie': cookiesAfterCF, 'Referer': confirmedUrl, 'Origin': `https://${B2C_TENANT}`,
+      'X-Requested-With': 'XMLHttpRequest',
+    };
+    if (cfCsrf) sa2Headers['X-CSRF-TOKEN'] = cfCsrf;
+    const sa2Body = new URLSearchParams({ signInName: username, password, request_type: 'RESPONSE' });
+    const sa2Res = await ft(sa2Url, { method: 'POST', headers: sa2Headers, body: sa2Body.toString(), redirect: 'manual' }, 12000);
+    const sa2Text = await sa2Res.text();
+    const sa2Cookies = sa2Res.headers.raw()['set-cookie'] || [];
+    step4bStatus = sa2Res.status;
+    step4bBody = sa2Text;
+    const cookiesAfterSA2 = mergeCookies(cookiesAfterCF, sa2Cookies);
 
-      // If step4b worked, try confirmed again
-      if (sa2Res.status === 200) {
-        const cf2Url = `${apiBase}/api/CombinedSigninAndSignup/confirmed`
-          + `?rememberMe=false&csrf_token=${encodeURIComponent(cfCsrf||'')}&tx=${cfTransId}&p=${B2C_POLICY}`;
-        const cf2Res = await ft(cf2Url, {
-          headers: { 'User-Agent': UA, 'Cookie': cookiesAfterCF, 'Referer': confirmedUrl },
-          redirect: 'follow',
-        }, 12000);
-        const cf2Text = await cf2Res.text();
-        const cf2Cookies = cf2Res.headers.raw()['set-cookie'] || [];
-        step4bBody += ' | CF2 status:' + cf2Res.status + ' | idToken in CF2:' + cf2Text.includes('id_token') + ' | formIn CF2:' + cf2Text.includes('<form');
-        // Update cfText and cfCookies for step 5
-        cfText.__replaced = cf2Text; // for display only
-        cookiesAfterCF = mergeCookies(cookiesAfterCF.split('; ').map(p => p + '; Path=/'), cf2Cookies);
-      }
-    }
+    // Step 5: GET second confirmed to get id_token form
+    const cf2Url = `${apiBase}/api/${cfApiType}/confirmed`
+      + `?rememberMe=false&csrf_token=${encodeURIComponent(cfCsrf||'')}&tx=${cfTransId}&p=${B2C_POLICY}`;
+    const cf2Res = await ft(cf2Url, {
+      headers: { 'User-Agent': UA, 'Cookie': cookiesAfterSA2, 'Referer': confirmedUrl, 'Accept': 'text/html,application/xhtml+xml' },
+      redirect: 'manual',
+    }, 15000);
+    const cf2Text = await cf2Res.text();
+    const cf2Cookies = cf2Res.headers.raw()['set-cookie'] || [];
+    const cf2Location = cf2Res.headers.get('location') || '';
+    const cookiesAfterCF2 = mergeCookies(cookiesAfterSA2, cf2Cookies);
 
-    // Step 5: POST id_token if present
-    const idToken = cfText.match(/name="id_token"\s+value="([^"]+)"/i)?.[1];
-    const code    = cfText.match(/name="code"\s+value="([^"]+)"/i)?.[1];
-    const action  = cfText.match(/<form[^>]+action="([^"]+)"/i)?.[1]?.replace(/&amp;/g, '&');
+    // Step 6: POST id_token / code to ACGME
+    const idToken = cf2Text.match(/name="id_token"\s+value="([^"]+)"/i)?.[1];
+    const code    = cf2Text.match(/name="code"\s+value="([^"]+)"/i)?.[1];
+    const action  = cf2Text.match(/<form[^>]+action="([^"]+)"/i)?.[1]?.replace(/&amp;/g, '&');
     let acgmeStatus = null, acgmeCookieCount = 0, acgmeCookieNames = [];
     if (idToken || code) {
       const tokenBody = new URLSearchParams();
       if (idToken) tokenBody.append('id_token', idToken);
       if (code) tokenBody.append('code', code);
-      const stateM = cfText.match(/name="state"\s+value="([^"]+)"/i);
+      const stateM = cf2Text.match(/name="state"\s+value="([^"]+)"/i);
       if (stateM) tokenBody.append('state', stateM[1]);
       const acgmeRes = await ft(action || 'https://apps.acgme.org/ads/', {
-        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA, 'Cookie': cookiesAfterCF },
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA, 'Cookie': cookiesAfterCF2 },
         body: tokenBody.toString(), redirect: 'follow',
       }, 12000);
       const acgmeCookies = acgmeRes.headers.raw()['set-cookie'] || [];
       acgmeStatus = acgmeRes.status;
       acgmeCookieCount = acgmeCookies.length;
       acgmeCookieNames = acgmeCookies.map(c => c.split('=')[0]);
+    } else if (cf2Location && cf2Location.startsWith('http')) {
+      const followRes = await ft(cf2Location, { headers: { 'User-Agent': UA, 'Cookie': cookiesAfterCF2 }, redirect: 'follow' }, 12000);
+      const followCookies = followRes.headers.raw()['set-cookie'] || [];
+      acgmeStatus = followRes.status;
+      acgmeCookieCount = followCookies.length;
+      acgmeCookieNames = followCookies.map(c => c.split('=')[0]);
     }
 
     // Extract full SETTINGS from initial login page for diagnosis
@@ -217,26 +217,26 @@ app.post('/debug/b2c-login', async (req, res) => {
       hops,
       loginUrl: loginUrl.slice(0, 200),
       b2cApiType,
-      settings: settingsParsed,
       csrfFound: !!csrf, transIdFound: !!transId,
-      transIdValue: (transId||'').slice(0, 60),
       step1CookieNames: cookies.map(c => c.split('=')[0]),
-      selfAssertedStatus: saRes.status, selfAssertedBody: saText,
+      // Step 3a: Email POST
+      emailPostStatus: saRes.status, emailPostBody: saText,
       saCookieNames: saCookies.map(c => c.split('=')[0]),
-      cookiesSentToConfirmed: cookiesAfterSA.slice(0, 600),
-      cookieSentCount: cookiesAfterSA.split('; ').length,
-      allCookieNames: cookiesAfterSA.split('; ').map(c => c.split('=')[0]),
+      // Step 3b: First confirmed (password form page)
       confirmedUrl: confirmedUrl.slice(0, 200),
-      confirmedFinalUrl: cfRes.url?.slice(0, 200),
       confirmedStatus: cfRes.status, confirmedLocation: cfLocation.slice(0, 200),
       confirmedHtmlLength: cfText.length,
-      confirmedSettingsApi: cfText.match(/"api"\s*:\s*"([^"]+)"/)?.[1] || 'not found',
-      confirmedHtmlFirst500: cfText.slice(0, 500),
-      confirmedHtmlLast300: cfText.slice(-300),
-      originalTransId: transId?.slice(0, 60),
-      cfNewTransId: cfTransId?.slice(0, 60),
-      transIdsMatch: transId === cfTransId,
-      step4bStatus, step4bBody: step4bBody?.slice(0, 300),
+      confirmedApiType: cfApiType,
+      cfTransIdSameAsOriginal: cfTransId === transId,
+      // Step 4: Password POST
+      pwPostStatus: step4bStatus, pwPostBody: step4bBody?.slice(0, 200),
+      sa2CookieNames: sa2Cookies.map(c => c.split('=')[0]),
+      // Step 5: Second confirmed (should have id_token)
+      cf2Url: cf2Url.slice(0, 200),
+      cf2Status: cf2Res.status, cf2Location: cf2Location.slice(0, 200),
+      cf2HtmlLength: cf2Text.length,
+      cf2ApiType: cf2Text.match(/"api"\s*:\s*"([^"]+)"/)?.[1] || 'not found',
+      cf2First300: cf2Text.slice(0, 300),
       idTokenFound: !!idToken, codeFound: !!code, formAction: (action || 'none').slice(0, 150),
       acgmeStatus, acgmeCookieCount, acgmeCookieNames,
     });
