@@ -192,7 +192,7 @@ app.post('/debug/b2c-login', async (req, res) => {
     // cfApiType defaults to b2cApiType if SETTINGS parse failed; use cfApiType (CombinedSigninAndSignup per SETTINGS)
     const cf2ApiTypeToUse = cfApiType || b2cApiType;
     const cf2Url = `${apiBase}/api/${cf2ApiTypeToUse}/confirmed`
-      + `?rememberMe=false&csrf_token=${encodeURIComponent(cfCsrf||'')}&tx=${encodeURIComponent(cfTransId)}&p=${B2C_POLICY}`;
+      + `?rememberMe=false&csrf_token=${encodeURIComponent(cfCsrf||'')}&tx=${cfTransId}&p=${B2C_POLICY}`;
     const cf2Res = await ft(cf2Url, {
       headers: {
         'User-Agent': UA,
