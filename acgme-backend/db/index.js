@@ -1,8 +1,14 @@
 const { Pool } = require('pg');
 
+// Railway internal networking (*.railway.internal) does NOT use SSL.
+// External/public connections require SSL with self-signed cert tolerance.
+const dbUrl = process.env.DATABASE_URL || '';
+const useSSL = dbUrl.includes('railway.internal') ? false : { rejectUnauthorized: false };
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  connectionString: dbUrl,
+  ssl: useSSL,
+  connectionTimeoutMillis: 10000,
 });
 
 module.exports = {
