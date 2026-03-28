@@ -191,8 +191,11 @@ app.post('/debug/b2c-login', async (req, res) => {
     const transFromCookieAfterSA2 = decodeTransCookie(cookiesAfterSA2) || transIdAfterEmail;
     // cfApiType defaults to b2cApiType if SETTINGS parse failed; use cfApiType (CombinedSigninAndSignup per SETTINGS)
     const cf2ApiTypeToUse = cfApiType || b2cApiType;
+    // Try different combinations: main attempt uses cfCsrf+cfTransId+cfApiType
+    // Also try: originalCsrf+transId+b2cApiType (same as step 3b)
     const cf2Url = `${apiBase}/api/${cf2ApiTypeToUse}/confirmed`
-      + `?rememberMe=false&csrf_token=${encodeURIComponent(cfCsrf||'')}&tx=${cfTransId}&p=${B2C_POLICY}`;
+      + `?csrf_token=${encodeURIComponent(cfCsrf||'')}&tx=${cfTransId}&p=${B2C_POLICY}`;
+    const cf2UrlVariant = confirmedUrl; // exact same URL as step 3b
     const cf2Res = await ft(cf2Url, {
       headers: {
         'User-Agent': UA,
@@ -204,6 +207,13 @@ app.post('/debug/b2c-login', async (req, res) => {
       },
       redirect: 'follow',
     }, 15000);
+    // ALSO try the same confirmed URL as step 3b (original CSRF) to see if it returns different result
+    const cf2VarRes = await ft(cf2UrlVariant, {
+      headers: { 'User-Agent': UA, 'Cookie': cookiesAfterSA2, 'Referer': confirmedUrl, 'Accept': 'text/html,application/xhtml+xml', 'Accept-Language': 'en-US,en;q=0.9' },
+      redirect: 'follow',
+    }, 15000);
+    const cf2VarText = await cf2VarRes.text();
+    const cf2VarStatus = cf2VarRes.status;
     const cf2Text = await cf2Res.text();
     const cf2Cookies = cf2Res.headers.raw()['set-cookie'] || [];
     const cf2Location = cf2Res.headers.get('location') || '';
@@ -277,6 +287,8 @@ app.post('/debug/b2c-login', async (req, res) => {
       sa2ResponseHeaders: sa2RawHeaders,
       cf2Url: cf2Url.slice(0, 200),
       cf2Status: cf2Res.status, cf2Location: cf2Location.slice(0, 200),
+      cf2VarStatus: cf2VarStatus, cf2VarFirst100: cf2VarText.slice(0, 100),
+      cf2VarApiType: cf2VarText.match(/"api"\s*:\s*"([^"]+)"/)?.[1] || 'not found',
       cf2RawHeaders,
       cf2HtmlLength: cf2Text.length,
       cf2ApiType: cf2Text.match(/"api"\s*:\s*"([^"]+)"/)?.[1] || 'not found',
