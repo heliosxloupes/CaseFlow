@@ -40,84 +40,163 @@ async function loginToACGME(username, password) {
 
   // ── 2. Extract CSRF token and form POST URL from the B2C login page ────────
   console.log('[ACGME] Login page URL after redirects:', loginUrl);
-  console.log('[ACGME] Login page HTML (first 1000 chars):', loginHtml.slice(0, 1000));
 
-  const csrfMatch = loginHtml.match(/name="RequestVerificationToken"[^>]*value="([^"]+)"/i)
-    || loginHtml.match(/"csrf":"([^"]+)"/);
-  const stateMatch = loginHtml.match(/name="state"[^>]*value="([^"]+)"/i)
-    || loginHtml.match(/"StateProperties=([^"&]+)"/);
+  // B2C embeds config JSON in a <script> block: var SETTINGS = {...}
+  // The csrf field and transId are inside that JSON blob.
+  const settingsMatch = loginHtml.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i)
+    || loginHtml.match(/var\s+settings\s*=\s*(\{[\s\S]*?\});/i);
 
-  // B2C posts the self-submit form to a URL embedded in the page
-  // The action may be relative — resolve it against the B2C tenant base
-  const formActionMatch = loginHtml.match(/<form[^>]+action="([^"]+)"/i);
-  let formAction;
-  if (formActionMatch) {
-    const raw = formActionMatch[1].replace(/&amp;/g, '&');
-    if (raw.startsWith('http')) {
-      formAction = raw;
-    } else if (raw.startsWith('/')) {
-      formAction = `https://${B2C_TENANT}${raw}`;
-    } else {
-      formAction = `https://${B2C_TENANT}/${raw}`;
-    }
-  } else {
-    // Fallback: try the SelfAsserted endpoint extracted from the login URL
-    const txMatch = loginUrl.match(/[?&]tx=([^&]+)/);
-    if (txMatch) {
-      formAction = `https://${B2C_TENANT}/${B2C_TENANT.split('.')[0]}.onmicrosoft.com/${B2C_POLICY}/SelfAsserted?tx=${txMatch[1]}&p=${B2C_POLICY}`;
-    } else {
-      formAction = loginUrl;
+  let csrf = null;
+  let transId = null;
+  if (settingsMatch) {
+    try {
+      const settings = JSON.parse(settingsMatch[1]);
+      csrf = settings.csrf;
+      transId = settings.transId;
+      console.log('[ACGME] Extracted CSRF from SETTINGS:', csrf ? csrf.slice(0, 10) + '...' : 'none');
+    } catch (e) {
+      console.log('[ACGME] Could not parse SETTINGS JSON:', e.message);
     }
   }
-  console.log('[ACGME] Form action URL:', formAction);
+  // Fallback: hidden input field or inline JSON string
+  if (!csrf) {
+    const csrfMatch = loginHtml.match(/"csrf"\s*:\s*"([^"]+)"/i)
+      || loginHtml.match(/name="RequestVerificationToken"[^>]*value="([^"]+)"/i);
+    if (csrfMatch) csrf = csrfMatch[1];
+  }
+
+  // Extract transId for the SelfAsserted endpoint URL
+  if (!transId) {
+    const txMatch = loginUrl.match(/[?&]tx=([^&]+)/);
+    if (txMatch) transId = txMatch[1];
+  }
+
+  console.log('[ACGME] CSRF:', csrf ? 'found' : 'NOT found');
+  console.log('[ACGME] TransId:', transId ? 'found' : 'NOT found');
+
+  // B2C SelfAsserted endpoint
+  const tenant = B2C_TENANT.split('.')[0]; // 'acgmeras'
+  const selfAssertedUrl = `https://${B2C_TENANT}/${tenant}.onmicrosoft.com/${B2C_POLICY}/SelfAsserted`
+    + `?tx=${transId || ''}&p=${B2C_POLICY}`;
+
+  console.log('[ACGME] SelfAsserted URL:', selfAssertedUrl);
 
   const cookieHeader = parseCookies(loginCookies);
 
-  // ── 3. POST credentials to Azure B2C ──────────────────────────────────────
+  // ── 3. POST credentials to Azure B2C SelfAsserted endpoint ────────────────
+  // B2C requires request_type=RESPONSE and X-CSRF-TOKEN header
   const body = new URLSearchParams({
     signInName: username,
     password: password,
+    request_type: 'RESPONSE',
   });
-  if (csrfMatch) body.append('RequestVerificationToken', csrfMatch[1]);
-  if (stateMatch) body.append('StateProperties', stateMatch[1]);
 
-  const credRes = await fetch(formAction, {
+  const credHeaders = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+    'Cookie': cookieHeader,
+    'Referer': loginUrl,
+    'Origin': `https://${B2C_TENANT}`,
+    'X-Requested-With': 'XMLHttpRequest',
+  };
+  if (csrf) credHeaders['X-CSRF-TOKEN'] = csrf;
+
+  const credRes = await fetch(selfAssertedUrl, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
-      'Cookie': cookieHeader,
-      'Referer': loginUrl,
-      'Origin': `https://${B2C_TENANT}`,
-    },
+    headers: credHeaders,
     body: body.toString(),
     redirect: 'manual',
   });
 
+  const credBody = await credRes.text();
+  console.log('[ACGME] SelfAsserted response status:', credRes.status);
+  console.log('[ACGME] SelfAsserted response body:', credBody.slice(0, 500));
+
   const credCookies = credRes.headers.raw()['set-cookie'] || [];
   const allCookies = parseCookies([...loginCookies, ...credCookies]);
 
-  // 302 or 200 with redirect = B2C accepted the credentials
-  if (credRes.status !== 302 && credRes.status !== 200) {
+  // B2C SelfAsserted returns 200 with JSON {status:'200'} on success, or error JSON
+  if (credRes.status !== 200 && credRes.status !== 302) {
     throw new Error(`Azure B2C login failed with status ${credRes.status}. Check your ACGME username and password.`);
   }
-
-  // ── 4. Follow the redirect chain back to apps.acgme.org ───────────────────
-  // B2C sends an id_token via form_post back to the redirect_uri
-  const location = credRes.headers.get('location') || '';
-  if (location.includes('error') || location.includes('AADB2C')) {
-    throw new Error('ACGME login rejected. Check your username and password.');
+  try {
+    const credJson = JSON.parse(credBody);
+    if (credJson.status && credJson.status !== '200') {
+      throw new Error(`ACGME login rejected: ${credJson.message || JSON.stringify(credJson)}`);
+    }
+  } catch (parseErr) {
+    if (parseErr.message.startsWith('ACGME login rejected')) throw parseErr;
+    // Non-JSON body — could be a redirect page, continue
   }
 
-  // If B2C returns a form-post with id_token, fetch the next page
-  let sessionCookie = allCookies;
-  if (location) {
-    const followRes = await fetch(location.startsWith('http') ? location : `https://${B2C_TENANT}${location}`, {
+  // ── 4. Follow the confirmation redirect to get ACGME session ─────────────
+  // After a successful SelfAsserted POST, B2C returns JSON with a
+  // status:'200' and we then need to GET the confirmed_url / follow location.
+  const location = credRes.headers.get('location') || '';
+  if (location.includes('error') || location.includes('AADB2C')) {
+    throw new Error('ACGME login rejected by B2C. Check your username and password.');
+  }
+
+  // B2C next step: GET the /api/CombinedSigninAndSignup/confirmed endpoint
+  const tenant = B2C_TENANT.split('.')[0];
+  const confirmedUrl = `https://${B2C_TENANT}/${tenant}.onmicrosoft.com/${B2C_POLICY}/api/CombinedSigninAndSignup/confirmed`
+    + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf || '')}&tx=${transId || ''}&p=${B2C_POLICY}`;
+
+  console.log('[ACGME] Fetching confirmed URL...');
+  const confirmedRes = await fetch(confirmedUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+      'Cookie': allCookies,
+      'Referer': loginUrl,
+    },
+    redirect: 'follow',
+  });
+
+  const confirmedHtml = await confirmedRes.text();
+  const confirmedCookies = confirmedRes.headers.raw()['set-cookie'] || [];
+  let sessionCookie = parseCookies([...loginCookies, ...credCookies, ...confirmedCookies]);
+
+  console.log('[ACGME] Confirmed URL response status:', confirmedRes.status);
+  console.log('[ACGME] Final URL after confirmed:', confirmedRes.url);
+
+  // The confirmed page contains a form that auto-posts id_token to ACGME
+  // Extract and follow that form_post
+  const idTokenMatch = confirmedHtml.match(/name="id_token"\s+value="([^"]+)"/i);
+  const codeMatch = confirmedHtml.match(/name="code"\s+value="([^"]+)"/i);
+  const formActionMatch2 = confirmedHtml.match(/<form[^>]+action="([^"]+)"/i);
+
+  if (idTokenMatch || codeMatch) {
+    const acgmeFormAction = formActionMatch2
+      ? formActionMatch2[1].replace(/&amp;/g, '&')
+      : B2C_REDIRECT;
+    const tokenBody = new URLSearchParams();
+    if (idTokenMatch) tokenBody.append('id_token', idTokenMatch[1]);
+    if (codeMatch) tokenBody.append('code', codeMatch[1]);
+    const stateInForm = confirmedHtml.match(/name="state"\s+value="([^"]+)"/i);
+    if (stateInForm) tokenBody.append('state', stateInForm[1]);
+
+    console.log('[ACGME] Posting id_token to ACGME:', acgmeFormAction);
+    const acgmeRes = await fetch(acgmeFormAction, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+        'Cookie': sessionCookie,
+      },
+      body: tokenBody.toString(),
+      redirect: 'follow',
+    });
+    const acgmeCookies = acgmeRes.headers.raw()['set-cookie'] || [];
+    sessionCookie = parseCookies([...loginCookies, ...credCookies, ...confirmedCookies, ...acgmeCookies]);
+    console.log('[ACGME] ACGME post-login status:', acgmeRes.status);
+  } else if (location) {
+    const followUrl = location.startsWith('http') ? location : `https://${B2C_TENANT}${location}`;
+    const followRes = await fetch(followUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
         'Cookie': allCookies,
       },
-      redirect: 'manual',
+      redirect: 'follow',
     });
     const followCookies = followRes.headers.raw()['set-cookie'] || [];
     sessionCookie = parseCookies([...loginCookies, ...credCookies, ...followCookies]);
