@@ -159,14 +159,22 @@ app.post('/debug/b2c-login', async (req, res) => {
       acgmeCookieNames = acgmeCookies.map(c => c.split('=')[0]);
     }
 
+    // Extract full SETTINGS from initial login page for diagnosis
+    let settingsParsed = null;
+    const sm2 = loginHtml.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i);
+    if (sm2) { try { settingsParsed = JSON.parse(sm2[1]); } catch(_){} }
+
     return res.json({
       hops,
-      loginUrl: loginUrl.slice(0, 150),
+      loginUrl: loginUrl.slice(0, 200),
+      settings: settingsParsed,   // Full SETTINGS object from B2C page
       csrfFound: !!csrf, transIdFound: !!transId,
-      selfAssertedStatus: saRes.status, selfAssertedBody: saText.slice(0, 200),
-      confirmedStatus: cfRes.status, confirmedLocation: cfLocation.slice(0, 150),
-      confirmedHtmlSnippet: cfText.slice(0, 600),
-      idTokenFound: !!idToken, codeFound: !!code, formAction: (action || 'none').slice(0, 100),
+      transIdValue: (transId||'').slice(0, 60),
+      selfAssertedStatus: saRes.status, selfAssertedBody: saText,
+      confirmedUrl: confirmedUrl.slice(0, 200),
+      confirmedStatus: cfRes.status, confirmedLocation: cfLocation.slice(0, 200),
+      confirmedHtmlFirst200: cfText.slice(0, 200),
+      idTokenFound: !!idToken, codeFound: !!code, formAction: (action || 'none').slice(0, 150),
       acgmeStatus, acgmeCookieCount, acgmeCookieNames,
     });
   } catch (err) {
