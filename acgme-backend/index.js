@@ -140,7 +140,7 @@ app.post('/debug/b2c-login', async (req, res) => {
       + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf||'')}&tx=${transId||''}&p=${B2C_POLICY}`;
     const cfRes = await ft(confirmedUrl, {
       headers: { 'User-Agent': UA, 'Cookie': cookiesAfterSA, 'Referer': loginUrl, 'Accept': 'text/html,application/xhtml+xml' },
-      redirect: 'follow',
+      redirect: 'manual',
     }, 15000);
     const cfText = await cfRes.text();
     const cfCookies = cfRes.headers.raw()['set-cookie'] || [];
@@ -224,6 +224,8 @@ app.post('/debug/b2c-login', async (req, res) => {
       selfAssertedStatus: saRes.status, selfAssertedBody: saText,
       saCookieNames: saCookies.map(c => c.split('=')[0]),
       cookiesSentToConfirmed: cookiesAfterSA.slice(0, 600),
+      cookieSentCount: cookiesAfterSA.split('; ').length,
+      allCookieNames: cookiesAfterSA.split('; ').map(c => c.split('=')[0]),
       confirmedUrl: confirmedUrl.slice(0, 200),
       confirmedFinalUrl: cfRes.url?.slice(0, 200),
       confirmedStatus: cfRes.status, confirmedLocation: cfLocation.slice(0, 200),
