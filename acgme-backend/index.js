@@ -53,76 +53,90 @@ app.get('/health/db', async (req, res) => {
   }
 });
 
-// Debug: test B2C login step-by-step and return full diagnostic info
+// Debug: test B2C login flow step-by-step
 app.post('/debug/b2c-login', async (req, res) => {
-  const fetch = require('node-fetch');
-  const { URLSearchParams } = require('url');
   const { username, password } = req.body || {};
   if (!username || !password) return res.status(400).json({ error: 'username and password required' });
-
-  const B2C_TENANT   = 'acgmeras.b2clogin.com';
-  const B2C_POLICY   = 'b2c_1a_signup_signin';
-  const B2C_CLIENT   = 'dcdddbd1-2b64-4940-9983-6a6442c526aa';
-  const B2C_REDIRECT = 'https://apps.acgme.org/ads/';
-  const tenant = B2C_TENANT.split('.')[0];
-
   try {
-    const authorizeUrl = `https://${B2C_TENANT}/${tenant}.onmicrosoft.com/${B2C_POLICY}/oauth2/v2.0/authorize`
-      + `?client_id=${B2C_CLIENT}`
-      + `&redirect_uri=${encodeURIComponent(B2C_REDIRECT)}`
-      + `&response_type=code%20id_token`
-      + `&scope=openid%20profile%20offline_access`
-      + `&response_mode=form_post`
-      + `&nonce=caseflow${Date.now()}`;
+    // Import the modular helpers from acgmeService
+    // We re-implement inline so we can return intermediate state
+    const fetch = require('node-fetch');
+    const AbortController = require('abort-controller');
+    const { URLSearchParams } = require('url');
+    const B2C_TENANT = 'acgmeras.b2clogin.com';
+    const B2C_POLICY = 'b2c_1a_signup_signin';
+    const B2C_CLIENT = 'dcdddbd1-2b64-4940-9983-6a6442c526aa';
+    const B2C_REDIRECT = 'https://apps.acgme.org/ads/';
+    const B2C_BASE = `https://${B2C_TENANT}/acgmeras.onmicrosoft.com/${B2C_POLICY}`;
+    const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15';
 
-    const loginPageRes = await fetch(authorizeUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15', 'Accept': 'text/html' },
-      redirect: 'follow',
-    });
-    const loginHtml = await loginPageRes.text();
-    const loginCookies = loginPageRes.headers.raw()['set-cookie'] || [];
-    const loginUrl = loginPageRes.url;
+    function parseCookies(arr) { return arr.map(c => c.split(';')[0]).join('; '); }
+    async function ft(url, opts, ms = 12000) {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), ms);
+      try { return await fetch(url, { ...opts, signal: ctrl.signal }); }
+      finally { clearTimeout(t); }
+    }
 
-    // Extract SETTINGS JSON
-    const settingsMatch = loginHtml.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i);
-    let settings = null;
-    try { if (settingsMatch) settings = JSON.parse(settingsMatch[1]); } catch(e) {}
+    // Step 1: authorize - follow manually
+    const authorizeUrl = `${B2C_BASE}/oauth2/v2.0/authorize`
+      + `?client_id=${B2C_CLIENT}&redirect_uri=${encodeURIComponent(B2C_REDIRECT)}`
+      + `&response_type=code%20id_token&scope=openid%20profile&response_mode=form_post&nonce=dbg${Date.now()}`;
 
-    const csrf = settings?.csrf || (loginHtml.match(/"csrf"\s*:\s*"([^"]+)"/)?.[1]);
-    const transId = settings?.transId || (loginUrl.match(/[?&]tx=([^&]+)/)?.[1]);
+    let url = authorizeUrl;
+    let cookies = [];
+    let loginHtml = '';
+    let loginUrl = '';
+    const hops = [];
 
-    // POST to SelfAsserted
-    const selfAssertedUrl = `https://${B2C_TENANT}/${tenant}.onmicrosoft.com/${B2C_POLICY}/SelfAsserted`
-      + `?tx=${transId || ''}&p=${B2C_POLICY}`;
+    for (let i = 0; i < 8; i++) {
+      const r = await ft(url, { headers: { 'User-Agent': UA, 'Cookie': parseCookies(cookies) }, redirect: 'manual' }, 10000);
+      const sc = r.headers.raw()['set-cookie'] || [];
+      cookies = [...cookies, ...sc];
+      const loc = r.headers.get('location') || '';
+      hops.push({ hop: i, status: r.status, url: url.slice(0, 100), location: loc.slice(0, 100) });
+      if (r.status >= 200 && r.status < 300) { loginHtml = await r.text(); loginUrl = url; break; }
+      if (r.status >= 300 && r.status < 400) {
+        if (loc.startsWith(B2C_REDIRECT)) { hops.push({ note: 'Redirected to ACGME before login page!' }); break; }
+        url = loc.startsWith('http') ? loc : `https://${B2C_TENANT}${loc}`;
+        continue;
+      }
+      hops.push({ error: `HTTP ${r.status}` }); break;
+    }
 
-    const cookieHeader = loginCookies.map(c => c.split(';')[0]).join('; ');
-    const credHeaders = {
+    // Step 2: extract config
+    let csrf = null, transId = null;
+    const sm = loginHtml.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i);
+    if (sm) { try { const s = JSON.parse(sm[1]); csrf = s.csrf; transId = s.transId; } catch(_){} }
+    if (!csrf)    csrf    = loginHtml.match(/"csrf"\s*:\s*"([^"]+)"/)?.[1] || null;
+    if (!transId) transId = loginHtml.match(/"transId"\s*:\s*"([^"]+)"/)?.[1] || loginUrl.match(/[?&]tx=([^&]+)/)?.[1] || null;
+
+    // Step 3: POST credentials
+    const saUrl = `${B2C_BASE}/SelfAsserted?tx=${transId||''}&p=${B2C_POLICY}`;
+    const saHeaders = {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
-      'Cookie': cookieHeader,
-      'Referer': loginUrl,
-      'Origin': `https://${B2C_TENANT}`,
-      'X-Requested-With': 'XMLHttpRequest',
+      'User-Agent': UA, 'Cookie': parseCookies(cookies),
+      'Referer': loginUrl, 'Origin': `https://${B2C_TENANT}`, 'X-Requested-With': 'XMLHttpRequest',
     };
-    if (csrf) credHeaders['X-CSRF-TOKEN'] = csrf;
-
-    const body = new URLSearchParams({ signInName: username, password, request_type: 'RESPONSE' });
-    const credRes = await fetch(selfAssertedUrl, { method: 'POST', headers: credHeaders, body: body.toString(), redirect: 'manual' });
-    const credBody = await credRes.text();
+    if (csrf) saHeaders['X-CSRF-TOKEN'] = csrf;
+    const saBody = new URLSearchParams({ signInName: username, password, request_type: 'RESPONSE' });
+    const saRes = await ft(saUrl, { method: 'POST', headers: saHeaders, body: saBody.toString(), redirect: 'manual' }, 12000);
+    const saText = await saRes.text();
+    const saCookies = saRes.headers.raw()['set-cookie'] || [];
 
     return res.json({
-      loginUrl,
-      loginHtmlSnippet: loginHtml.slice(0, 800),
-      settingsFound: !!settings,
+      hops,
+      loginUrl: loginUrl.slice(0, 150),
+      loginHtmlSnippet: loginHtml.slice(0, 600),
       csrfFound: !!csrf,
       transIdFound: !!transId,
-      selfAssertedUrl,
-      selfAssertedStatus: credRes.status,
-      selfAssertedBody: credBody.slice(0, 500),
-      loginCookieCount: loginCookies.length,
+      selfAssertedUrl: saUrl.slice(0, 150),
+      selfAssertedStatus: saRes.status,
+      selfAssertedBody: saText.slice(0, 400),
+      cookieCount: cookies.length + saCookies.length,
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message, stack: err.stack });
+    return res.status(500).json({ error: err.message });
   }
 });
 
