@@ -138,7 +138,6 @@ async function loginToACGME(username, password) {
   }
 
   // B2C next step: GET the /api/CombinedSigninAndSignup/confirmed endpoint
-  const tenant = B2C_TENANT.split('.')[0];
   const confirmedUrl = `https://${B2C_TENANT}/${tenant}.onmicrosoft.com/${B2C_POLICY}/api/CombinedSigninAndSignup/confirmed`
     + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf || '')}&tx=${transId || ''}&p=${B2C_POLICY}`;
 
