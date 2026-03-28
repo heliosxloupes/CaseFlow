@@ -1,15 +1,19 @@
-const express = require('express');
-const router = express.Router();
-const { loginToACGME } = require('../services/acgmeService');
+const express  = require('express');
+const router   = express.Router();
 const { encrypt, decrypt } = require('../services/encryptionService');
-const { setSession, clearSession } = require('../services/sessionCache');
-const { authenticate } = require('../middleware/authenticate');
+const { clearSession }     = require('../services/sessionCache');
+const { authenticate }     = require('../middleware/authenticate');
+const pw = require('../services/playwrightService');
 const db = require('../db');
 
 /**
  * POST /api/auth/save-credentials
- * Saves & verifies ACGME credentials for the logged-in user.
- * Call this when user first sets up their ACGME account in Settings.
+ *
+ * Save ACGME username + password, then immediately attempt a Playwright login.
+ *
+ * Response shapes:
+ *   { success: true, message }                              — logged in, cookies stored
+ *   { success: false, mfaRequired: true, sessionId, message } — MFA needed, use /complete-mfa
  */
 router.post('/save-credentials', authenticate, async (req, res, next) => {
   try {
@@ -18,12 +22,7 @@ router.post('/save-credentials', authenticate, async (req, res, next) => {
       return res.status(400).json({ error: 'Username and password required' });
     }
 
-    // Verify the credentials actually work before saving
-    const cookie = await loginToACGME(acgmeUsername, acgmePassword);
-
-    // Cache the session so the first submission is instant
-    setSession(req.userId, cookie);
-
+    // Persist credentials first (even before login succeeds, so MFA completion can retrieve them)
     const encryptedPassword = encrypt(acgmePassword);
     await db.query(
       `INSERT INTO user_acgme_credentials (user_id, acgme_username, acgme_password_encrypted, created_at)
@@ -33,7 +32,52 @@ router.post('/save-credentials', authenticate, async (req, res, next) => {
       [req.userId, acgmeUsername, encryptedPassword]
     );
 
-    res.json({ success: true, message: 'ACGME credentials saved and verified' });
+    // Attempt Playwright login
+    const result = await pw.startLogin(acgmeUsername, acgmePassword);
+
+    if (result.success) {
+      await pw.storeSessionCookies(req.userId, result.cookies);
+      return res.json({ success: true, message: 'ACGME account connected successfully' });
+    }
+
+    if (result.mfaRequired) {
+      return res.json({
+        success: false,
+        mfaRequired: true,
+        sessionId: result.sessionId,
+        message: 'MFA required. Please check your email/phone for a verification code.',
+      });
+    }
+
+    return res.status(500).json({ error: 'Unexpected login result' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/auth/complete-mfa
+ *
+ * Supply the MFA verification code to finish an in-progress Playwright session.
+ *
+ * Body: { sessionId, code }
+ * Response: { success: true, message }
+ */
+router.post('/complete-mfa', authenticate, async (req, res, next) => {
+  try {
+    const { sessionId, code } = req.body;
+    if (!sessionId || !code) {
+      return res.status(400).json({ error: 'sessionId and code required' });
+    }
+
+    const result = await pw.completeMFA(sessionId, code);
+
+    if (result.success) {
+      await pw.storeSessionCookies(req.userId, result.cookies);
+      return res.json({ success: true, message: 'MFA verified. ACGME account connected!' });
+    }
+
+    return res.status(500).json({ error: 'MFA verification failed' });
   } catch (err) {
     next(err);
   }
@@ -41,7 +85,9 @@ router.post('/save-credentials', authenticate, async (req, res, next) => {
 
 /**
  * POST /api/auth/verify-acgme
- * Tests if stored credentials still work (use in Settings status check).
+ *
+ * Re-test whether stored session cookies are still valid.
+ * If they've expired, attempts a fresh Playwright login (no MFA needed if within 14-day SSO window).
  */
 router.post('/verify-acgme', authenticate, async (req, res, next) => {
   try {
@@ -51,10 +97,31 @@ router.post('/verify-acgme', authenticate, async (req, res, next) => {
     );
     if (!rows.length) return res.status(404).json({ error: 'No ACGME credentials saved' });
 
+    // Check if stored cookies still work
+    const cookieHeader = await pw.getValidCookieHeader(req.userId);
+    if (cookieHeader) {
+      return res.json({ success: true, message: 'ACGME session is active' });
+    }
+
+    // Cookies expired — try a fresh Playwright login (usually works within 14-day MFA window)
     const password = decrypt(rows[0].acgme_password_encrypted);
-    const cookie = await loginToACGME(rows[0].acgme_username, password);
-    setSession(req.userId, cookie);
-    res.json({ success: true, message: 'ACGME login successful' });
+    const result   = await pw.startLogin(rows[0].acgme_username, password);
+
+    if (result.success) {
+      await pw.storeSessionCookies(req.userId, result.cookies);
+      return res.json({ success: true, message: 'ACGME re-authenticated successfully' });
+    }
+
+    if (result.mfaRequired) {
+      return res.json({
+        success: false,
+        mfaRequired: true,
+        sessionId: result.sessionId,
+        message: 'Your ACGME session has expired and MFA is required to reconnect.',
+      });
+    }
+
+    return res.status(500).json({ error: 'Re-authentication failed' });
   } catch (err) {
     next(err);
   }
@@ -62,7 +129,6 @@ router.post('/verify-acgme', authenticate, async (req, res, next) => {
 
 /**
  * DELETE /api/auth/disconnect-acgme
- * Removes stored ACGME credentials.
  */
 router.delete('/disconnect-acgme', authenticate, async (req, res, next) => {
   try {
@@ -76,16 +142,23 @@ router.delete('/disconnect-acgme', authenticate, async (req, res, next) => {
 
 /**
  * GET /api/auth/acgme-status
- * Returns whether the user has ACGME credentials saved.
  */
 router.get('/acgme-status', authenticate, async (req, res, next) => {
   try {
     const { rows } = await db.query(
-      'SELECT acgme_username, created_at FROM user_acgme_credentials WHERE user_id = $1',
+      'SELECT acgme_username, created_at, cookies_updated_at FROM user_acgme_credentials WHERE user_id = $1',
       [req.userId]
     );
     if (!rows.length) return res.json({ connected: false });
-    res.json({ connected: true, username: rows[0].acgme_username, savedAt: rows[0].created_at });
+
+    const cookieHeader = await pw.getValidCookieHeader(req.userId);
+    res.json({
+      connected:      true,
+      sessionActive:  !!cookieHeader,
+      username:       rows[0].acgme_username,
+      savedAt:        rows[0].created_at,
+      cookiesUpdated: rows[0].cookies_updated_at,
+    });
   } catch (err) {
     next(err);
   }

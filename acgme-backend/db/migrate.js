@@ -11,6 +11,8 @@ const schema = `
     user_id                  INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     acgme_username           VARCHAR(255) NOT NULL,
     acgme_password_encrypted TEXT NOT NULL,
+    browser_cookies          TEXT,
+    cookies_updated_at       TIMESTAMP,
     created_at               TIMESTAMP DEFAULT NOW(),
     updated_at               TIMESTAMP
   );
@@ -31,9 +33,23 @@ const schema = `
   CREATE INDEX IF NOT EXISTS idx_case_submissions_status  ON case_submissions(status);
 `;
 
+// ALTER statements for columns added after initial deploy
+const alterStatements = [
+  `ALTER TABLE user_acgme_credentials ADD COLUMN IF NOT EXISTS browser_cookies TEXT`,
+  `ALTER TABLE user_acgme_credentials ADD COLUMN IF NOT EXISTS cookies_updated_at TIMESTAMP`,
+];
+
 async function migrate() {
   try {
     await db.query(schema);
+    for (const stmt of alterStatements) {
+      await db.query(stmt).catch(e => {
+        // Ignore if column already exists; log anything else
+        if (!e.message.includes('already exists')) {
+          console.warn('Migration ALTER warning:', e.message);
+        }
+      });
+    }
     console.log('Database migration complete — all tables ready.');
   } catch (err) {
     console.error('Database migration failed:', err.message);

@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { submitCase, loginToACGME } = require('../services/acgmeService');
+const { submitCase } = require('../services/acgmeService');
 const { decrypt } = require('../services/encryptionService');
-const { getSession, setSession } = require('../services/sessionCache');
+const pw = require('../services/playwrightService');
 const db = require('../db');
 
 /**
@@ -56,6 +56,15 @@ router.post('/submit', async (req, res, next) => {
        VALUES ($1, 'failed', $2, NOW())`,
       [req.userId, err.message]
     ).catch(() => {});
+
+    // Surface MFA requirement as a structured response (not a 500)
+    if (err.mfaRequired) {
+      return res.status(401).json({
+        error:       err.message,
+        mfaRequired: true,
+        sessionId:   err.sessionId,
+      });
+    }
     next(err);
   }
 });
@@ -82,19 +91,39 @@ router.get('/history', async (req, res, next) => {
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
 async function getOrRefreshSession(userId) {
-  let cookie = getSession(userId);
-  if (cookie) return cookie;
+  // 1. Try in-memory cache or still-valid stored cookies
+  const cookieHeader = await pw.getValidCookieHeader(userId);
+  if (cookieHeader) return cookieHeader;
 
+  // 2. Cookies expired — try a silent Playwright re-login (works within 14-day B2C SSO window)
   const { rows } = await db.query(
     'SELECT acgme_username, acgme_password_encrypted FROM user_acgme_credentials WHERE user_id = $1',
     [userId]
   );
-  if (!rows.length) throw new Error('No ACGME credentials found. Go to Settings → ACGME Account to connect your account.');
+  if (!rows.length) {
+    throw new Error('No ACGME credentials found. Go to Settings → ACGME Account to connect your account.');
+  }
 
   const password = decrypt(rows[0].acgme_password_encrypted);
-  cookie = await loginToACGME(rows[0].acgme_username, password);
-  setSession(userId, cookie);
-  return cookie;
+  const result   = await pw.startLogin(rows[0].acgme_username, password);
+
+  if (result.success) {
+    await pw.storeSessionCookies(userId, result.cookies);
+    return pw.cookiesArrayToHeader(result.cookies);
+  }
+
+  if (result.mfaRequired) {
+    // Can't proceed with case submission — user must complete MFA first
+    const err = new Error(
+      'Your ACGME session has expired and MFA verification is required. ' +
+      'Please go to Settings → ACGME Account → Reconnect to re-authenticate.'
+    );
+    err.mfaRequired = true;
+    err.sessionId   = result.sessionId;
+    throw err;
+  }
+
+  throw new Error('Failed to refresh ACGME session. Please reconnect your account in Settings.');
 }
 
 module.exports = router;
