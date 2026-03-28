@@ -87,7 +87,7 @@ async function loginToACGME(username, password) {
   if (!loginHtml) throw new Error('B2C never returned the login page HTML');
 
   // ── STEP 2: Extract CSRF, transId, and API base from SETTINGS ──
-  let csrf = null, transId = null, apiBase = B2C_BASE;
+  let csrf = null, transId = null, apiBase = B2C_BASE, b2cApiType = 'SelfAsserted';
 
   const sm = loginHtml.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i);
   if (sm) {
@@ -95,6 +95,7 @@ async function loginToACGME(username, password) {
       const s = JSON.parse(sm[1]);
       csrf    = s.csrf    || null;
       transId = s.transId || null;
+      if (s.api) b2cApiType = s.api;
       if (s.hosts?.tenant) {
         apiBase = `https://${B2C_TENANT}${s.hosts.tenant}`;
       }
@@ -103,7 +104,7 @@ async function loginToACGME(username, password) {
   if (!csrf)    csrf    = loginHtml.match(/"csrf"\s*:\s*"([^"]+)"/)?.[1]    || null;
   if (!transId) transId = loginHtml.match(/"transId"\s*:\s*"([^"]+)"/)?.[1] || loginUrl.match(/[?&]tx=([^&]+)/)?.[1] || null;
 
-  console.log(`[B2C] CSRF: ${csrf ? 'found' : 'MISSING'} | transId: ${transId ? 'found' : 'MISSING'} | apiBase: ${apiBase}`);
+  console.log(`[B2C] CSRF: ${csrf ? 'found' : 'MISSING'} | transId: ${transId ? 'found' : 'MISSING'} | apiBase: ${apiBase} | apiType: ${b2cApiType}`);
 
   if (!transId) {
     throw new Error('Could not extract B2C transId. ACGME login flow may have changed.');
@@ -142,8 +143,8 @@ async function loginToACGME(username, password) {
     if (e.message.startsWith('ACGME credentials rejected')) throw e;
   }
 
-  // ── STEP 4: GET /confirmed to get the id_token form ──
-  const confirmedUrl = `${apiBase}/api/CombinedSigninAndSignup/confirmed`
+  // ── STEP 4: GET /confirmed using actual API type from SETTINGS ──
+  const confirmedUrl = `${apiBase}/api/${b2cApiType}/confirmed`
     + `?rememberMe=false`
     + `&csrf_token=${encodeURIComponent(csrf || '')}`
     + `&tx=${transId}`

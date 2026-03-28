@@ -105,9 +105,9 @@ app.post('/debug/b2c-login', async (req, res) => {
     }
 
     // Step 2: extract config
-    let csrf = null, transId = null, apiBase = B2C_BASE;
+    let csrf = null, transId = null, apiBase = B2C_BASE, b2cApiType = 'SelfAsserted';
     const sm = loginHtml.match(/var\s+SETTINGS\s*=\s*(\{[\s\S]*?\});/i);
-    if (sm) { try { const s = JSON.parse(sm[1]); csrf = s.csrf; transId = s.transId; if (s.hosts?.tenant) apiBase = `https://${B2C_TENANT}${s.hosts.tenant}`; } catch(_){} }
+    if (sm) { try { const s = JSON.parse(sm[1]); csrf = s.csrf; transId = s.transId; if (s.api) b2cApiType = s.api; if (s.hosts?.tenant) apiBase = `https://${B2C_TENANT}${s.hosts.tenant}`; } catch(_){} }
     if (!csrf)    csrf    = loginHtml.match(/"csrf"\s*:\s*"([^"]+)"/)?.[1] || null;
     if (!transId) transId = loginHtml.match(/"transId"\s*:\s*"([^"]+)"/)?.[1] || loginUrl.match(/[?&]tx=([^&]+)/)?.[1] || null;
 
@@ -135,8 +135,8 @@ app.post('/debug/b2c-login', async (req, res) => {
     const saCookies = saRes.headers.raw()['set-cookie'] || [];
     const cookiesAfterSA = mergeCookies(cookies, saCookies); // merged string
 
-    // Step 4: GET confirmed — follow redirects to see final destination
-    const confirmedUrl = `${apiBase}/api/CombinedSigninAndSignup/confirmed`
+    // Step 4: GET confirmed — use actual API type from SETTINGS (e.g. SelfAsserted)
+    const confirmedUrl = `${apiBase}/api/${b2cApiType}/confirmed`
       + `?rememberMe=false&csrf_token=${encodeURIComponent(csrf||'')}&tx=${transId||''}&p=${B2C_POLICY}`;
     const cfRes = await ft(confirmedUrl, {
       headers: { 'User-Agent': UA, 'Cookie': cookiesAfterSA, 'Referer': loginUrl, 'Accept': 'text/html,application/xhtml+xml' },
@@ -216,25 +216,25 @@ app.post('/debug/b2c-login', async (req, res) => {
     return res.json({
       hops,
       loginUrl: loginUrl.slice(0, 200),
-      settings: settingsParsed,   // Full SETTINGS object from B2C page
+      b2cApiType,
+      settings: settingsParsed,
       csrfFound: !!csrf, transIdFound: !!transId,
       transIdValue: (transId||'').slice(0, 60),
       step1CookieNames: cookies.map(c => c.split('=')[0]),
       selfAssertedStatus: saRes.status, selfAssertedBody: saText,
       saCookieNames: saCookies.map(c => c.split('=')[0]),
-      saCookiesFull: saCookies.map(c => c.slice(0, 200)),
-      cookiesSentToConfirmed: cookiesAfterSA.slice(0, 400),
+      cookiesSentToConfirmed: cookiesAfterSA.slice(0, 600),
       confirmedUrl: confirmedUrl.slice(0, 200),
       confirmedFinalUrl: cfRes.url?.slice(0, 200),
       confirmedStatus: cfRes.status, confirmedLocation: cfLocation.slice(0, 200),
+      confirmedHtmlLength: cfText.length,
+      confirmedSettingsApi: cfText.match(/"api"\s*:\s*"([^"]+)"/)?.[1] || 'not found',
+      confirmedHtmlFirst500: cfText.slice(0, 500),
+      confirmedHtmlLast300: cfText.slice(-300),
       originalTransId: transId?.slice(0, 60),
       cfNewTransId: cfTransId?.slice(0, 60),
       transIdsMatch: transId === cfTransId,
       step4bStatus, step4bBody: step4bBody?.slice(0, 300),
-      confirmedHtmlLength: cfText.length,
-      confirmedSettingsApi: cfText.match(/"api"\s*:\s*"([^"]+)"/)?.[1] || 'not found',
-      confirmedSettingsTransId: cfText.match(/"transId"\s*:\s*"([^"]+)"/)?.[1]?.slice(0, 50) || 'not found',
-      confirmedHtmlLast300: cfText.slice(-300),
       idTokenFound: !!idToken, codeFound: !!code, formAction: (action || 'none').slice(0, 150),
       acgmeStatus, acgmeCookieCount, acgmeCookieNames,
     });
