@@ -359,11 +359,11 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .state-label:empty{height:0;margin:0;}
 /* ── Login — LineWaves full-screen ──────────────────────────────── */
 #pg-login{
-  position:fixed!important;inset:0!important;
-  display:flex!important;flex-direction:column!important;
-  align-items:center!important;justify-content:center!important;
-  overflow:hidden!important;padding:0!important;
-  background:#07090f;
+  position:fixed;inset:0;
+  flex-direction:column;
+  align-items:center;justify-content:center;
+  overflow:hidden;padding:0;height:auto;
+  background:#07090f;z-index:200;
 }
 .login-waves-bg{
   position:absolute;inset:0;width:100%;height:100%;pointer-events:none;
