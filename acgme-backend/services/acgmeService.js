@@ -16,7 +16,11 @@ const UA          = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.3
 /** Merge arrays of Set-Cookie strings; later entries override earlier by name */
 function mergeCookies(...arrays) {
   const map = {};
-  [].concat(...arrays).forEach(c => {
+  const flat = []
+    .concat(...arrays)
+    .filter(c => c != null && c !== '')
+    .map(c => (typeof c === 'string' ? c : String(c)));
+  flat.forEach((c) => {
     const pair = c.split(';')[0];
     const eq   = pair.indexOf('=');
     if (eq > 0) map[pair.slice(0, eq).trim()] = pair;
@@ -330,7 +334,10 @@ function mergeCookieHeaderWithSetCookies(cookieHeader, setCookieArray) {
   const existing = cookieHeader
     ? cookieHeader.split(';').map(s => s.trim()).filter(s => s.includes('='))
     : [];
-  return mergeCookies([existing], setCookieArray);
+  // mergeCookies expects parallel arrays of string lines — do NOT wrap `existing` in an extra
+  // array or [].concat flattens to one element that is still an array → c.split is not a function.
+  const lines = Array.isArray(setCookieArray) ? setCookieArray : [setCookieArray];
+  return mergeCookies(existing, lines);
 }
 
 function resolveRedirectUrl(location, currentUrl) {
