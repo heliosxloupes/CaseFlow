@@ -88,48 +88,26 @@ async function loadStoredCookies(userId) {
 
 /**
  * Convert a Playwright cookies array to a Cookie header string for node-fetch.
+ * Keep every named cookie from the capture array (Playwright already scopes to ACGME).
  */
 function cookiesArrayToHeader(cookies) {
+  if (!cookies || !cookies.length) return '';
   return cookies
-    .filter(c => c.domain && c.domain.includes('acgme.org'))
+    .filter(c => c && c.name)
     .map(c => `${c.name}=${c.value}`)
     .join('; ');
 }
 
 /**
- * Probe the lightweight GetResidentRoles JSON endpoint — returns true if the
- * session cookie is accepted by ACGME (200 + JSON array), false otherwise.
- * Using a JSON API instead of the Insert HTML page avoids false negatives caused
- * by ACGME redirecting the Insert page for reasons unrelated to auth (program
- * setup, role assignment, etc.).
+ * Same bar as submit: session must load Case Entry Insert (CSRF + hidden fields).
  */
-const fetch        = require('node-fetch');
-const ACGME_BASE   = 'https://apps.acgme.org';
-const PROBE_UA     = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-const ROLES_URL    = `${ACGME_BASE}/ads/CaseLogs/CaseEntryMobile/GetResidentRoles`;
-
 async function testCookieHeaderValid(cookieHeader) {
   if (!cookieHeader) return false;
   try {
-    const res = await fetch(ROLES_URL, {
-      headers: {
-        Cookie: cookieHeader,
-        'User-Agent': PROBE_UA,
-        Accept: 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-        Referer: `${ACGME_BASE}/ads/`,
-      },
-    });
-    if (!res.ok) {
-      console.log(`[PW] Session probe: GetResidentRoles returned ${res.status}`);
-      return false;
-    }
-    const data = await res.json();
-    const valid = Array.isArray(data) && data.length > 0;
-    if (!valid) console.log('[PW] Session probe: GetResidentRoles returned empty/non-array');
-    return valid;
+    await getInsertPageData(cookieHeader);
+    return true;
   } catch (e) {
-    console.log('[PW] Session probe failed:', e.message);
+    console.log('[PW] Insert-page session probe failed:', e.message);
     return false;
   }
 }

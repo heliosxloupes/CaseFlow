@@ -1,0 +1,11 @@
+# CaseFlow ACGME backend — deploy from this directory (acgme-backend).
+#
+# CRITICAL: In Railway Dashboard → this service → Settings → set Replicas / Instances to 1.
+# Playwright MFA sessions live in process memory; multiple replicas break save-credentials ↔ complete-mfa.
+
+[build]
+builder = "nixpacks"
+
+[deploy]
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

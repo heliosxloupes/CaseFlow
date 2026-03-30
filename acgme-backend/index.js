@@ -1,3 +1,5 @@
+// Railway: scale this Node service to exactly 1 replica (Dashboard → Service → Settings).
+// In-memory MFA (Playwright pending sessions) and cookie cache do not work across instances.
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');

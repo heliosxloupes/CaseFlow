@@ -1,14 +1,12 @@
 const express = require('express');
 const router  = express.Router();
 const { getLookupData, getUserProfile } = require('../services/acgmeService');
-const { decrypt }       = require('../services/encryptionService');
 const pw  = require('../services/playwrightService');
-const db  = require('../db');
 
 // GET /api/lookups/roles?specialtyId=158&activeAsOfDate=3%2F28%2F2026
 router.get('/roles', async (req, res, next) => {
   try {
-    const cookie = await getOrRefreshSession(req.userId);
+    const cookie = await getLookupSession(req.userId);
     res.json(await getLookupData(cookie, 'roles', req.query));
   } catch (err) { next(err); }
 });
@@ -16,7 +14,7 @@ router.get('/roles', async (req, res, next) => {
 // GET /api/lookups/cpt-codes?specialtyId=158&activeAsOfDate=...
 router.get('/cpt-codes', async (req, res, next) => {
   try {
-    const cookie = await getOrRefreshSession(req.userId);
+    const cookie = await getLookupSession(req.userId);
     res.json(await getLookupData(cookie, 'cptCodes', req.query));
   } catch (err) { next(err); }
 });
@@ -24,7 +22,7 @@ router.get('/cpt-codes', async (req, res, next) => {
 // GET /api/lookups/types?specialtyId=158
 router.get('/types', async (req, res, next) => {
   try {
-    const cookie = await getOrRefreshSession(req.userId);
+    const cookie = await getLookupSession(req.userId);
     res.json(await getLookupData(cookie, 'types', req.query));
   } catch (err) { next(err); }
 });
@@ -32,7 +30,7 @@ router.get('/types', async (req, res, next) => {
 // GET /api/lookups/codes?specialtyId=158&searchTerm=breast
 router.get('/codes', async (req, res, next) => {
   try {
-    const cookie = await getOrRefreshSession(req.userId);
+    const cookie = await getLookupSession(req.userId);
     res.json(await getLookupData(cookie, 'codes', req.query));
   } catch (err) { next(err); }
 });
@@ -41,7 +39,7 @@ router.get('/codes', async (req, res, next) => {
 // Returns the user's program-specific sites and attendings fetched from ACGME.
 router.get('/user-profile', async (req, res, next) => {
   try {
-    const cookie = await getOrRefreshSession(req.userId);
+    const cookie = await getLookupSession(req.userId);
     const profile = await getUserProfile(cookie);
     res.json(profile);
   } catch (err) { next(err); }
@@ -49,25 +47,16 @@ router.get('/user-profile', async (req, res, next) => {
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
-async function getOrRefreshSession(userId) {
+/**
+ * Lookups must NOT run silent Playwright re-login (would send MFA codes unexpectedly).
+ * Only returns a cookie header if Insert probe already passes — same bar as submit.
+ */
+async function getLookupSession(userId) {
   const cookieHeader = await pw.getValidCookieHeader(userId);
   if (cookieHeader) return cookieHeader;
-
-  const { rows } = await db.query(
-    'SELECT acgme_username, acgme_password_encrypted FROM user_acgme_credentials WHERE user_id = $1',
-    [userId]
+  throw new Error(
+    'No active ACGME session. Open Settings → ACGME Account, save credentials, and complete verification — then try again.'
   );
-  if (!rows.length) throw new Error('No ACGME credentials found. Please connect your ACGME account in Settings.');
-
-  const password = decrypt(rows[0].acgme_password_encrypted);
-  const result   = await pw.startLogin(rows[0].acgme_username, password);
-
-  if (result.success) {
-    await pw.storeSessionCookies(userId, result.cookies);
-    return pw.cookiesArrayToHeader(result.cookies);
-  }
-
-  throw new Error('ACGME session expired. Please reconnect your account in Settings → ACGME Account.');
 }
 
 module.exports = router;
