@@ -8,7 +8,8 @@ const B2C_POLICY  = 'b2c_1a_signup_signin';
 const B2C_CLIENT  = 'dcdddbd1-2b64-4940-9983-6a6442c526aa';
 const B2C_REDIRECT= 'https://apps.acgme.org/ads/';
 const B2C_BASE    = `https://${B2C_TENANT}/acgmeras.onmicrosoft.com/${B2C_POLICY}`;
-const UA          = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15';
+// Must match Playwright browser UA — ACGME ASP.NET binds sessions to the UA string
+const UA          = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -324,11 +325,17 @@ async function getInsertPageData(sessionCookie) {
   const res = await fetchT(insertUrl, {
     headers: {
       Cookie: sessionCookie,
-      'User-Agent': UA,
-      Accept: 'text/html,application/xhtml+xml',
+      ‘User-Agent’: UA,
+      Accept: ‘text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8’,
+      ‘Accept-Language’: ‘en-US,en;q=0.9’,
       Referer: `${BASE_URL}/ads/`,
+      ‘Upgrade-Insecure-Requests’: ‘1’,
+      ‘Sec-Fetch-Mode’: ‘navigate’,
+      ‘Sec-Fetch-Site’: ‘same-origin’,
+      ‘Sec-Fetch-Dest’: ‘document’,
+      ‘Sec-Fetch-User’: ‘?1’,
     },
-    redirect: 'manual',
+    redirect: ‘manual’,
   }, 15000);
 
   // Don’t follow cross-site auth redirects — treat as dead session (cookie not accepted)
