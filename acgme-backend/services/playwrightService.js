@@ -16,7 +16,7 @@
  * Cookie lifecycle:
  *   - After a successful login, call storeSessionCookies(userId, cookies)
  *   - Before submitting a case, call getValidCookieHeader(userId)
- *     which loads DB cookies, validates them, and refreshes if possible
+ *     which loads DB cookies and validates with the Case Entry Insert page (same as submit)
  */
 
 const { chromium } = require('playwright');
