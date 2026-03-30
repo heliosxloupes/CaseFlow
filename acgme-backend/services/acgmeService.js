@@ -292,6 +292,33 @@ async function loginToACGME(username, password) {
 
 // ── Case Submission ───────────────────────────────────────────────────────────
 
+/**
+ * ASP.NET anti-forgery token — attribute order and quoting vary by page version.
+ */
+function extractRequestVerificationToken(html) {
+  const patterns = [
+    // name then value (double quotes)
+    /name=["']__RequestVerificationToken["'][^>]*?\bvalue=["']([^"']*)["']/is,
+    // value then name
+    /\bvalue=["']([^"']+)["'][^>]*name=["']__RequestVerificationToken["']/is,
+    // Single-quoted value after name
+    /name=["']__RequestVerificationToken["'][^>]*?\bvalue='([^']*)'/is,
+  ];
+  for (const re of patterns) {
+    const m = html.match(re);
+    if (m && m[1] !== undefined && m[1] !== '') return m[1];
+  }
+  // Broader: any <input> tag that names the token, then grab first value= in that tag block
+  const inputRe = /<input\b[^>]*\bname=["']__RequestVerificationToken["'][^>]*>/gi;
+  let im;
+  while ((im = inputRe.exec(html)) !== null) {
+    const tag = im[0];
+    const vm = tag.match(/\bvalue=["']([^"']*)["']/i) || tag.match(/\bvalue='([^']*)'/i);
+    if (vm && vm[1] !== undefined) return vm[1];
+  }
+  return null;
+}
+
 async function getInsertPageData(sessionCookie) {
   const res = await fetchT(`${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`, {
     headers: { 'Cookie': sessionCookie, 'User-Agent': UA, 'Accept': 'text/html' },
@@ -299,11 +326,18 @@ async function getInsertPageData(sessionCookie) {
 
   if (!res.ok) throw new Error(`Failed to load ACGME Insert page: ${res.status}`);
 
-  const html       = await res.text();
-  const tokenMatch = html.match(/name="__RequestVerificationToken"\s+[^>]*value="([^"]+)"/);
-  if (!tokenMatch) throw new Error('Could not find __RequestVerificationToken on Insert page');
+  const html  = await res.text();
+  const token = extractRequestVerificationToken(html);
+  if (!token) {
+    const looksLikeLogin = /sign\s*in|log\s*in|b2clogin|oauth2/i.test(html);
+    throw new Error(
+      looksLikeLogin
+        ? 'ACGME session expired or not authenticated — open Settings and reconnect your ACGME account.'
+        : 'Could not find __RequestVerificationToken on Insert page (ACGME page layout may have changed).'
+    );
+  }
 
-  return { token: tokenMatch[1], hidden: scrapeHiddenFields(html) };
+  return { token, hidden: scrapeHiddenFields(html) };
 }
 
 async function submitCase(sessionCookie, caseData) {
@@ -421,10 +455,17 @@ async function getLookupData(sessionCookie, type, params = {}) {
 
 function scrapeHiddenFields(html) {
   const fields = {};
-  const regex  = /<input[^>]+type="hidden"[^>]+name="([^"]+)"[^>]+value="([^"]*)"[^>]*>/gi;
-  let match;
-  while ((match = regex.exec(html)) !== null) {
-    if (match[1] !== '__RequestVerificationToken') fields[match[1]] = match[2];
+  const inputRe = /<input\b([^>]*?)>/gi;
+  let m;
+  while ((m = inputRe.exec(html)) !== null) {
+    const attrs = m[1];
+    if (!/type\s*=\s*["']hidden["']/i.test(attrs)) continue;
+    const nameM = attrs.match(/\bname\s*=\s*["']([^"']+)["']/i);
+    const valM  = attrs.match(/\bvalue\s*=\s*["']([^"']*)["']/i);
+    if (!nameM) continue;
+    const name = nameM[1];
+    if (name === '__RequestVerificationToken') continue;
+    fields[name] = valM ? valM[1] : '';
   }
   return fields;
 }
