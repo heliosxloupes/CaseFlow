@@ -487,6 +487,16 @@ async function getInsertPageData(sessionCookie) {
 }
 
 /**
+ * ADS Insert expects a numeric server case id for edits, or empty for new rows.
+ * CaseFlow's optional "Case ID" field is often a user label — sending it as CaseId can 500.
+ */
+function sanitizeCaseIdForAds(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return '';
+  return /^\d+$/.test(s) ? s : '';
+}
+
+/**
  * Build POST body: server hidden fields first, then antiforgery token, then explicit case
  * fields (so programmatic values override any duplicate names from hidden).
  */
@@ -503,11 +513,50 @@ function buildInsertFormPayload(token, hidden, caseData) {
     SelectedCodes:   caseData.selectedCodes,
     CodeDescription: caseData.codeDescription || '',
     Comments:        caseData.comments || '',
-    CaseId:          caseData.caseId || '',
+    CaseId:          sanitizeCaseIdForAds(caseData.caseId),
     IsMobileApp:     'True',
     MobileViewMode:  '0',
     SearchTerm:      'False',
   });
+}
+
+/**
+ * Log form field names and value lengths only (no secrets) — compare to browser DevTools
+ * → Network → Insert POST → Form Data when debugging 500s without ACGME support.
+ */
+function logSubmitPayloadDiagnostics(payload, hidden, caseData) {
+  try {
+    const hiddenKeys = Object.keys(hidden || {});
+    const pairs = [];
+    for (const [k, v] of payload.entries()) {
+      const n = String(v).length;
+      pairs.push(`${k}=${n}b`);
+    }
+    console.warn('[ACGME] submit form keys (value byte-lengths only):', pairs.join(', '));
+    console.warn('[ACGME] Insert hidden field count:', hiddenKeys.length, 'names:', hiddenKeys.sort().join(',') || '(none)');
+    if (caseData) {
+      console.warn(
+        '[ACGME] caseData snapshot (lengths): date=%s yr=%s roleId=%s siteId=%s attId=%s ptId=%s codes=%sb desc=%sb caseId=%sb',
+        String(caseData.procedureDate || '').length,
+        String(caseData.procedureYear || '').length,
+        String(caseData.residentRoleId || '').length,
+        String(caseData.institutionId || '').length,
+        String(caseData.attendingId || '').length,
+        String(caseData.patientTypeId || '').length,
+        String(caseData.selectedCodes || '').length,
+        String(caseData.codeDescription || '').length,
+        String(caseData.caseId || '').length
+      );
+      const cid = String(caseData.caseId || '').trim();
+      if (cid && !/^\d+$/.test(cid)) {
+        console.warn(
+          '[ACGME] hint: CaseId is non-numeric — optional Case ID in CaseFlow may not be ACGME server id; try clearing it or use only ADS numeric case id if editing.'
+        );
+      }
+    }
+  } catch (e) {
+    console.warn('[ACGME] payload diagnostics failed:', e.message);
+  }
 }
 
 function logSubmitErrorResponse(status, html) {
@@ -594,6 +643,7 @@ async function submitCaseOnce(sessionCookie, caseData) {
   }
 
   if (res.status >= 400) {
+    logSubmitPayloadDiagnostics(payload, hidden, caseData);
     logSubmitErrorResponse(res.status, html);
     const hint = extractAcgmeSubmitErrorHint(html);
     throw new Error(
