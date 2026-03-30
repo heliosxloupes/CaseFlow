@@ -2380,6 +2380,7 @@ async function fetchAcgmeProfile(opts){
     if(attendings.length)    localStorage.setItem('cf5-attendings',     JSON.stringify(attendings));
     if(roles.length)         localStorage.setItem('cf5-roles',           JSON.stringify(roles));
     if(patientTypes.length) localStorage.setItem('cf5-patient-types',  JSON.stringify(patientTypes));
+    if(body.residentsId) localStorage.setItem('cf5-residents-id', String(body.residentsId));
     _applyProfileToUI(sites, attendings);
     acgmeServerSessionActive = true;
     return { ok: true, sitesLen: sites.length, attLen: attendings.length };
@@ -2522,6 +2523,7 @@ async function callSubmitAcgme(casePayload){
       codeDescription: proc.d,
       comments:        casePayload.notes||'',
       caseId:          casePayload.caseId||'',
+      residentsId:     localStorage.getItem('cf5-residents-id') || '',
     };
 
     const resp=await fetch(`${ACGME_BACKEND_URL}/api/cases/submit`,{

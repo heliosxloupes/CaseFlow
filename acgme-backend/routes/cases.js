@@ -26,6 +26,7 @@ function isRetryableAcgmeSessionError(err) {
  *   selectedCodes:   "30410" or "P,4780,1118932,1,1;"  ← bare CPT is resolved server-side via GetCodes; tuples pass through
  *   codeDescription: "Breast augmentation",
  *   comments:        ""
+ *   residentsId:     optional override — ADS Insert posts Residents (logged-in resident); usually set from Insert page scrape
  * }
  */
 router.post('/submit', async (req, res, next) => {
@@ -35,6 +36,7 @@ router.post('/submit', async (req, res, next) => {
       institutionId, attendingId, patientTypeId,
       selectedCodes, codeDescription, comments,
       caseId = '',
+      residentsId = '',
     } = req.body;
 
     const required = { procedureDate, procedureYear, residentRoleId, institutionId, attendingId, patientTypeId, selectedCodes };
@@ -48,6 +50,7 @@ router.post('/submit', async (req, res, next) => {
       institutionId, attendingId, patientTypeId,
       selectedCodes, codeDescription, comments,
       caseId,
+      residentsId,
     };
 
     let result;

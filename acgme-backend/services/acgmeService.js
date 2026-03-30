@@ -485,7 +485,13 @@ async function getInsertPageData(sessionCookie) {
       'Could not find __RequestVerificationToken on Insert page (ACGME page layout may have changed).'
     );
   }
-  return { token, hidden: scrapeHiddenFields(html), cookieHeader };
+  const hidden = scrapeHiddenFields(html);
+  // Residents is usually a <select>, not type=hidden — ADS requires it for "resident program detail" validation (see Insert HAR).
+  const residentsSel = parseSelectSelectedValue(html, 'Residents');
+  if (residentsSel) {
+    hidden.Residents = residentsSel;
+  }
+  return { token, hidden, cookieHeader };
 }
 
 /**
@@ -805,9 +811,14 @@ function buildInsertFormPayload(token, hidden, caseData) {
     caseData._adsCodeValueForInsert != null && String(caseData._adsCodeValueForInsert).trim() !== ''
       ? String(caseData._adsCodeValueForInsert).trim()
       : (caseData.codeDescription || '');
+  const residentsVal =
+    caseData.residentsId != null && String(caseData.residentsId).trim() !== ''
+      ? String(caseData.residentsId).trim()
+      : (hidden.Residents || '');
   return new URLSearchParams({
     ...hidden,
     __RequestVerificationToken: token,
+    Residents:       residentsVal,
     ProcedureDate:   caseData.procedureDate,
     ProcedureYear:   caseData.procedureYear,
     ResidentRoles:   caseData.residentRoleId,
@@ -893,6 +904,12 @@ async function submitCaseOnce(sessionCookie, caseData) {
 
   if (process.env.ACGME_DEBUG_SUBMIT === '1') {
     console.warn('[ACGME] DEBUG Insert hidden field names:', Object.keys(hidden || {}));
+  }
+
+  if (!hidden.Residents) {
+    console.warn(
+      '[ACGME] No Residents id on Insert page (hidden/select parse). If submit fails with "bad resident program detail Id", reconnect ACGME or pass residentsId from GET /api/lookups/user-profile.'
+    );
   }
 
   const caseDataResolved = await resolveSelectedCodesIfNeeded(cookie, hidden, caseData);
@@ -1010,6 +1027,34 @@ async function submitCase(sessionCookie, caseData) {
 // ── User Profile (sites + attendings) ─────────────────────────────────────────
 
 /**
+ * Value of the selected <option> for a named <select> (visible fields not scraped as hidden inputs).
+ * Used for Residents on Insert — required with institution/role for ADS resident-program validation.
+ */
+function parseSelectSelectedValue(html, selectName) {
+  const esc = selectName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const blockRe = new RegExp(
+    `<select\\b[^>]*\\b(?:name|id)=["']${esc}["'][^>]*>([\\s\\S]*?)<\\/select>`,
+    'i'
+  );
+  const selectMatch = html.match(blockRe);
+  if (!selectMatch) return '';
+  const inner = selectMatch[1];
+  const optRe = /<option\b([^>]*)>([\s\S]*?)<\/option>/gi;
+  let m;
+  let firstVal = '';
+  while ((m = optRe.exec(inner)) !== null) {
+    const attrs = m[1];
+    let vm = attrs.match(/\bvalue\s*=\s*(["'])([^"']*)\1/i);
+    if (!vm) vm = attrs.match(/\bvalue\s*=\s*([^\s>]+)/i);
+    const id = vm ? (vm[2] != null ? vm[2] : vm[1]).trim() : '';
+    if (!id) continue;
+    if (!firstVal) firstVal = id;
+    if (/\bselected\b/i.test(attrs)) return id;
+  }
+  return firstVal;
+}
+
+/**
  * Parses <select name="NAME"> (or id="NAME") options from Insert HTML.
  * Handles single/double-quoted value= and labels with nested tags/entities.
  */
@@ -1066,10 +1111,12 @@ async function getUserProfile(sessionCookie) {
   if (!patientTypes.length) patientTypes = parseSelectOptions(html, 'PatientType');
   if (!patientTypes.length) patientTypes = parseSelectOptions(html, 'patientTypes');
 
+  const residentsId = parseSelectSelectedValue(html, 'Residents');
   console.log(
-    `[profile] sites: ${sites.length}, attendings: ${attendings.length}, roles: ${roles.length}, patientTypes: ${patientTypes.length}`
+    `[profile] sites: ${sites.length}, attendings: ${attendings.length}, roles: ${roles.length}, patientTypes: ${patientTypes.length}` +
+      (residentsId ? `, residentsId: set` : `, residentsId: (none)`)
   );
-  return { sites, attendings, roles, patientTypes };
+  return { sites, attendings, roles, patientTypes, residentsId };
 }
 
 async function getLookupData(sessionCookie, type, params = {}) {
