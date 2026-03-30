@@ -2557,6 +2557,9 @@ function doLogout(){
   sessionPassword='';
   localStorage.removeItem('cf5-token');
   localStorage.removeItem('cf5-name');
+  localStorage.removeItem('cf5-vault');
+  localStorage.removeItem('cf5-sites');
+  localStorage.removeItem('cf5-attendings');
   resetFlow();
   showPage('pg-login');
 }
@@ -2572,15 +2575,42 @@ async function launchApp(name,email){
   await loadCasesFromDB();
   document.getElementById('hdr-n').textContent=cases.length;
   renderHistory();
-  // Apply any cached sites/attendings immediately, then refresh if vault is connected
+  await syncAcgmeSettingsFromServer();
   const cachedSites      = JSON.parse(localStorage.getItem('cf5-sites')||'[]');
   const cachedAttendants = JSON.parse(localStorage.getItem('cf5-attendings')||'[]');
   if(cachedSites.length || cachedAttendants.length){
     _applyProfileToUI(cachedSites, cachedAttendants);
   }
-  // If ACGME credentials are saved but cache is empty, fetch in background
   if(localStorage.getItem('cf5-vault') && (!cachedSites.length || !cachedAttendants.length)){
     fetchAcgmeProfile();
+  }
+}
+
+/** Align local “Connected” state with the server (cf5-vault alone was stale after sign-out / re-login). */
+async function syncAcgmeSettingsFromServer(){
+  if(!ACGME_BACKEND_URL) return;
+  const token = localStorage.getItem('cf5-token');
+  if(!token) return;
+  try{
+    const res = await fetch(`${ACGME_BACKEND_URL}/api/auth/acgme-status`,{
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if(!res.ok) return;
+    const data = await res.json();
+    if(!data.connected){
+      localStorage.removeItem('cf5-vault');
+      localStorage.removeItem('cf5-sites');
+      localStorage.removeItem('cf5-attendings');
+    } else {
+      localStorage.setItem('cf5-vault', JSON.stringify({ saved: true }));
+    }
+    loadSettingsUI();
+    if(data.connected && data.sessionActive === false){
+      const sub = document.getElementById('s-status-sub');
+      if(sub) sub.textContent = 'Credentials on file — ACGME session inactive. Tap Edit to reconnect.';
+    }
+  } catch(e){
+    console.warn('acgme-status sync failed', e);
   }
 }
 
