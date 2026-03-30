@@ -26,12 +26,7 @@ html{height:100%;overflow:hidden;background:var(--bg)}
 body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(--bg);overflow:hidden}
 .page{display:none;height:100%;flex-direction:column;overflow:hidden}
 .page.on{display:flex}
-#pg-login{align-items:center;justify-content:center;padding:48px 28px}
-.login-wrap{width:100%;max-width:360px}
-.brand{text-align:center;margin-bottom:56px}
-.brand-name{font-size:34px;font-weight:700;letter-spacing:-2px}
-.brand-name em{font-style:normal;color:var(--blue)}
-.brand-tag{font-size:11px;color:var(--text3);letter-spacing:.14em;text-transform:uppercase;margin-top:7px}
+/* login base reset – overridden below */
 .lbl{display:block;font-size:11px;color:var(--text2);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px}
 .ifield{width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);padding:15px 16px;color:var(--text);font-family:'Sora',sans-serif;font-size:15px;outline:none;transition:border-color .18s,background .18s;margin-bottom:13px}
 .ifield:focus{border-color:var(--blue);background:var(--bg3)}
@@ -362,53 +357,99 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
   overflow:hidden;pointer-events:none;
 }
 .state-label:empty{height:0;margin:0;}
-/* ── Login — ColorBends full-screen ─────────────────────────────── */
+/* ── Login — LineWaves full-screen ──────────────────────────────── */
 #pg-login{
   position:fixed!important;inset:0!important;
-  padding:0!important;overflow:hidden!important;
-  display:block!important;height:auto!important;
-  flex-direction:unset!important;
+  display:flex!important;flex-direction:column!important;
+  align-items:center!important;justify-content:center!important;
+  overflow:hidden!important;padding:0!important;
+  background:#07090f;
 }
-.login-colorbends-bg{
-  position:absolute;inset:0;width:100%;height:100%;
+.login-waves-bg{
+  position:absolute;inset:0;width:100%;height:100%;pointer-events:none;
 }
-.login-colorbends-bg canvas{
-  display:block;width:100%!important;height:100%!important;
+.login-waves-bg canvas{
+  position:absolute;inset:0;width:100%!important;height:100%!important;display:block;
 }
-.login-overlay{
-  position:absolute;inset:0;z-index:1;
-  background:linear-gradient(
-    to bottom,
-    rgba(7,9,15,0.10) 0%,
-    rgba(7,9,15,0.00) 30%,
-    rgba(7,9,15,0.35) 60%,
-    rgba(7,9,15,0.92) 100%
-  );
-  pointer-events:none;
+/* overlay to darken waves slightly so UI is readable */
+.login-dim{
+  position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:rgba(7,9,15,0.55);
 }
-.login-brand-top{
-  position:absolute;top:52px;left:0;right:0;
-  text-align:center;z-index:20;pointer-events:none;
+/* scrollable UI layer */
+.login-ui{
+  position:relative;z-index:10;
+  width:100%;max-width:400px;
+  padding:0 28px;
+  display:flex;flex-direction:column;align-items:center;
+  overflow-y:auto;max-height:100dvh;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
 }
-.login-brand-top-name{
-  font-size:38px;font-weight:700;letter-spacing:-2.5px;
-  color:#fff;text-shadow:0 2px 24px rgba(0,0,0,.45);
+.login-ui::-webkit-scrollbar{display:none}
+/* logo */
+.login-logo-wrap{
+  text-align:center;padding-top:max(56px,10dvh);padding-bottom:44px;
 }
-.login-brand-top-name em{font-style:normal;color:var(--blue)}
-.login-brand-top-tag{
-  font-size:11px;color:rgba(255,255,255,.45);
-  letter-spacing:.18em;text-transform:uppercase;margin-top:6px;
+.login-logo-name{
+  font-size:40px;font-weight:700;letter-spacing:-2.5px;
+  color:#fff;text-shadow:0 2px 32px rgba(0,0,0,.6);
 }
-.login-card{
-  position:absolute;bottom:0;left:0;right:0;z-index:20;
-  width:100%;max-width:420px;margin:0 auto;
-  padding:28px 28px 44px;
-  background:rgba(13,17,25,0.82);
-  backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
-  border-top:1px solid rgba(255,255,255,0.08);
-  border-left:1px solid rgba(255,255,255,0.06);
-  border-right:1px solid rgba(255,255,255,0.06);
-  border-radius:28px 28px 0 0;
+.login-logo-name em{font-style:normal;color:var(--blue)}
+.login-logo-tag{
+  font-size:11px;color:rgba(255,255,255,.38);
+  letter-spacing:.2em;text-transform:uppercase;margin-top:8px;
+}
+/* CTA button row */
+.login-cta-row{
+  display:flex;gap:10px;width:100%;
+}
+.login-cta-btn{
+  flex:1;padding:15px 10px;
+  font-family:'Sora',sans-serif;font-size:14px;font-weight:600;
+  border-radius:14px;cursor:pointer;
+  transition:all .2s;letter-spacing:-.1px;
+  border:1.5px solid transparent;
+}
+.login-cta-btn.primary{
+  background:var(--blue);color:#fff;
+  box-shadow:0 4px 22px rgba(79,142,247,0.35);
+}
+.login-cta-btn.primary:hover{opacity:.88}
+.login-cta-btn.primary.active{
+  background:transparent;color:var(--blue);border-color:var(--blue);
+  box-shadow:none;
+}
+.login-cta-btn.secondary{
+  background:rgba(255,255,255,0.07);color:var(--text2);
+  border-color:rgba(255,255,255,0.10);
+}
+.login-cta-btn.secondary:hover{background:rgba(255,255,255,0.11)}
+.login-cta-btn.secondary.active{
+  background:rgba(255,255,255,0.12);color:var(--text);
+  border-color:rgba(255,255,255,0.2);
+}
+/* expandable panels */
+.login-panel{
+  width:100%;max-height:0;overflow:hidden;
+  transition:max-height .42s cubic-bezier(.4,0,.2,1),
+             margin-top .3s ease,opacity .3s ease;
+  opacity:0;margin-top:0;
+}
+.login-panel.open{
+  max-height:700px;opacity:1;margin-top:20px;
+}
+.login-panel-inner{
+  background:rgba(13,17,25,0.78);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:18px;padding:24px 20px 28px;
+}
+.login-footer-text{
+  position:relative;z-index:10;
+  padding:20px 28px max(24px,env(safe-area-inset-bottom));
+  font-size:11px;color:rgba(255,255,255,0.15);
+  letter-spacing:.04em;text-align:center;
 }
 .auth-tabs{
   display:flex;background:rgba(255,255,255,0.05);
@@ -463,7 +504,80 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 </head>
 <body>
 <div id="pg-login" class="page on">
-  <div class="login-colorbends-bg" id="login-colorbends"></div>
+  <!-- LineWaves animated background -->
+  <div class="login-waves-bg" id="login-waves-bg"></div>
+  <div class="login-dim"></div>
+
+  <!-- Scrollable UI -->
+  <div class="login-ui">
+    <!-- Brand -->
+    <div class="login-logo-wrap">
+      <div class="login-logo-name">Case<em>Flow</em></div>
+      <div class="login-logo-tag">ACGME Case Logging</div>
+    </div>
+
+    <!-- CTA buttons -->
+    <div class="login-cta-row">
+      <button class="login-cta-btn primary" id="cta-signin" onclick="expandAuthPanel('signin')">Sign In</button>
+      <button class="login-cta-btn secondary" id="cta-signup" onclick="expandAuthPanel('signup')">Create Account</button>
+    </div>
+
+    <!-- Sign In panel -->
+    <div class="login-panel" id="panel-signin">
+      <div class="login-panel-inner">
+        <div class="form-field">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" id="l-email" placeholder="you@hospital.com"
+                 autocomplete="email" autocapitalize="none" autocorrect="off"
+                 onkeydown="if(event.key==='Enter')document.getElementById('l-pass').focus()">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" id="l-pass" placeholder="••••••••"
+                 autocomplete="current-password"
+                 onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <button class="btn-main" id="l-btn" onclick="doLogin()" style="margin-top:8px">Sign In</button>
+        <div class="auth-err" id="l-err"></div>
+      </div>
+    </div>
+
+    <!-- Create Account panel -->
+    <div class="login-panel" id="panel-signup">
+      <div class="login-panel-inner">
+        <div class="form-field">
+          <label class="form-label">Full Name</label>
+          <input class="form-input" type="text" id="r-name" placeholder="Dr. Jane Smith"
+                 autocomplete="name"
+                 onkeydown="if(event.key==='Enter')document.getElementById('r-email').focus()">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" id="r-email" placeholder="you@hospital.com"
+                 autocomplete="email" autocapitalize="none" autocorrect="off"
+                 onkeydown="if(event.key==='Enter')document.getElementById('r-pass').focus()">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" id="r-pass" placeholder="Min. 8 characters"
+                 autocomplete="new-password"
+                 onkeydown="if(event.key==='Enter')document.getElementById('r-pass2').focus()">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Confirm Password</label>
+          <input class="form-input" type="password" id="r-pass2" placeholder="Repeat password"
+                 autocomplete="new-password"
+                 onkeydown="if(event.key==='Enter')doRegister()">
+        </div>
+        <button class="btn-main" id="r-btn" onclick="doRegister()" style="margin-top:8px">Create Account</button>
+        <div class="auth-err" id="r-err"></div>
+      </div>
+    </div>
+
+    <div style="height:max(32px,env(safe-area-inset-bottom))"></div>
+  </div>
+
+  <div class="login-footer-text">Your data is encrypted and stored securely.</div>
 </div>
 
 <div class="page" id="pg-app">
@@ -2008,12 +2122,31 @@ function jwtDecode(token){try{return JSON.parse(atob(token.split('.')[1]));}catc
 function jwtValid(token){const p=jwtDecode(token);return p&&p.exp*1000>Date.now();}
 
 function switchAuthTab(tab){
-  document.getElementById('tab-signin').classList.toggle('on',tab==='signin');
-  document.getElementById('tab-signup').classList.toggle('on',tab==='signup');
-  document.getElementById('form-signin').style.display=tab==='signin'?'block':'none';
-  document.getElementById('form-signup').style.display=tab==='signup'?'block':'none';
-  document.getElementById('l-err').textContent='';
-  document.getElementById('r-err').textContent='';
+  document.getElementById('l-err')&&(document.getElementById('l-err').textContent='');
+  document.getElementById('r-err')&&(document.getElementById('r-err').textContent='');
+}
+function expandAuthPanel(which){
+  const signinPanel=document.getElementById('panel-signin');
+  const signupPanel=document.getElementById('panel-signup');
+  const signinBtn=document.getElementById('cta-signin');
+  const signupBtn=document.getElementById('cta-signup');
+  if(which==='signin'){
+    const opening=!signinPanel.classList.contains('open');
+    signinPanel.classList.toggle('open',opening);
+    signupPanel.classList.remove('open');
+    signinBtn.classList.toggle('active',opening);
+    signupBtn.classList.remove('active');
+    if(opening) setTimeout(()=>document.getElementById('l-email')?.focus(),420);
+  } else {
+    const opening=!signupPanel.classList.contains('open');
+    signupPanel.classList.toggle('open',opening);
+    signinPanel.classList.remove('open');
+    signupBtn.classList.toggle('active',opening);
+    signinBtn.classList.remove('active');
+    if(opening) setTimeout(()=>document.getElementById('r-name')?.focus(),420);
+  }
+  document.getElementById('l-err')&&(document.getElementById('l-err').textContent='');
+  document.getElementById('r-err')&&(document.getElementById('r-err').textContent='');
 }
 
 async function doLogin(){
@@ -2160,13 +2293,13 @@ function goTab(n){document.querySelectorAll('.tab').forEach(b=>b.classList.remov
 
 document.addEventListener('DOMContentLoaded',()=>{
   startOrb();
-  // Init ColorBends login background (deferred to ensure layout is complete)
-  const loginBg=document.getElementById('login-colorbends');
-  if(loginBg) new ColorBendsRenderer(loginBg,{
-    rotation:0, speed:0.18, autoRotate:2,
-    colors:['#453f5a','#6b5f8a','#2e2845','#7a6fa0','#332d4f','#8878b0','#1e1a30','#5a4e80'],
-    warpStrength:1.6, frequency:0.85, mouseInfluence:0.0,
-    parallax:0.0, noise:0.04,
+  const wavesBg=document.getElementById('login-waves-bg');
+  if(wavesBg) new LineWavesRenderer(wavesBg,{
+    speed:0.1, innerLineCount:32, outerLineCount:36,
+    warpIntensity:1.0, rotation:-45, edgeFadeWidth:0.0,
+    colorCycleSpeed:1.0, brightness:0.35,
+    color1:'#5a4e80', color2:'#4f8ef7', color3:'#7a6fa0',
+    enableMouseInteraction:false,
   });
   function tryBuildIndex(){if(typeof CPT_DB!=='undefined'){buildIndex();}else{setTimeout(tryBuildIndex,100);}}
   setTimeout(tryBuildIndex,200);
@@ -2286,113 +2419,120 @@ void main(){vec2 fc=vUv*iResolution.xy;vec4 col=mainImage(fc);gl_FragColor=vec4(
 }
 
 /* ================================================================
-   ColorBendsRenderer — pure WebGL, no dependencies (ReactBits port)
+   LineWavesRenderer — vanilla WebGL port of ReactBits LineWaves
    ================================================================ */
-class ColorBendsRenderer{
-  static _MAX=8;
-  static VERT=`precision highp float;
-attribute vec2 position;attribute vec2 uv;varying vec2 vUv;
-void main(){vUv=uv;gl_Position=vec4(position,0.0,1.0);}`;
+class LineWavesRenderer{
+  static VERT=`attribute vec2 uv;attribute vec2 position;varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position,0,1);}`;
   static FRAG=`precision highp float;
-#define MAX_COLORS 8
-uniform vec2 uCanvas;uniform float uTime;uniform float uSpeed;uniform vec2 uRot;
-uniform int uColorCount;uniform vec3 uColors[MAX_COLORS];
-uniform float uScale;uniform float uFrequency;uniform float uWarpStrength;
-uniform vec2 uPointer;uniform float uMouseInfluence;uniform float uParallax;uniform float uNoise;
-varying vec2 vUv;
+uniform float uTime;uniform vec3 uResolution;uniform float uSpeed;
+uniform float uInnerLines;uniform float uOuterLines;uniform float uWarpIntensity;
+uniform float uRotation;uniform float uEdgeFadeWidth;uniform float uColorCycleSpeed;
+uniform float uBrightness;uniform vec3 uColor1;uniform vec3 uColor2;uniform vec3 uColor3;
+uniform vec2 uMouse;uniform float uMouseInfluence;uniform int uEnableMouse;
+#define HALF_PI 1.5707963
+float hashF(float n){return fract(sin(n*127.1)*43758.5453123);}
+float smoothNoise(float x){float i=floor(x);float f=fract(x);float u=f*f*(3.0-2.0*f);return mix(hashF(i),hashF(i+1.0),u);}
+float displaceA(float coord,float t){float r=sin(coord*2.123)*0.2;r+=sin(coord*3.234+t*4.345)*0.1;r+=sin(coord*0.589+t*0.934)*0.5;return r;}
+float displaceB(float coord,float t){float r=sin(coord*1.345)*0.3;r+=sin(coord*2.734+t*3.345)*0.2;r+=sin(coord*0.189+t*0.934)*0.3;return r;}
+vec2 rot2D(vec2 p,float a){float c=cos(a);float s=sin(a);return vec2(p.x*c-p.y*s,p.x*s+p.y*c);}
 void main(){
-  float t=uTime*uSpeed;
-  vec2 p=vUv*2.0-1.0;p+=uPointer*uParallax*0.1;
-  vec2 rp=vec2(p.x*uRot.x-p.y*uRot.y,p.x*uRot.y+p.y*uRot.x);
-  vec2 q=vec2(rp.x*(uCanvas.x/uCanvas.y),rp.y);
-  q/=max(uScale,0.0001);q/=0.5+0.2*dot(q,q);q+=0.2*cos(t)-7.56;
-  q+=(uPointer-rp)*uMouseInfluence*0.2;
-  vec3 col=vec3(0.0);float cover=0.0;
-  vec2 s=q;
-  for(int i=0;i<MAX_COLORS;++i){
-    if(i>=uColorCount)break;
-    s-=0.01;
-    vec2 r=sin(1.5*(s.yx*uFrequency)+2.0*cos(s*uFrequency));
-    float m0=length(r+sin(5.0*r.y*uFrequency-3.0*t+float(i))/4.0);
-    float kBelow=clamp(uWarpStrength,0.0,1.0);
-    float gain=1.0+max(uWarpStrength-1.0,0.0);
-    vec2 warped=s+(r-s)*kBelow*gain;
-    float m1=length(warped+sin(5.0*warped.y*uFrequency-3.0*t+float(i))/4.0);
-    float m=mix(m0,m1,pow(kBelow,0.3));
-    float w=1.0-exp(-6.0/exp(6.0*m));
-    col+=uColors[i]*w;cover=max(cover,w);
-  }
-  col=clamp(col,0.0,1.0);
-  if(uNoise>0.0001){
-    float n=fract(sin(dot(gl_FragCoord.xy+vec2(uTime),vec2(12.9898,78.233)))*43758.5453123);
-    col=clamp(col+(n-0.5)*uNoise,0.0,1.0);
-  }
-  gl_FragColor=vec4(col,1.0);
+  vec2 coords=gl_FragCoord.xy/uResolution.xy;
+  coords=coords*2.0-1.0;coords=rot2D(coords,uRotation);
+  float halfT=uTime*uSpeed*0.5;float fullT=uTime*uSpeed;
+  float mouseWarp=0.0;
+  if(uEnableMouse==1){vec2 mPos=rot2D(uMouse*2.0-1.0,uRotation);float mDist=length(coords-mPos);mouseWarp=uMouseInfluence*exp(-mDist*mDist*4.0);}
+  float warpAx=coords.x+displaceA(coords.y,halfT)*uWarpIntensity+mouseWarp;
+  float warpAy=coords.y-displaceA(coords.x*cos(fullT)*1.235,halfT)*uWarpIntensity;
+  float warpBx=coords.x+displaceB(coords.y,halfT)*uWarpIntensity+mouseWarp;
+  float warpBy=coords.y-displaceB(coords.x*sin(fullT)*1.235,halfT)*uWarpIntensity;
+  vec2 fieldA=vec2(warpAx,warpAy);vec2 fieldB=vec2(warpBx,warpBy);
+  vec2 blended=mix(fieldA,fieldB,0.5);
+  float fadeTop=smoothstep(uEdgeFadeWidth,uEdgeFadeWidth+0.4,blended.y);
+  float fadeBottom=smoothstep(-uEdgeFadeWidth,-(uEdgeFadeWidth+0.4),blended.y);
+  float vMask=1.0-max(fadeTop,fadeBottom);
+  float tileCount=mix(uOuterLines,uInnerLines,vMask);
+  float scaledY=blended.y*tileCount;
+  float nY=smoothNoise(abs(scaledY));
+  float ridge=pow(step(abs(nY-blended.x)*2.0,HALF_PI)*cos(2.0*(nY-blended.x)),5.0);
+  float lines=0.0;
+  for(float i=1.0;i<3.0;i+=1.0){lines+=pow(max(fract(scaledY),fract(-scaledY)),i*2.0);}
+  float pattern=vMask*lines;
+  float cycleT=fullT*uColorCycleSpeed;
+  float rChannel=(pattern+lines*ridge)*(cos(blended.y+cycleT*0.234)*0.5+1.0);
+  float gChannel=(pattern+vMask*ridge)*(sin(blended.x+cycleT*1.745)*0.5+1.0);
+  float bChannel=(pattern+lines*ridge)*(cos(blended.x+cycleT*0.534)*0.5+1.0);
+  vec3 col=(rChannel*uColor1+gChannel*uColor2+bChannel*uColor3)*uBrightness;
+  float alpha=clamp(length(col),0.0,1.0);
+  gl_FragColor=vec4(col,alpha);
 }`;
   constructor(container,opts={}){
     this._c=container;
-    this._rot=opts.rotation??45;this._ar=opts.autoRotate??0;
-    this._speed=opts.speed??0.2;this._scale=opts.scale??1;
-    this._freq=opts.frequency??1;this._warp=opts.warpStrength??1;
-    this._mi=opts.mouseInfluence??1;this._par=opts.parallax??0.5;
-    this._noise=opts.noise??0.1;
-    this._colors=(opts.colors||[]).filter(Boolean).slice(0,ColorBendsRenderer._MAX).map(h=>{
-      const s=h.replace('#','');const v=s.length===3?[parseInt(s[0]+s[0],16),parseInt(s[1]+s[1],16),parseInt(s[2]+s[2],16)]:[parseInt(s.slice(0,2),16),parseInt(s.slice(2,4),16),parseInt(s.slice(4,6),16)];return[v[0]/255,v[1]/255,v[2]/255];});
-    this._ptrTgt=[0,0];this._ptrCur=[0,0];
-    this._t0=performance.now();
+    this._speed=opts.speed??0.3;
+    this._inner=opts.innerLineCount??32;
+    this._outer=opts.outerLineCount??36;
+    this._warp=opts.warpIntensity??1;
+    this._rot=((opts.rotation??-45)*Math.PI)/180;
+    this._fade=opts.edgeFadeWidth??0;
+    this._cycle=opts.colorCycleSpeed??1;
+    this._bright=opts.brightness??0.2;
+    this._c1=this._hex(opts.color1??'#ffffff');
+    this._c2=this._hex(opts.color2??'#ffffff');
+    this._c3=this._hex(opts.color3??'#ffffff');
+    this._mouse=[0.5,0.5];
     this._canvas=document.createElement('canvas');
-    this._canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;display:block;';
+    this._canvas.style.cssText='position:absolute;inset:0;width:100%!important;height:100%!important;display:block;';
     container.appendChild(this._canvas);
-    this._gl=this._canvas.getContext('webgl',{antialias:false,alpha:false});
-    if(!this._gl){console.warn('WebGL not available for ColorBends');return;}
+    this._gl=this._canvas.getContext('webgl',{alpha:true,premultipliedAlpha:false});
+    if(!this._gl){console.warn('LineWaves: WebGL unavailable');return;}
     this._build();this._resize();
     this._onResize=this._resize.bind(this);
     window.addEventListener('resize',this._onResize);
-    if('ResizeObserver' in window){this._ro=new ResizeObserver(this._resize.bind(this));this._ro.observe(container);}
-    container.addEventListener('pointermove',e=>{const r=container.getBoundingClientRect();this._ptrTgt[0]=((e.clientX-r.left)/(r.width||1))*2-1;this._ptrTgt[1]=-(((e.clientY-r.top)/(r.height||1))*2-1);});
     this._raf=requestAnimationFrame(this._loop.bind(this));
   }
-  _compile(type,src){const gl=this._gl;const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){console.error('CB shader:',gl.getShaderInfoLog(s));return null;}return s;}
+  _hex(h){const s=h.replace('#','');return[parseInt(s.slice(0,2),16)/255,parseInt(s.slice(2,4),16)/255,parseInt(s.slice(4,6),16)/255];}
+  _compile(type,src){const gl=this._gl;const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){console.error('LW shader:',gl.getShaderInfoLog(s));return null;}return s;}
   _build(){
     const gl=this._gl;
-    const vs=this._compile(gl.VERTEX_SHADER,ColorBendsRenderer.VERT);
-    const fs=this._compile(gl.FRAGMENT_SHADER,ColorBendsRenderer.FRAG);
+    const vs=this._compile(gl.VERTEX_SHADER,LineWavesRenderer.VERT);
+    const fs=this._compile(gl.FRAGMENT_SHADER,LineWavesRenderer.FRAG);
     if(!vs||!fs)return;
     this._pgm=gl.createProgram();gl.attachShader(this._pgm,vs);gl.attachShader(this._pgm,fs);gl.linkProgram(this._pgm);
-    if(!gl.getProgramParameter(this._pgm,gl.LINK_STATUS)){console.error('CB link:',gl.getProgramInfoLog(this._pgm));return;}
+    if(!gl.getProgramParameter(this._pgm,gl.LINK_STATUS)){console.error('LW link:',gl.getProgramInfoLog(this._pgm));return;}
     gl.useProgram(this._pgm);
-    const pl=gl.getAttribLocation(this._pgm,'position');const ul=gl.getAttribLocation(this._pgm,'uv');
-    const pb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,pb);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);gl.enableVertexAttribArray(pl);gl.vertexAttribPointer(pl,2,gl.FLOAT,false,0,0);
-    const ub=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,ub);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,2,0,0,2]),gl.STATIC_DRAW);gl.enableVertexAttribArray(ul);gl.vertexAttribPointer(ul,2,gl.FLOAT,false,0,0);
+    const posL=gl.getAttribLocation(this._pgm,'position');
+    const uvL=gl.getAttribLocation(this._pgm,'uv');
+    const pb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,pb);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);gl.enableVertexAttribArray(posL);gl.vertexAttribPointer(posL,2,gl.FLOAT,false,0,0);
+    const ub=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,ub);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,2,0,0,2]),gl.STATIC_DRAW);gl.enableVertexAttribArray(uvL);gl.vertexAttribPointer(uvL,2,gl.FLOAT,false,0,0);
     this._u={};
-    ['uCanvas','uTime','uSpeed','uRot','uColorCount','uScale','uFrequency','uWarpStrength','uPointer','uMouseInfluence','uParallax','uNoise'].forEach(n=>{this._u[n]=gl.getUniformLocation(this._pgm,n);});
-    this._uCol=Array.from({length:ColorBendsRenderer._MAX},(_,i)=>gl.getUniformLocation(this._pgm,`uColors[${i}]`));
-    gl.clearColor(0.271,0.247,0.353,1);
+    ['uTime','uResolution','uSpeed','uInnerLines','uOuterLines','uWarpIntensity','uRotation','uEdgeFadeWidth','uColorCycleSpeed','uBrightness','uColor1','uColor2','uColor3','uMouse','uMouseInfluence','uEnableMouse'].forEach(n=>{this._u[n]=gl.getUniformLocation(this._pgm,n);});
+    gl.clearColor(0,0,0,0);
+    gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
   }
-  _resize(){const dpr=Math.min(window.devicePixelRatio||1,2);const w=window.innerWidth||this._c.clientWidth||1;const h=window.innerHeight||this._c.clientHeight||1;this._canvas.width=w*dpr;this._canvas.height=h*dpr;if(this._gl)this._gl.viewport(0,0,this._canvas.width,this._canvas.height);}
-  _loop(){
+  _resize(){const dpr=Math.min(window.devicePixelRatio||1,2);const w=window.innerWidth||1;const h=window.innerHeight||1;this._canvas.width=w*dpr;this._canvas.height=h*dpr;if(this._gl)this._gl.viewport(0,0,this._canvas.width,this._canvas.height);}
+  _loop(ts){
     this._raf=requestAnimationFrame(this._loop.bind(this));
     if(!this._pgm)return;
-    const gl=this._gl;
-    const elapsed=(performance.now()-this._t0)*0.001;
-    const deg=(this._rot%360)+this._ar*elapsed;
-    const rad=deg*Math.PI/180;const cs=Math.cos(rad);const sn=Math.sin(rad);
-    this._ptrCur[0]+=(this._ptrTgt[0]-this._ptrCur[0])*0.08;
-    this._ptrCur[1]+=(this._ptrTgt[1]-this._ptrCur[1])*0.08;
+    const gl=this._gl;const t=ts*0.001;
     gl.clear(gl.COLOR_BUFFER_BIT);gl.useProgram(this._pgm);
-    gl.uniform2f(this._u.uCanvas,this._canvas.width,this._canvas.height);
-    gl.uniform1f(this._u.uTime,elapsed);gl.uniform1f(this._u.uSpeed,this._speed);
-    gl.uniform2f(this._u.uRot,cs,sn);
-    gl.uniform1i(this._u.uColorCount,this._colors.length);
-    this._colors.forEach((c,i)=>gl.uniform3f(this._uCol[i],c[0],c[1],c[2]));
-    gl.uniform1f(this._u.uScale,this._scale);gl.uniform1f(this._u.uFrequency,this._freq);
-    gl.uniform1f(this._u.uWarpStrength,this._warp);
-    gl.uniform2f(this._u.uPointer,this._ptrCur[0],this._ptrCur[1]);
-    gl.uniform1f(this._u.uMouseInfluence,this._mi);gl.uniform1f(this._u.uParallax,this._par);
-    gl.uniform1f(this._u.uNoise,this._noise);
+    gl.uniform1f(this._u.uTime,t);
+    gl.uniform3f(this._u.uResolution,this._canvas.width,this._canvas.height,this._canvas.width/this._canvas.height);
+    gl.uniform1f(this._u.uSpeed,this._speed);
+    gl.uniform1f(this._u.uInnerLines,this._inner);
+    gl.uniform1f(this._u.uOuterLines,this._outer);
+    gl.uniform1f(this._u.uWarpIntensity,this._warp);
+    gl.uniform1f(this._u.uRotation,this._rot);
+    gl.uniform1f(this._u.uEdgeFadeWidth,this._fade);
+    gl.uniform1f(this._u.uColorCycleSpeed,this._cycle);
+    gl.uniform1f(this._u.uBrightness,this._bright);
+    gl.uniform3f(this._u.uColor1,this._c1[0],this._c1[1],this._c1[2]);
+    gl.uniform3f(this._u.uColor2,this._c2[0],this._c2[1],this._c2[2]);
+    gl.uniform3f(this._u.uColor3,this._c3[0],this._c3[1],this._c3[2]);
+    gl.uniform2f(this._u.uMouse,0.5,0.5);
+    gl.uniform1f(this._u.uMouseInfluence,0);
+    gl.uniform1i(this._u.uEnableMouse,0);
     gl.drawArrays(gl.TRIANGLES,0,3);
   }
-  destroy(){cancelAnimationFrame(this._raf);window.removeEventListener('resize',this._onResize);if(this._ro)this._ro.disconnect();if(this._canvas.parentNode)this._canvas.parentNode.removeChild(this._canvas);const ext=this._gl&&this._gl.getExtension('WEBGL_lose_context');if(ext)ext.loseContext();}
+  destroy(){cancelAnimationFrame(this._raf);window.removeEventListener('resize',this._onResize);if(this._canvas.parentNode)this._canvas.parentNode.removeChild(this._canvas);const ext=this._gl&&this._gl.getExtension('WEBGL_lose_context');if(ext)ext.loseContext();}
 }
 </script>
 </body>
