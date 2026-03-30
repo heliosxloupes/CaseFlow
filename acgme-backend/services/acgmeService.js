@@ -348,10 +348,13 @@ async function getInsertPageData(sessionCookie) {
   const token = extractRequestVerificationToken(html);
   if (!token) {
     const looksLikeLogin = /sign\s*in|log\s*in|b2clogin|oauth2/i.test(html);
+    const looksLikeDuo = /duo|duosecurity|push.*approve|approve.*request/i.test(html);
     throw new Error(
       looksLikeLogin
         ? 'ACGME session expired or not authenticated — open Settings and reconnect your ACGME account.'
-        : 'Could not find __RequestVerificationToken on Insert page (ACGME page layout may have changed).'
+        : looksLikeDuo
+          ? 'ACGME is waiting for Duo approval. Approve the sign-in on your phone, then open Settings → ACGME Account → Reconnect.'
+          : 'Could not find __RequestVerificationToken on Insert page (ACGME page layout may have changed).'
     );
   }
 

@@ -90,8 +90,10 @@ async function loadStoredCookies(userId) {
  * Convert a Playwright cookies array to a Cookie header string for node-fetch.
  */
 function cookiesArrayToHeader(cookies) {
+  if (!cookies || !cookies.length) return '';
+  // Playwright scopes cookies to ACGME when captured; keep all named pairs so host-only cookies are not dropped.
   return cookies
-    .filter(c => c.domain && c.domain.includes('acgme.org'))
+    .filter(c => c && c.name)
     .map(c => `${c.name}=${c.value}`)
     .join('; ');
 }
