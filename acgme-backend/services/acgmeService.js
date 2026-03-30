@@ -17,6 +17,22 @@ const UA          = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.3
 /** ADS Insert Case ID field uses bootstrap-maxlength (25) on the resident form — keep POST length aligned. */
 const ADS_CASE_ID_MAX_LEN = 25;
 
+/**
+ * Whether to include CaseId in the Insert POST.
+ * ADS accepts alphanumeric refs in the UI (e.g. t1t1t1); pure-digit strings are often treated as internal row ids and can return HTTP 500.
+ * Default: post when the ref contains [A-Za-z]. Comments always carry "Case ID: …" as backup.
+ * ACGME_POST_CASE_ID=all|always|1|true → post even digit-only (optional # prefix in caseIdForAdsInsertForm)
+ * ACGME_POST_CASE_ID=0|false|never → never post CaseId field
+ */
+function shouldPostCaseIdToAds(raw) {
+  const env = String(process.env.ACGME_POST_CASE_ID || '').trim().toLowerCase();
+  if (env === '0' || env === 'false' || env === 'off' || env === 'never') return false;
+  if (env === '1' || env === 'true' || env === 'all' || env === 'always') return true;
+  const s = String(raw || '').trim();
+  if (!s) return false;
+  return /[a-zA-Z]/.test(s);
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Merge arrays of Set-Cookie strings; later entries override earlier by name */
@@ -518,9 +534,8 @@ function extractCaseIdFieldNameFromInsertHtml(html) {
 }
 
 /**
- * ADS often treats all-numeric CaseId as an internal server id (edits only). Those values can be cleared on Insert.
- * For digit-only refs we prefix (default "#") so the field binds as text. Override with ACGME_CASE_ID_DIGIT_PREFIX:
- *   unset → prefix "#"; empty string "" → no prefix; any other string → first character used as prefix (e.g. "R" → R12345).
+ * Value for the CaseId POST field. Alphanumeric (e.g. t1t1t1) is sent as-is.
+ * Pure-digit refs only when ACGME_POST_CASE_ID=all — optional "#" prefix so ADS may bind as text (ACGME_CASE_ID_DIGIT_PREFIX).
  */
 function caseIdForAdsInsertForm(raw) {
   let s = String(raw || '').trim().slice(0, ADS_CASE_ID_MAX_LEN);
@@ -873,9 +888,20 @@ function buildInsertFormPayload(token, hidden, caseData, insertHtml) {
     caseData.residentsId != null && String(caseData.residentsId).trim() !== ''
       ? String(caseData.residentsId).trim()
       : (hidden.Residents || '');
+  const postCaseId = shouldPostCaseIdToAds(caseData.caseId);
   const caseIdFieldName = extractCaseIdFieldNameFromInsertHtml(insertHtml || '') || 'CaseId';
-  const cid = caseIdForAdsInsertForm(caseData.caseId);
-  const hiddenClean = stripHiddenCaseIdKeys(hidden);
+  const cid = postCaseId ? caseIdForAdsInsertForm(caseData.caseId) : '';
+  const hiddenClean = postCaseId ? stripHiddenCaseIdKeys(hidden) : { ...hidden };
+  if (!postCaseId && String(caseData.caseId || '').trim()) {
+    const s = String(caseData.caseId).trim();
+    if (/[a-zA-Z]/.test(s)) {
+      console.warn('[ACGME] CaseId field not posted (ACGME_POST_CASE_ID=never). Ref is in Comments.');
+    } else {
+      console.warn(
+        '[ACGME] CaseId field not posted for digits/symbols-only (use a letter in the ref, e.g. C12345 or t1t1t1, or set ACGME_POST_CASE_ID=all). Ref is in Comments.'
+      );
+    }
+  }
   const body = {
     ...hiddenClean,
     __RequestVerificationToken: token,
@@ -927,8 +953,12 @@ function logSubmitPayloadDiagnostics(payload, hidden, caseData) {
       );
       const cid = String(caseData.caseId || '').trim();
       if (cid) {
-        const posted = caseIdForAdsInsertForm(caseData.caseId);
-        console.warn('[ACGME] CaseId raw %sb → posted as key matching Insert form (%sb)', `${cid.length}`, `${String(posted).length}`);
+        if (shouldPostCaseIdToAds(caseData.caseId)) {
+          const posted = caseIdForAdsInsertForm(caseData.caseId);
+          console.warn('[ACGME] CaseId POST: raw %sb → posted %sb', `${cid.length}`, `${String(posted).length}`);
+        } else {
+          console.warn('[ACGME] CaseId POST skipped; Comments contain ref; raw %sb', `${cid.length}`);
+        }
       }
       const scLen = String(caseData.selectedCodes || '').length;
       const scRaw = String(caseData.selectedCodes || '').trim();

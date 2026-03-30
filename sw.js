@@ -1,4 +1,4 @@
-const CACHE = 'caseflow-v12';
+const CACHE = 'caseflow-v14';
 const STATIC = ['/', '/index.html', '/caseflow-data.js', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
