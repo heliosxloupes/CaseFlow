@@ -50,8 +50,9 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .app-bar{display:flex;align-items:center;justify-content:space-between;padding:15px 20px 13px;border-bottom:1px solid var(--line);background:rgba(7,9,15,.95);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);position:sticky;top:0;z-index:400}
 .app-logo{font-size:19px;font-weight:700;letter-spacing:-1px}
 .app-logo em{font-style:normal;color:var(--blue)}
-.bar-right{display:flex;align-items:center;gap:9px}
+.bar-right{display:flex;align-items:center;gap:9px;position:relative;z-index:450}
 .chip{background:var(--bg2);border:1px solid var(--line2);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--text2)}
+.chip-cases{cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;pointer-events:auto!important;position:relative;z-index:2}
 .chip b{color:var(--blue);font-weight:600}
 .user-chip{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--line2);border-radius:20px;padding:5px 12px 5px 8px;font-size:12px;color:var(--text2);cursor:pointer}
 .udot{width:7px;height:7px;background:var(--green);border-radius:50%;flex-shrink:0}
@@ -79,9 +80,10 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .sm-icon-h{transform:translate(-50%,-50%)}
 .sm-icon-v{transform:translate(-50%,-50%) rotate(90deg)}
 .sm-toggle-text{font-size:12px;letter-spacing:.07em;opacity:.7}
+/* Closed: stack below .pane so history/voice receive taps; open: above pane (see body.sm-menu-open) */
 .sm-backdrop{
   position:fixed;top:56px;left:0;right:0;bottom:0;
-  background:rgba(0,0,0,.55);z-index:179;
+  background:rgba(0,0,0,.55);z-index:100;
   opacity:0;pointer-events:none!important;
   backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
   visibility:hidden;
@@ -93,17 +95,21 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
   width:min(78vw,360px);height:calc(100% - 56px);
   will-change:transform;
 }
-.sm-prelayer-1{background:#0a1322;z-index:180}
-.sm-prelayer-2{background:#1a3560;z-index:181}
+.sm-prelayer-1{background:#0a1322;z-index:101}
+.sm-prelayer-2{background:#1a3560;z-index:102}
 .sm-panel-wrap{
   position:fixed;top:56px;left:0;
   width:min(78vw,360px);height:calc(100% - 56px);
   background:#0b1628;
   border-right:1px solid rgba(79,142,247,0.12);
-  z-index:182;will-change:transform;
+  z-index:103;will-change:transform;
   display:flex;flex-direction:column;overflow:hidden;
   box-shadow:4px 0 40px rgba(0,0,0,.6);
 }
+body.sm-menu-open .sm-backdrop{z-index:300}
+body.sm-menu-open .sm-prelayer-1{z-index:301}
+body.sm-menu-open .sm-prelayer-2{z-index:302}
+body.sm-menu-open .sm-panel-wrap{z-index:303}
 .sm-panel-logo-row{
   padding:28px 28px 20px;border-bottom:1px solid rgba(255,255,255,.05);
 }
@@ -148,8 +154,10 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 }
 .sm-footer-note{font-size:11px;color:var(--text3);line-height:1.6}
 #pg-app{height:100%;display:flex;flex-direction:column}
-.pane{display:none;width:100%}
+.pane{display:none;width:100%;position:relative;z-index:220;min-height:0}
 .pane.on{display:block;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+/* Inactive panes must not intercept taps (WebKit can still hit-test display:none edge cases) */
+#pn-log:not(.on),#pn-history:not(.on),#pn-settings:not(.on){pointer-events:none!important}
 .voice-screen{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   min-height:100%;
@@ -319,8 +327,8 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .hist-date-clear{font-size:12px;color:var(--text3);cursor:pointer;padding:4px 6px;flex-shrink:0;transition:color .15s}
 .hist-date-clear:active{color:#f87171}
 .hist-count{padding:10px 20px 2px;max-width:600px;margin:0 auto;font-size:12px;color:var(--text3)}
-.hist-wrap{padding:8px 20px 100px;max-width:600px;margin:0 auto}
-.hist-item{background:var(--bg1);border:1px solid var(--line);border-radius:var(--rl);padding:16px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;cursor:pointer;transition:border-color .15s,background .15s}
+.hist-wrap{position:relative;z-index:2;padding:8px 20px 100px;max-width:600px;margin:0 auto}
+.hist-item{background:var(--bg1);border:1px solid var(--line);border-radius:var(--rl);padding:16px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;cursor:pointer;transition:border-color .15s,background .15s;position:relative;z-index:1;touch-action:manipulation;-webkit-user-select:none;user-select:none;pointer-events:auto!important}
 .hist-item:active{background:var(--bg2);border-color:var(--blue-b)}
 .hprocs{font-size:14px;font-weight:500;margin-bottom:5px;line-height:1.4}
 .hmeta{font-size:12px;color:var(--text2);line-height:1.75}
@@ -372,8 +380,8 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .btn-signout{width:100%;padding:13px;background:transparent;border:1px solid var(--line2);border-radius:var(--r);color:var(--text2);font-family:'Sora',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:border-color .15s,color .15s}
 .btn-signout:active{border-color:#f87171;color:#f87171}
 /* Case edit modal */
-.case-edit-modal{position:fixed;inset:0;z-index:8500;background:rgb(7,9,15);display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .22s;transform:translateY(20px);overflow:hidden;width:100vw;max-width:100vw}
-.case-edit-modal.on{opacity:1;pointer-events:all;transform:translateY(0);transition:opacity .22s,transform .22s}
+.case-edit-modal{position:fixed;inset:0;z-index:8500;background:rgb(7,9,15);display:flex;flex-direction:column;opacity:0;pointer-events:none!important;transition:opacity .22s;transform:translateY(20px);overflow:hidden;width:100vw;max-width:100vw}
+.case-edit-modal.on{opacity:1;pointer-events:all!important;transform:translateY(0);transition:opacity .22s,transform .22s}
 .case-edit-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--line);flex-shrink:0;box-sizing:border-box;width:100%}
 .case-edit-title{font-size:16px;font-weight:700;color:var(--text)}
 .case-edit-close{background:var(--bg2);border:1px solid var(--line2);color:var(--text2);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;line-height:1;flex-shrink:0}
@@ -398,8 +406,8 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .btn-del-case{flex:1;padding:13px;background:transparent;border:1px solid rgba(248,113,113,.3);border-radius:var(--r);color:#f87171;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;box-sizing:border-box}
 .btn-del-case:active{background:rgba(248,113,113,.1)}
 /* Search modal */
-.search-modal{position:fixed;inset:0;z-index:8000;background:rgba(7,9,15,.96);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:18vh;opacity:0;pointer-events:none;transition:opacity .2s;padding-left:20px;padding-right:20px}
-.search-modal.on{opacity:1;pointer-events:all}
+.search-modal{position:fixed;inset:0;z-index:8000;background:rgba(7,9,15,.96);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:18vh;opacity:0;pointer-events:none!important;transition:opacity .2s;padding-left:20px;padding-right:20px}
+.search-modal.on{opacity:1;pointer-events:all!important}
 .search-modal-inner{width:100%;max-width:420px;display:flex;flex-direction:column;gap:0}
 .search-modal-close{position:absolute;top:20px;right:20px;background:var(--bg2);border:1px solid var(--line2);color:var(--text2);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;line-height:1;transition:background .15s}
 .search-modal-close:active{background:var(--bg3)}
@@ -408,8 +416,8 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .search-modal .srch-ico svg{width:18px;height:18px}
 .search-modal .srch-results{max-height:52vh;border-radius:12px;margin-top:10px}
 /* Submit overlay */
-.submit-overlay{position:fixed;inset:0;z-index:9000;background:rgba(7,9,15,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;opacity:0;pointer-events:none;transition:opacity .25s}
-.submit-overlay.on{opacity:1;pointer-events:all}
+.submit-overlay{position:fixed;inset:0;z-index:9000;background:rgba(7,9,15,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;opacity:0;pointer-events:none!important;transition:opacity .25s}
+.submit-overlay.on{opacity:1;pointer-events:all!important}
 .submit-spinner-wrap{position:relative;width:100px;height:100px;display:flex;align-items:center;justify-content:center}
 .spinner{background-image:linear-gradient(rgb(186,66,255) 35%,rgb(0,225,255));width:100px;height:100px;animation:spinning82341 1.7s linear infinite;border-radius:50px;filter:blur(1px);box-shadow:0px -5px 20px 0px rgb(186,66,255),0px 5px 20px 0px rgb(0,225,255);display:flex;align-items:center;justify-content:center}
 .spinner1{background-color:rgb(20,22,30);width:82px;height:82px;border-radius:50px;filter:blur(8px)}
@@ -696,7 +704,7 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
       <div class="app-logo" onclick="smNavigate('log')" style="cursor:pointer">Case<em>Flow</em></div>
     </div>
     <div class="bar-right">
-      <div class="chip"><b id="hdr-n">0</b> cases</div>
+      <div class="chip chip-cases" id="hdr-chip-cases" title="Open case history" role="button" tabindex="0"><b id="hdr-n">0</b> cases</div>
       <button class="new-case-btn" id="new-case-btn" onclick="resetFlow()" style="display:none">
         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         New Case
@@ -1815,6 +1823,10 @@ function updateDateToggleLabel(){
     toggle.classList.remove('active');
   }
 }
+/** Escape for double-quoted HTML attributes (case ids from DB / localStorage) */
+function escAttr(s){
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
 function filterHistory(){
   const q=(document.getElementById('hist-search')?.value||'').toLowerCase().trim();
   const from=document.getElementById('hist-from')?.value||'';
@@ -1839,7 +1851,7 @@ function filterHistory(){
   list.innerHTML=filtered.map(c=>{
     const procs=c.procs?.length?c.procs.map(p=>p.d).join(', '):'No procedures listed';
     const d=new Date(c.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-    return`<div class="hist-item" onclick="openCaseEdit(${c.id})">
+    return`<div class="hist-item" data-case-id="${escAttr(c.id)}">
       <div style="flex:1;min-width:0">
         <div class="hprocs">${procs}</div>
         <div class="hmeta">${d} &middot; ${c.role||'—'} &middot; Year ${c.yr||'—'}</div>
@@ -1848,6 +1860,8 @@ function filterHistory(){
       <div class="spill s-${c.status}">${c.status}</div>
     </div>`;
   }).join('');
+  // Ensure delegated handlers remain attached after any re-render
+  try{ initPointerBindings(); }catch(e){}
 }
 
 // ── CASE EDIT MODAL ──
@@ -1859,11 +1873,19 @@ const CE_PATIENTS=['Adult','Pediatric'];
 const CE_YEARS=['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6'];
 
 function openCaseEdit(id){
-  const c=cases.find(x=>x.id===id);
-  if(!c)return;
-  editingCase=JSON.parse(JSON.stringify(c)); // deep copy
-  renderCaseEditModal();
-  document.getElementById('case-edit-modal').classList.add('on');
+  try{
+    const c=cases.find(x=>String(x.id)===String(id));
+    if(!c){
+      toast('Case not found','err');
+      return;
+    }
+    editingCase=JSON.parse(JSON.stringify(c)); // deep copy
+    renderCaseEditModal();
+    document.getElementById('case-edit-modal').classList.add('on');
+  } catch(e){
+    toast('openCaseEdit error','err');
+    console.warn('openCaseEdit error:',e);
+  }
 }
 function closeCaseEdit(){
   document.getElementById('case-edit-modal').classList.remove('on');
@@ -2413,6 +2435,8 @@ async function launchApp(name,email){
   document.getElementById('hdr-u').textContent=displayName.split(' ')[0];
   showPage('pg-app');
   startOrb();
+  // Re-bind tap/click handlers after app is visible (guards against partial reloads)
+  try{ initPointerBindings(); }catch(e){}
   // Load cases from DB, fall back to localStorage cache
   await loadCasesFromDB();
   document.getElementById('hdr-n').textContent=cases.length;
@@ -2501,9 +2525,68 @@ function goTab(n){
   if(n==='history')renderHistory();
   if(n==='settings')loadSettingsUI();
 }
+/** Header “N cases” chip — switches to History and scrolls to the list */
+function chipCasesClick(){
+  try { toast('2 cases tap',''); } catch(e) {}
+  goTab('history');
+  requestAnimationFrame(()=>{
+    document.getElementById('hist-list')?.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+}
+/** Delegated handlers — works when CSP blocks inline onclick (e.g. some embedded browsers) */
+function initPointerBindings(){
+  const histList=document.getElementById('hist-list');
+  if(histList&&!histList.dataset.histDelegate){
+    histList.dataset.histDelegate='1';
+    const handler=(e)=>{
+      const row=e.target.closest?.('.hist-item');
+      if(!row||!histList.contains(row))return;
+      const id=row.getAttribute('data-case-id');
+      if(id==null||id==='')return;
+      try { toast('history tap',''); } catch(e) {}
+      openCaseEdit(id);
+    };
+    histList.addEventListener('pointerup', handler, {passive:true, capture:true});
+    histList.addEventListener('touchend', handler, {passive:true, capture:true});
+    histList.addEventListener('click', handler, {capture:true});
+  }
+  const chip=document.getElementById('hdr-chip-cases');
+  if(chip&&!chip.dataset.chipBound){
+    chip.dataset.chipBound='1';
+    const chipHandler=()=>chipCasesClick();
+    chip.addEventListener('pointerup', chipHandler, {passive:true, capture:true});
+    chip.addEventListener('touchend', chipHandler, {passive:true, capture:true});
+    chip.addEventListener('click', chipHandler, {capture:true});
+  }
+}
+
+// Optional touch debugging: set localStorage cf5-debug-touches = "1"
+function initTouchDebug(){
+  try{
+    if(localStorage.getItem('cf5-debug-touches')!=='1')return;
+  }catch(e){ return; }
+  if(window.__cfTouchDbg) return;
+  window.__cfTouchDbg = true;
+  const fmt=(el)=>{
+    if(!el) return 'null';
+    const id=el.id?('#'+el.id):'';
+    const cls=(el.className&&typeof el.className==='string')?('.'+el.className.trim().split(/\s+/).slice(0,3).join('.')):'';
+    return `${el.tagName?.toLowerCase?.()||'el'}${id}${cls}`;
+  };
+  const show=(e)=>{
+    const t=e.target;
+    const pt=('clientX' in e)?{x:e.clientX,y:e.clientY}:null;
+    const top=pt?document.elementFromPoint(pt.x,pt.y):null;
+    toast(`tap → ${fmt(t)} | top → ${fmt(top)}`,'');
+  };
+  document.addEventListener('pointerup', show, true);
+  document.addEventListener('touchend', show, true);
+}
 
 document.addEventListener('DOMContentLoaded',()=>{
   SM.init();
+  initPointerBindings();
+  initTouchDebug();
   startOrb();
   const wavesBg=document.getElementById('login-waves-bg');
   if(wavesBg) new LineWavesRenderer(wavesBg,{
@@ -2751,6 +2834,8 @@ void main(){
 const SM = (() => {
   let isOpen = false;
   let busy = false;
+  /** When set, goTab/setActive run after menu close animation (avoids pane switching on top of sliding menu) */
+  let pendingNavTab = null;
   let layers, panel, backdrop, iconWrap, toggleText, toggleBtn;
   let labelEls, numEls;
 
@@ -2840,6 +2925,12 @@ const SM = (() => {
         gsap.set(numEls, { opacity: 0 });
         sealMenuFully();
         busy = false;
+        if (pendingNavTab !== null) {
+          const t = pendingNavTab;
+          pendingNavTab = null;
+          goTab(t);
+          setActive(t);
+        }
       }
     });
     gsap.to(backdrop, { opacity: 0, duration: 0.28 });
@@ -2848,7 +2939,16 @@ const SM = (() => {
   }
 
   function toggle()          { isOpen ? close() : open(); }
-  function navigate(tab)     { close(); goTab(tab); setActive(tab); }
+  function navigate(tab) {
+    pendingNavTab = tab;
+    if (isOpen) {
+      close();
+    } else {
+      goTab(tab);
+      setActive(tab);
+      pendingNavTab = null;
+    }
+  }
   function setActive(tab) {
     document.querySelectorAll('.sm-nav-btn').forEach(b => b.classList.remove('active'));
     const btn = document.querySelector(`#sm-item-${tab} .sm-nav-btn`);
