@@ -4,6 +4,8 @@ const { URLSearchParams } = require('url');
 const AbortController = require('abort-controller');
 
 const BASE_URL    = 'https://apps.acgme.org';
+/** Desktop “Add Cases” form — matches DevTools HAR; Mobile Insert uses different model binding. */
+const ACGME_INSERT_URL = `${BASE_URL}/ads/CaseLogs/CaseEntry/Insert`;
 const B2C_TENANT  = 'acgmeras.b2clogin.com';
 const B2C_POLICY  = 'b2c_1a_signup_signin';
 const B2C_CLIENT  = 'dcdddbd1-2b64-4940-9983-6a6442c526aa';
@@ -376,7 +378,7 @@ function resolveRedirectUrl(location, currentUrl) {
  * with redirect:manual used to treat that as failure. Follow apps.acgme.org hops and merge cookies.
  */
 async function fetchInsertHtmlWithRedirects(initialCookie) {
-  const insertUrl = `${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`;
+  const insertUrl = ACGME_INSERT_URL;
   let url = insertUrl;
   let cookieHdr = initialCookie || '';
   let referer = `${BASE_URL}/ads/`;
@@ -446,14 +448,14 @@ async function fetchInsertHtmlWithRedirects(initialCookie) {
       );
     }
     // e.g. 200 on /ads/ shell — retry Insert with cookies we just collected
-    if (!url.includes('CaseEntryMobile/Insert')) {
+    if (!url.includes('CaseEntry/Insert')) {
       referer = url;
       url = insertUrl;
       continue;
     }
 
     // Insert URL returned 200 but no antiforgery token in HTML — load /ads/ once then retry Insert
-    if (url.includes('CaseEntryMobile/Insert') && !triedAdsWarmup) {
+    if (url.includes('CaseEntry/Insert') && !triedAdsWarmup) {
       triedAdsWarmup = true;
       referer = url;
       url = `${BASE_URL}/ads/`;
@@ -574,10 +576,10 @@ async function fetchCodeSearchGetCodes(sessionCookie, { specialtyId, codeDesc, a
     }, 20000);
   }
 
-  let res = await getWithReferer('/ads/CaseLogs/CaseEntryMobile/Insert');
+  let res = await getWithReferer('/ads/CaseLogs/CaseEntry/Insert');
   if (res.status === 404) {
-    console.warn('[ACGME] GetCodes 404 with Mobile Insert Referer; retrying with CaseEntry/Insert');
-    res = await getWithReferer('/ads/CaseLogs/CaseEntry/Insert');
+    console.warn('[ACGME] GetCodes 404 with desktop Insert Referer; retrying with CaseEntryMobile/Insert');
+    res = await getWithReferer('/ads/CaseLogs/CaseEntryMobile/Insert');
   }
   if (!res.ok) {
     const errBody = await res.text().catch(() => '');
@@ -754,8 +756,7 @@ function buildInsertFormPayload(token, hidden, caseData) {
     CodeDescription: caseData.codeDescription || '',
     Comments:        caseData.comments || '',
     CaseId:          sanitizeCaseIdForAds(caseData.caseId),
-    IsMobileApp:     'True',
-    MobileViewMode:  '0',
+    // Do not force IsMobileApp / MobileViewMode — desktop Insert uses hidden defaults; Mobile=True on desktop 500s.
     SearchTerm:      'False',
   });
 }
@@ -835,13 +836,13 @@ async function submitCaseOnce(sessionCookie, caseData) {
 
   const payload = buildInsertFormPayload(token, hidden, caseDataResolved);
 
-  const res = await fetchT(`${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`, {
+  const res = await fetchT(ACGME_INSERT_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'Cookie': cookie,
       'User-Agent': UA,
-      'Referer': `${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`,
+      'Referer': ACGME_INSERT_URL,
       'Origin': BASE_URL,
       'Sec-Fetch-Site': 'same-origin',
       'Sec-Fetch-Mode': 'navigate',

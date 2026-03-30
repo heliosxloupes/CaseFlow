@@ -27,7 +27,7 @@ const { setSession, getSession, clearSession } = require('./sessionCache');
 const { getInsertPageData } = require('./acgmeService');
 
 const ACGME_ORIGIN = 'https://apps.acgme.org';
-const ACGME_INSERT = `${ACGME_ORIGIN}/ads/CaseLogs/CaseEntryMobile/Insert`;
+const ACGME_INSERT = `${ACGME_ORIGIN}/ads/CaseLogs/CaseEntry/Insert`;
 const B2C_TENANT   = 'acgmeras.b2clogin.com';
 const B2C_POLICY   = 'b2c_1a_signup_signin';
 const B2C_CLIENT   = 'dcdddbd1-2b64-4940-9983-6a6442c526aa';
