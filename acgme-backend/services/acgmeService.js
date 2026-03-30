@@ -589,16 +589,57 @@ async function fetchCodeSearchGetCodes(sessionCookie, { specialtyId, codeDesc, a
 }
 
 /**
- * Prefer Success + Payload[] tuple; fall back to legacy tree walk for older JSON shapes.
+ * ADS POSTs this with the full GetCodes Payload row when the user clicks "Add" on a code.
+ * Some server paths require it before Insert accepts SelectedCodes.
  */
-function resolveSelectedCodesFromGetCodesJson(data, cptWant) {
-  if (data && data.Success === false) return '';
+async function postGetSelectedCodePartial(sessionCookie, row) {
+  const url = `${BASE_URL}/ads/CaseLogs/Code/GetSelectedCodePartial`;
+  const res = await fetchT(
+    url,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+        Cookie: sessionCookie,
+        'User-Agent': UA,
+        Accept: '*/*',
+        'X-Requested-With': 'XMLHttpRequest',
+        Referer: ACGME_INSERT_URL,
+        Origin: BASE_URL,
+      },
+      body: JSON.stringify(row),
+    },
+    30000
+  );
+  const sc = res.headers.raw()['set-cookie'] || [];
+  let merged = sessionCookie;
+  if (sc.length) {
+    merged = mergeCookieHeaderWithSetCookies(sessionCookie, sc);
+  }
+  const text = await res.text().catch(() => '');
+  if (!res.ok) {
+    throw new Error(`GetSelectedCodePartial ${res.status}: ${text.slice(0, 400)}`);
+  }
+  return merged;
+}
+
+/**
+ * Prefer Success + Payload[] tuple + row; fall back to legacy tree walk (no row for partial).
+ */
+function resolveTupleAndPayloadRowFromGetCodesJson(data, cptWant) {
+  if (data && data.Success === false) return { tuple: '', payloadRow: null };
   const row = pickFirstPayloadRowForCpt(data && data.Payload, cptWant);
   if (row) {
     const tuple = buildAdsSelectedCodesTupleFromPayloadRow(row);
-    if (tuple) return tuple;
+    if (tuple) return { tuple, payloadRow: row };
   }
-  return pickSelectedCodesFromGetCodesResponseLegacy(data, cptWant);
+  const legacy = pickSelectedCodesFromGetCodesResponseLegacy(data, cptWant);
+  return { tuple: legacy || '', payloadRow: null };
+}
+
+/** @returns {string} tuple only — exported for tests */
+function resolveSelectedCodesFromGetCodesJson(data, cptWant) {
+  return resolveTupleAndPayloadRowFromGetCodesJson(data, cptWant).tuple;
 }
 
 /**
@@ -719,7 +760,7 @@ async function resolveSelectedCodesIfNeeded(sessionCookie, hidden, caseData) {
     );
   }
 
-  const resolved = resolveSelectedCodesFromGetCodesJson(data, raw);
+  const { tuple: resolved, payloadRow } = resolveTupleAndPayloadRowFromGetCodesJson(data, raw);
   if (!resolved) {
     throw new Error(
       `ACGME has no matching procedure row for code "${raw}" (specialty ${specialtyId}). ` +
@@ -731,7 +772,9 @@ async function resolveSelectedCodesIfNeeded(sessionCookie, hidden, caseData) {
   console.warn(
     `[ACGME] Resolved CPT "${raw}" → SelectedCodes tuple (len=${resolved.length}b)`
   );
-  return { ...caseData, selectedCodes: resolved };
+  const out = { ...caseData, selectedCodes: resolved };
+  if (payloadRow) out._adsPayloadRow = payloadRow;
+  return out;
 }
 
 /**
@@ -834,13 +877,25 @@ async function submitCaseOnce(sessionCookie, caseData) {
 
   const caseDataResolved = await resolveSelectedCodesIfNeeded(cookie, hidden, caseData);
 
-  const payload = buildInsertFormPayload(token, hidden, caseDataResolved);
+  const caseDataForInsert = { ...caseDataResolved };
+  const payloadRow = caseDataForInsert._adsPayloadRow;
+  delete caseDataForInsert._adsPayloadRow;
+
+  let cookieForSubmit = cookie;
+  if (payloadRow) {
+    cookieForSubmit = await postGetSelectedCodePartial(cookie, payloadRow);
+    if (process.env.ACGME_DEBUG_SUBMIT === '1') {
+      console.warn('[ACGME] DEBUG GetSelectedCodePartial completed before Insert');
+    }
+  }
+
+  const payload = buildInsertFormPayload(token, hidden, caseDataForInsert);
 
   const res = await fetchT(ACGME_INSERT_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Cookie': cookie,
+      'Cookie': cookieForSubmit,
       'User-Agent': UA,
       'Referer': ACGME_INSERT_URL,
       'Origin': BASE_URL,
@@ -894,7 +949,7 @@ async function submitCaseOnce(sessionCookie, caseData) {
   }
 
   if (res.status >= 400) {
-    logSubmitPayloadDiagnostics(payload, hidden, caseDataResolved);
+    logSubmitPayloadDiagnostics(payload, hidden, caseDataForInsert);
     logSubmitErrorResponse(res.status, html);
     const hint = extractAcgmeSubmitErrorHint(html);
     throw new Error(
