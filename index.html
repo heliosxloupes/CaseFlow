@@ -1635,7 +1635,7 @@ const SUMMARY_FIELDS = [
   {key:'attending', label:'Attending', type:'chips', get:()=>caseData.attending, set:v=>{caseData.attending=v}, options:['Dr. Smith','Dr. Johnson','Dr. Williams','Dr. Brown']},
   {key:'patient',   label:'Patient',   type:'chips', get:()=>caseData.patientType,set:v=>{caseData.patientType=v},options:['Adult','Pediatric']},
   {key:'year',      label:'Year',      type:'chips', get:()=>caseData.caseYear,  set:v=>{caseData.caseYear=v},  options:['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6']},
-  {key:'caseId',    label:'Case ID',   type:'text',  get:()=>caseData.caseId,    set:v=>{caseData.caseId=v},    placeholder:'Optional'},
+  {key:'caseId',    label:'Case ID',   type:'text',  get:()=>caseData.caseId,    set:v=>{caseData.caseId=v},    placeholder:'MRN, birthday, your ref — sent to ACGME in Comments'},
 ];
 let summaryEditKey = null;
 

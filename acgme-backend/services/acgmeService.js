@@ -495,13 +495,31 @@ async function getInsertPageData(sessionCookie) {
 }
 
 /**
- * ADS Insert expects a numeric server case id for edits, or empty for new rows.
- * CaseFlow's optional "Case ID" field is often a user label — sending it as CaseId can 500.
+ * ADS Insert `CaseId` expects a numeric ADS server id for edits, or empty/0 for new rows.
+ * Sending MRN-style or free text there can cause ADS errors — use mergeLocalCaseIdIntoComments instead.
  */
 function sanitizeCaseIdForAds(raw) {
   const s = String(raw || '').trim();
   if (!s) return '';
   return /^\d+$/.test(s) ? s : '';
+}
+
+/**
+ * Resident Case ID in CaseFlow is usually a local ref (MRN, birthday, arbitrary label).
+ * Those are prepended to ADS Comments so they are stored in ACGME. Digits-only values are
+ * treated as ADS case ids (edits) and are not duplicated into Comments.
+ */
+function mergeLocalCaseIdIntoComments(caseData) {
+  const base = String(caseData.comments != null ? caseData.comments : '');
+  const raw = String(caseData.caseId || '').trim();
+  if (!raw) return base;
+  if (sanitizeCaseIdForAds(raw)) {
+    return base;
+  }
+  const prefix = `Case ID: ${raw}`;
+  const trimmed = base.trim();
+  if (!trimmed) return prefix;
+  return `${prefix}\n\n${base}`;
 }
 
 /**
@@ -828,7 +846,7 @@ function buildInsertFormPayload(token, hidden, caseData) {
     HoldSelectedCodes: tupleLike ? 'False' : codes,
     SelectedCodes:     codes,
     CodeDescription: codeDesc,
-    Comments:        caseData.comments || '',
+    Comments:        mergeLocalCaseIdIntoComments(caseData),
     CaseId:          sanitizeCaseIdForAds(caseData.caseId),
     // Do not force IsMobileApp / MobileViewMode — desktop Insert uses hidden defaults; Mobile=True on desktop 500s.
     SearchTerm:      'False',
@@ -865,7 +883,7 @@ function logSubmitPayloadDiagnostics(payload, hidden, caseData) {
       const cid = String(caseData.caseId || '').trim();
       if (cid && !/^\d+$/.test(cid)) {
         console.warn(
-          '[ACGME] hint: CaseId is non-numeric — optional Case ID in CaseFlow may not be ACGME server id; try clearing it or use only ADS numeric case id if editing.'
+          '[ACGME] Local Case ID (non-numeric) is merged into ADS Comments; ADS CaseId left empty for new case.'
         );
       }
       const scLen = String(caseData.selectedCodes || '').length;
