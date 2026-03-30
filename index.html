@@ -403,6 +403,16 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .ce-add-btn:active{border-color:var(--blue);color:var(--blue)}
 .ce-date-input{width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;transition:border-color .18s}
 .ce-date-input:focus{border-color:var(--blue)}
+.ce-combo{position:relative;width:100%;box-sizing:border-box}
+.ce-sel-input{width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:12px 14px;color:var(--text);font-family:'Sora',sans-serif;font-size:16px;outline:none;transition:border-color .18s;-webkit-appearance:none;appearance:none}
+.ce-sel-input:focus{border-color:var(--blue)}
+.ce-combo-panel{position:absolute;left:0;right:0;top:calc(100% + 4px);max-height:min(240px,42vh);overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg3);border:1px solid var(--line2);border-radius:8px;z-index:12000;box-shadow:0 8px 28px rgba(0,0,0,.5);display:none}
+.ce-combo-panel.open{display:block}
+.ce-combo-opt{display:block;width:100%;text-align:left;padding:11px 14px;font-size:13px;color:var(--text);background:transparent;border:none;border-bottom:1px solid var(--line);cursor:pointer;font-family:'Sora',sans-serif;line-height:1.35}
+.ce-combo-opt:last-child{border-bottom:none}
+.ce-combo-opt:active{background:var(--bg2)}
+.ce-combo-empty{padding:12px 14px;font-size:12px;color:var(--text3);line-height:1.45}
+.ce-combo-hint{font-size:11px;color:var(--text3);margin-top:8px;line-height:1.45}
 .btn-del-case{flex:1;padding:13px;background:transparent;border:1px solid rgba(248,113,113,.3);border-radius:var(--r);color:#f87171;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;box-sizing:border-box}
 .btn-del-case:active{background:rgba(248,113,113,.1)}
 /* Search modal */
@@ -1867,8 +1877,9 @@ function filterHistory(){
 // ── CASE EDIT MODAL ──
 let editingCase=null;
 const CE_ROLES=['Surgeon','Assistant','Teaching Assistant','Observer'];
-const CE_SITES=['Larkin Community Hospital','Larkin Palm Springs','Affiliated Site'];
-const CE_ATTENDINGS=['Dr. Smith','Dr. Johnson','Dr. Williams','Dr. Brown'];
+/** Fallback when cf5-sites / cf5-attendings cache is empty */
+const CE_SITES_FALLBACK=['Larkin Community Hospital','Larkin Palm Springs','Affiliated Site'];
+const CE_ATTENDINGS_FALLBACK=['Dr. Smith','Dr. Johnson','Dr. Williams','Dr. Brown'];
 const CE_PATIENTS=['Adult','Pediatric'];
 const CE_YEARS=['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6'];
 
@@ -1891,9 +1902,88 @@ function closeCaseEdit(){
   document.getElementById('case-edit-modal').classList.remove('on');
   editingCase=null;
 }
+function getSitesForEdit(){
+  try{
+    const arr=JSON.parse(localStorage.getItem('cf5-sites')||'[]');
+    if(Array.isArray(arr)&&arr.length){
+      return arr.map(x=>(x&&typeof x==='object'&&x.label!=null)?String(x.label):String(x)).filter(Boolean);
+    }
+  }catch(e){}
+  return CE_SITES_FALLBACK.slice();
+}
+function getAttendingsForEdit(){
+  try{
+    const arr=JSON.parse(localStorage.getItem('cf5-attendings')||'[]');
+    if(Array.isArray(arr)&&arr.length){
+      return arr.map(x=>(x&&typeof x==='object'&&x.label!=null)?String(x.label):String(x)).filter(Boolean);
+    }
+  }catch(e){}
+  return CE_ATTENDINGS_FALLBACK.slice();
+}
+function hasProfileCache(key){
+  try{
+    const arr=JSON.parse(localStorage.getItem(key)||'[]');
+    return Array.isArray(arr)&&arr.length>0;
+  }catch(e){ return false; }
+}
+function escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function ceComboOpen(which){
+  const panel=document.getElementById('ce-'+which+'-panel');
+  const inp=document.getElementById('ce-'+which+'-inp');
+  if(!panel||!inp)return;
+  panel.classList.add('open');
+  ceComboFilter(which, inp.value);
+}
+function ceComboClose(which){
+  const panel=document.getElementById('ce-'+which+'-panel');
+  if(panel) panel.classList.remove('open');
+}
+function ceComboFilter(which, q){
+  const labels=which==='site'?getSitesForEdit():getAttendingsForEdit();
+  const needle=(q||'').toLowerCase().trim();
+  const filtered=needle?labels.filter(l=>l.toLowerCase().includes(needle)):labels;
+  const panel=document.getElementById('ce-'+which+'-panel');
+  if(!panel)return;
+  if(!labels.length){
+    panel.innerHTML='<div class="ce-combo-empty">No sites/attendings loaded. Open Settings and connect ACGME, or try again later.</div>';
+    return;
+  }
+  const slice=filtered.slice(0,120);
+  panel.innerHTML=slice.length
+    ? slice.map(l=>`<button type="button" class="ce-combo-opt" data-label="${escAttr(l)}" onmousedown="event.preventDefault()" onpointerdown="event.preventDefault()" onclick="ceComboPickFromBtn(this)">${escHtml(l)}</button>`).join('')
+    : '<div class="ce-combo-empty">No matches — keep typing or pick from the full list (clear search).</div>';
+}
+function ceComboPickFromBtn(btn){
+  const combo=btn.closest('.ce-combo');
+  if(!combo||!editingCase)return;
+  const which=combo.dataset.which;
+  const label=btn.dataset.label;
+  if(which==='site'){
+    editingCase.site=label;
+    const inp=document.getElementById('ce-site-inp'); if(inp) inp.value=label;
+  }else if(which==='att'){
+    editingCase.att=label;
+    const inp=document.getElementById('ce-att-inp'); if(inp) inp.value=label;
+  }
+  ceComboClose(which==='site'?'site':'att');
+}
+function ceComboInputSync(which, val){
+  if(!editingCase)return;
+  if(which==='site') editingCase.site=val;
+  else if(which==='att') editingCase.att=val;
+  ceComboFilter(which, val);
+}
 function renderCaseEditModal(){
   if(!editingCase)return;
   const c=editingCase;
+  const siteHint=hasProfileCache('cf5-sites')
+    ? 'Options from your ACGME program (saved on this device).'
+    : 'Using defaults — connect ACGME in Settings to load your program list.';
+  const attHint=hasProfileCache('cf5-attendings')
+    ? 'Options from your ACGME program (saved on this device).'
+    : 'Using defaults — connect ACGME in Settings to load your program list.';
   document.getElementById('case-edit-scroll').innerHTML=`
     <div class="ce-field">
       <div class="ce-label">Date</div>
@@ -1913,11 +2003,21 @@ function renderCaseEditModal(){
     </div>
     <div class="ce-field">
       <div class="ce-label">Site</div>
-      <div class="ce-chips">${CE_SITES.map(o=>`<div class="ce-chip${c.site===o?' active':''}" onclick="setCeField('site','${o}',this,'ce-site')">${o}</div>`).join('')}</div>
+      <div class="ce-combo" data-which="site">
+        <input type="text" class="ce-sel-input" id="ce-site-inp" placeholder="Search or select site…" autocomplete="off" autocorrect="off" autocapitalize="words" value="${escAttr(c.site||'')}"
+          onfocus="ceComboOpen('site')" oninput="ceComboInputSync('site',this.value)" onblur="setTimeout(function(){ceComboClose('site');},350)">
+        <div class="ce-combo-panel" id="ce-site-panel"></div>
+      </div>
+      <div class="ce-combo-hint">${siteHint}</div>
     </div>
     <div class="ce-field">
       <div class="ce-label">Attending</div>
-      <div class="ce-chips">${CE_ATTENDINGS.map(o=>`<div class="ce-chip${c.att===o?' active':''}" onclick="setCeField('att','${o}',this,'ce-att')">${o}</div>`).join('')}</div>
+      <div class="ce-combo" data-which="att">
+        <input type="text" class="ce-sel-input" id="ce-att-inp" placeholder="Search or select attending…" autocomplete="off" autocorrect="off" autocapitalize="words" value="${escAttr(c.att||'')}"
+          onfocus="ceComboOpen('att')" oninput="ceComboInputSync('att',this.value)" onblur="setTimeout(function(){ceComboClose('att');},350)">
+        <div class="ce-combo-panel" id="ce-att-panel"></div>
+      </div>
+      <div class="ce-combo-hint">${attHint}</div>
     </div>
     <div class="ce-field">
       <div class="ce-label">Patient</div>
@@ -1927,6 +2027,10 @@ function renderCaseEditModal(){
       <div class="ce-label">Year of Residency</div>
       <div class="ce-chips">${CE_YEARS.map(o=>`<div class="ce-chip${('Year '+c.yr)===o?' active':''}" onclick="setCeField('yr','${o.replace('Year ','')}',this,'ce-yr')">${o}</div>`).join('')}</div>
     </div>`;
+  setTimeout(()=>{
+    ceComboFilter('site', c.site||'');
+    ceComboFilter('att', c.att||'');
+  },0);
 }
 function renderCeProcs(){
   if(!editingCase?.procs?.length)return'<div style="font-size:13px;color:var(--text3);padding:4px 0">No procedures added</div>';
@@ -2527,7 +2631,6 @@ function goTab(n){
 }
 /** Header “N cases” chip — switches to History and scrolls to the list */
 function chipCasesClick(){
-  try { toast('2 cases tap',''); } catch(e) {}
   goTab('history');
   requestAnimationFrame(()=>{
     document.getElementById('hist-list')?.scrollIntoView({behavior:'smooth',block:'start'});
@@ -2543,8 +2646,7 @@ function initPointerBindings(){
       if(!row||!histList.contains(row))return;
       const id=row.getAttribute('data-case-id');
       if(id==null||id==='')return;
-      try { toast('history tap',''); } catch(e) {}
-      openCaseEdit(id);
+       openCaseEdit(id);
     };
     histList.addEventListener('pointerup', handler, {passive:true, capture:true});
     histList.addEventListener('touchend', handler, {passive:true, capture:true});
