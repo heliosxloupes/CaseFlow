@@ -18,19 +18,13 @@ const UA          = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.3
 const ADS_CASE_ID_MAX_LEN = 25;
 
 /**
- * Whether to include CaseId in the Insert POST.
- * ADS accepts alphanumeric refs in the UI (e.g. t1t1t1); pure-digit strings are often treated as internal row ids and can return HTTP 500.
- * Default: post when the ref contains [A-Za-z]. Comments always carry "Case ID: …" as backup.
- * ACGME_POST_CASE_ID=all|always|1|true → post even digit-only (optional # prefix in caseIdForAdsInsertForm)
- * ACGME_POST_CASE_ID=0|false|never → never post CaseId field
+ * Whether to include CaseId in the Insert POST. Default: yes whenever the user entered a non-empty ref (goes in the Case ID field).
+ * ACGME_POST_CASE_ID=never|0|false|off → do not post CaseId; ref is duplicated into Comments as "Case ID: …" only.
  */
 function shouldPostCaseIdToAds(raw) {
   const env = String(process.env.ACGME_POST_CASE_ID || '').trim().toLowerCase();
   if (env === '0' || env === 'false' || env === 'off' || env === 'never') return false;
-  if (env === '1' || env === 'true' || env === 'all' || env === 'always') return true;
-  const s = String(raw || '').trim();
-  if (!s) return false;
-  return /[a-zA-Z]/.test(s);
+  return String(raw || '').trim().length > 0;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -535,7 +529,7 @@ function extractCaseIdFieldNameFromInsertHtml(html) {
 
 /**
  * Value for the CaseId POST field. Alphanumeric (e.g. t1t1t1) is sent as-is.
- * Pure-digit refs only when ACGME_POST_CASE_ID=all — optional "#" prefix so ADS may bind as text (ACGME_CASE_ID_DIGIT_PREFIX).
+ * Pure-digit refs get an optional prefix (default "#") so ADS binds as text; ACGME_CASE_ID_DIGIT_PREFIX="" posts digits raw (may 500).
  */
 function caseIdForAdsInsertForm(raw) {
   let s = String(raw || '').trim().slice(0, ADS_CASE_ID_MAX_LEN);
@@ -549,7 +543,8 @@ function caseIdForAdsInsertForm(raw) {
 
 /**
  * ADS `Comments` — clinical / free text from CaseFlow (`comments` or `notes`).
- * Also prepends "Case ID: …" when a ref is present so it is never lost if ADS clears the Case ID field.
+ * When CaseId is not posted (ACGME_POST_CASE_ID=never), prepends "Case ID: …" so the ref is not lost.
+ * When CaseId is posted to the form, Comments stay as notes only — no duplicate Case ID line.
  */
 function mergeLocalCaseIdIntoComments(caseData) {
   const base0 =
@@ -560,6 +555,9 @@ function mergeLocalCaseIdIntoComments(caseData) {
         : '';
   const raw = String(caseData.caseId || '').trim();
   if (!raw) return base0;
+  if (shouldPostCaseIdToAds(raw)) {
+    return base0;
+  }
   const prefix = `Case ID: ${raw}`;
   const t = base0.trim();
   if (!t) return prefix;
@@ -893,14 +891,7 @@ function buildInsertFormPayload(token, hidden, caseData, insertHtml) {
   const cid = postCaseId ? caseIdForAdsInsertForm(caseData.caseId) : '';
   const hiddenClean = postCaseId ? stripHiddenCaseIdKeys(hidden) : { ...hidden };
   if (!postCaseId && String(caseData.caseId || '').trim()) {
-    const s = String(caseData.caseId).trim();
-    if (/[a-zA-Z]/.test(s)) {
-      console.warn('[ACGME] CaseId field not posted (ACGME_POST_CASE_ID=never). Ref is in Comments.');
-    } else {
-      console.warn(
-        '[ACGME] CaseId field not posted for digits/symbols-only (use a letter in the ref, e.g. C12345 or t1t1t1, or set ACGME_POST_CASE_ID=all). Ref is in Comments.'
-      );
-    }
+    console.warn('[ACGME] CaseId field not posted (ACGME_POST_CASE_ID=never); ref duplicated in Comments only.');
   }
   const body = {
     ...hiddenClean,
