@@ -23,7 +23,7 @@ const { chromium } = require('playwright');
 const crypto = require('crypto');
 const db = require('../db');
 const { encrypt, decrypt } = require('./encryptionService');
-const { setSession, getSession } = require('./sessionCache');
+const { setSession, getSession, clearSession } = require('./sessionCache');
 const { getInsertPageData } = require('./acgmeService');
 
 const ACGME_ORIGIN = 'https://apps.acgme.org';
@@ -96,13 +96,8 @@ function cookiesArrayToHeader(cookies) {
     .join('; ');
 }
 
-/**
- * Test whether stored cookies can load the Case Entry Insert page (same gate as submit).
- * GetResidentRoles alone can return 200 while Insert still redirects to B2C login — that
- * caused false "valid session" and confusing errors at submit time.
- */
-async function testCookiesValid(cookies) {
-  const cookieHeader = cookiesArrayToHeader(cookies);
+/** True if this Cookie header can load Case Entry Insert (same check as submit). */
+async function testCookieHeaderValid(cookieHeader) {
   if (!cookieHeader) return false;
   try {
     await getInsertPageData(cookieHeader);
@@ -114,13 +109,25 @@ async function testCookiesValid(cookies) {
 }
 
 /**
+ * Test whether stored Playwright cookies can load the Case Entry Insert page.
+ */
+async function testCookiesValid(cookies) {
+  return testCookieHeaderValid(cookiesArrayToHeader(cookies));
+}
+
+/**
  * Get a valid Cookie header string for a user, attempting refresh if necessary.
  * Returns null if no valid session is available (user must reconnect ACGME).
  */
 async function getValidCookieHeader(userId) {
-  // 1. Check in-memory session cache (25-min TTL)
+  // 1. In-memory cache (25-min TTL) — must still pass Insert probe; stale entries are dropped
   const cached = getSession(userId);
-  if (cached) return cached;
+  if (cached) {
+    const ok = await testCookieHeaderValid(cached);
+    if (ok) return cached;
+    clearSession(userId);
+    console.log(`[PW] Cleared stale in-memory ACGME cookie cache for user ${userId}`);
+  }
 
   // 2. Load cookies stored in DB
   const cookies = await loadStoredCookies(userId);
