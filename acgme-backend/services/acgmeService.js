@@ -301,25 +301,47 @@ async function loginToACGME(username, password) {
  * ASP.NET anti-forgery token — attribute order and quoting vary by page version.
  */
 function extractRequestVerificationToken(html) {
+  if (!html || typeof html !== 'string') return null;
+  let h = html;
+  if (h.charCodeAt(0) === 0xfeff) h = h.slice(1);
+
   const patterns = [
+    // Some layouts expose the token only in a meta tag
+    /<meta\s+name=["']__RequestVerificationToken["']\s+content=["']([^"']+)["']/is,
     // name then value (double quotes)
     /name=["']__RequestVerificationToken["'][^>]*?\bvalue=["']([^"']*)["']/is,
-    // value then name
+    // value then name (common on mobile views)
     /\bvalue=["']([^"']+)["'][^>]*name=["']__RequestVerificationToken["']/is,
     // Single-quoted value after name
     /name=["']__RequestVerificationToken["'][^>]*?\bvalue='([^']*)'/is,
+    // Unquoted name (HTML5)
+    /name\s*=\s*__RequestVerificationToken\b[^>]*\bvalue\s*=\s*["']([^"']*)["']/is,
+    // Hidden input: type before name
+    /<input[^>]*\btype\s*=\s*["']hidden["'][^>]*\bname\s*=\s*["']__RequestVerificationToken["'][^>]*\bvalue\s*=\s*["']([^"']*)["']/is,
+    /<input[^>]*\bname\s*=\s*["']__RequestVerificationToken["'][^>]*\btype\s*=\s*["']hidden["'][^>]*\bvalue\s*=\s*["']([^"']*)["']/is,
+    // ASP.NET Core alternate token name
+    /name=["']RequestVerificationToken["'][^>]*?\bvalue=["']([^"']+)["']/is,
   ];
   for (const re of patterns) {
-    const m = html.match(re);
-    if (m && m[1] !== undefined && m[1] !== '') return m[1];
+    const m = h.match(re);
+    if (m && m[1] !== undefined && String(m[1]).trim() !== '') return m[1].trim();
   }
-  // Broader: any <input> tag that names the token, then grab first value= in that tag block
-  const inputRe = /<input\b[^>]*\bname=["']__RequestVerificationToken["'][^>]*>/gi;
+  // Broader: full <input> tag scan (multiline-safe within tag)
+  const inputRe = /<input\b[^>]*\bname\s*=\s*["']__RequestVerificationToken["'][^>]*>/gi;
   let im;
-  while ((im = inputRe.exec(html)) !== null) {
+  while ((im = inputRe.exec(h)) !== null) {
     const tag = im[0];
-    const vm = tag.match(/\bvalue=["']([^"']*)["']/i) || tag.match(/\bvalue='([^']*)'/i);
-    if (vm && vm[1] !== undefined) return vm[1];
+    const vm = tag.match(/\bvalue\s*=\s*["']([^"']*)["']/i) || tag.match(/\bvalue\s*=\s*([^\s>]+)/i);
+    if (vm && vm[1] !== undefined && String(vm[1]).trim() !== '') return vm[1].trim();
+  }
+  // Last resort: window around the marker (handles odd minification / attribute order)
+  const marker = '__RequestVerificationToken';
+  let pos = 0;
+  while ((pos = h.indexOf(marker, pos)) !== -1) {
+    const slice = h.slice(Math.max(0, pos - 120), pos + 500);
+    const vm = slice.match(/value\s*=\s*["']([^"']+)["']/i);
+    if (vm && vm[1] && vm[1].length > 4) return vm[1].trim();
+    pos += marker.length;
   }
   return null;
 }
@@ -357,6 +379,8 @@ async function fetchInsertHtmlWithRedirects(initialCookie) {
   let url = insertUrl;
   let cookieHdr = initialCookie || '';
   let referer = `${BASE_URL}/ads/`;
+  /** One-time GET /ads/ when Insert returns 200 without a parseable token (session stitch). */
+  let triedAdsWarmup = false;
 
   const baseHeaders = {
     'User-Agent': UA,
@@ -426,6 +450,21 @@ async function fetchInsertHtmlWithRedirects(initialCookie) {
       url = insertUrl;
       continue;
     }
+
+    // Insert URL returned 200 but no antiforgery token in HTML — load /ads/ once then retry Insert
+    if (url.includes('CaseEntryMobile/Insert') && !triedAdsWarmup) {
+      triedAdsWarmup = true;
+      referer = url;
+      url = `${BASE_URL}/ads/`;
+      continue;
+    }
+
+    const title = html.match(/<title[^>]*>([^<]{0,120})/i);
+    console.warn(
+      `[ACGME] Insert probe: no token — hop=${hop} len=${html.length} ` +
+        `title=${title && title[1] ? title[1].trim().slice(0, 80) : 'n/a'} ` +
+        `hasMarker=${html.includes('__RequestVerificationToken')}`
+    );
 
     throw new Error(
       'Could not find __RequestVerificationToken on Insert page (ACGME page layout may have changed).'

@@ -27,6 +27,7 @@ const { setSession, getSession, clearSession } = require('./sessionCache');
 const { getInsertPageData } = require('./acgmeService');
 
 const ACGME_ORIGIN = 'https://apps.acgme.org';
+const ACGME_INSERT = `${ACGME_ORIGIN}/ads/CaseLogs/CaseEntryMobile/Insert`;
 const B2C_TENANT   = 'acgmeras.b2clogin.com';
 const B2C_POLICY   = 'b2c_1a_signup_signin';
 const B2C_CLIENT   = 'dcdddbd1-2b64-4940-9983-6a6442c526aa';
@@ -96,6 +97,25 @@ function cookiesArrayToHeader(cookies) {
     .filter(c => c && c.name)
     .map(c => `${c.name}=${c.value}`)
     .join('; ');
+}
+
+/**
+ * After B2C lands on ACGME /ads/, open Case Entry Insert once so the browser completes
+ * redirects + Set-Cookie the same way node-fetch will need — otherwise we often save too few cookies.
+ */
+async function collectCookiesAfterInsertVisit(context, page) {
+  try {
+    await page.goto(ACGME_INSERT, {
+      timeout: 45000,
+      waitUntil: 'domcontentloaded',
+    });
+    await page
+      .waitForSelector('input[name="__RequestVerificationToken"]', { timeout: 25000 })
+      .catch(() => {});
+  } catch (e) {
+    console.warn('[PW] Post-login Insert visit (non-fatal):', e.message);
+  }
+  return context.cookies([ACGME_ORIGIN]);
 }
 
 /**
@@ -233,7 +253,7 @@ async function startLogin(username, password) {
 
     // ── Handle outcomes ───────────────────────────────────────────────────────
     if (outcome === 'success') {
-      const cookies = await context.cookies([ACGME_ORIGIN]);
+      const cookies = await collectCookiesAfterInsertVisit(context, page);
       await browser.close();
       console.log(`[PW] Login succeeded, captured ${cookies.length} cookies`);
       return { success: true, cookies };
@@ -312,7 +332,7 @@ async function completeMFA(sessionId, code) {
     // Wait for ACGME to load
     await page.waitForURL(`${ACGME_ORIGIN}/ads/**`, { timeout: 35000 });
 
-    const cookies = await context.cookies([ACGME_ORIGIN]);
+    const cookies = await collectCookiesAfterInsertVisit(context, page);
     await browser.close();
     pendingMfaSessions.delete(sessionId);
 
