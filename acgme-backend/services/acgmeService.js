@@ -497,6 +497,158 @@ function sanitizeCaseIdForAds(raw) {
 }
 
 /**
+ * ADS Insert expects SelectedCodes as an internal tuple (e.g. "P,4780,1118932,1,1"), not a bare CPT.
+ * CaseFlow sends CPT from the local index — resolve via GetCodes before POST.
+ */
+function looksLikeAdsSelectedCodesTuple(s) {
+  const t = String(s || '').trim();
+  if (!t.includes(',')) return false;
+  const parts = t.split(',');
+  // Typical ADS tuple: "P,4780,1118932,1,1" — several segments; often starts with a short letter prefix
+  if (parts.length >= 4) return true;
+  if (parts[0].length <= 4 && /^[A-Za-z]/.test(parts[0])) return true;
+  return false;
+}
+
+function specialtyIdFromInsertHidden(hidden) {
+  const h = hidden || {};
+  for (const k of ['SpecialtyId', 'specialtyId', 'SpecialtyID', 'ProgramSpecialtyId', 'RRClassId']) {
+    const v = h[k];
+    if (v != null && String(v).trim() !== '') return String(v).trim();
+  }
+  const env = process.env.ACGME_SPECIALTY_ID;
+  if (env && String(env).trim() !== '') return String(env).trim();
+  return '158';
+}
+
+/**
+ * Walk GetCodes JSON (including ASP.NET { d: [...] } / double-encoded d) and find SelectedCodes for CPT.
+ */
+function pickSelectedCodesFromGetCodesResponse(data, cptWant) {
+  const want = String(cptWant || '').trim();
+  if (!want) return '';
+  const wantDigits = want.replace(/\D/g, '');
+
+  let root = data;
+  if (root && typeof root === 'object' && typeof root.d === 'string') {
+    try {
+      root = JSON.parse(root.d);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+  if (root && typeof root === 'object' && root.d != null && typeof root.d !== 'string') {
+    root = root.d;
+  }
+
+  const rows = [];
+
+  function consider(obj) {
+    if (!obj || typeof obj !== 'object') return;
+    const sel =
+      obj.SelectedCodes ||
+      obj.selectedCodes ||
+      obj.SelectedCode ||
+      obj.CodeValue ||
+      obj.Value;
+    const cpt =
+      obj.CptCode ||
+      obj.CPTCode ||
+      obj.Cpt ||
+      obj.cptCode ||
+      obj.ProcedureCode ||
+      obj.Code ||
+      obj.code;
+    if (typeof sel === 'string' && sel.includes(',')) {
+      rows.push({ sel, cpt: cpt != null ? String(cpt).trim() : '' });
+    }
+  }
+
+  function visit(node, depth) {
+    if (depth > 14 || node == null) return;
+    if (Array.isArray(node)) {
+      node.forEach((n) => visit(n, depth + 1));
+      return;
+    }
+    if (typeof node === 'object') {
+      consider(node);
+      for (const v of Object.values(node)) {
+        if (v && typeof v === 'object') visit(v, depth + 1);
+      }
+    }
+  }
+
+  visit(root, 0);
+
+  const score = (r) => {
+    const c = r.cpt.replace(/\D/g, '');
+    if (r.cpt === want) return 100;
+    if (c && wantDigits && c === wantDigits) return 90;
+    if (r.cpt && wantDigits && r.cpt.includes(want)) return 70;
+    return 0;
+  };
+
+  let best = '';
+  let bestScore = 0;
+  for (const r of rows) {
+    const s = score(r);
+    if (s > bestScore) {
+      bestScore = s;
+      best = r.sel;
+    }
+  }
+  return best;
+}
+
+/**
+ * If selectedCodes is a raw CPT / short code, call GetCodes and replace with ADS tuple.
+ */
+async function resolveSelectedCodesIfNeeded(sessionCookie, hidden, caseData) {
+  const raw = String(caseData.selectedCodes || '').trim();
+  if (!raw) return caseData;
+  if (looksLikeAdsSelectedCodesTuple(raw)) return caseData;
+
+  const specialtyId = specialtyIdFromInsertHidden(hidden);
+  const params = {
+    specialtyId,
+    searchTerm: raw,
+    activeAsOfDate: caseData.procedureDate || '',
+  };
+
+  let data;
+  try {
+    data = await getLookupData(sessionCookie, 'codes', params);
+  } catch (e) {
+    throw new Error(
+      `Could not look up procedure code "${raw}" in ACGME (${e.message || e}). ` +
+        'Confirm your case date and that this CPT is valid for your program in ADS.'
+    );
+  }
+
+  if (process.env.ACGME_DEBUG_SUBMIT === '1') {
+    try {
+      console.warn('[ACGME] DEBUG GetCodes response (truncated):', JSON.stringify(data).slice(0, 2500));
+    } catch (_) {
+      console.warn('[ACGME] DEBUG GetCodes: (unserializable)');
+    }
+  }
+
+  const resolved = pickSelectedCodesFromGetCodesResponse(data, raw);
+  if (!resolved) {
+    throw new Error(
+      `ACGME has no matching procedure row for code "${raw}" (specialty ${specialtyId}). ` +
+        'Try another code or enter the case manually in ADS once, then compare Network → GetCodes in DevTools. ' +
+        'If your program uses a non-default specialty, set ACGME_SPECIALTY_ID on the Railway service.'
+    );
+  }
+
+  console.warn(
+    `[ACGME] Resolved CPT "${raw}" → SelectedCodes tuple (len=${resolved.length}b)`
+  );
+  return { ...caseData, selectedCodes: resolved };
+}
+
+/**
  * Build POST body: server hidden fields first, then antiforgery token, then explicit case
  * fields (so programmatic values override any duplicate names from hidden).
  */
@@ -583,7 +735,9 @@ async function submitCaseOnce(sessionCookie, caseData) {
     console.warn('[ACGME] DEBUG Insert hidden field names:', Object.keys(hidden || {}));
   }
 
-  const payload = buildInsertFormPayload(token, hidden, caseData);
+  const caseDataResolved = await resolveSelectedCodesIfNeeded(cookie, hidden, caseData);
+
+  const payload = buildInsertFormPayload(token, hidden, caseDataResolved);
 
   const res = await fetchT(`${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`, {
     method: 'POST',
@@ -643,7 +797,7 @@ async function submitCaseOnce(sessionCookie, caseData) {
   }
 
   if (res.status >= 400) {
-    logSubmitPayloadDiagnostics(payload, hidden, caseData);
+    logSubmitPayloadDiagnostics(payload, hidden, caseDataResolved);
     logSubmitErrorResponse(res.status, html);
     const hint = extractAcgmeSubmitErrorHint(html);
     throw new Error(
