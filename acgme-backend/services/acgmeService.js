@@ -495,31 +495,24 @@ async function getInsertPageData(sessionCookie) {
 }
 
 /**
- * ADS Insert `CaseId` expects a numeric ADS server id for edits, or empty/0 for new rows.
- * Sending MRN-style or free text there can cause ADS errors — use mergeLocalCaseIdIntoComments instead.
+ * ADS Insert `CaseId` — trimmed and capped at 20 characters (same limit as the app).
  */
-function sanitizeCaseIdForAds(raw) {
+function caseIdForAdsInsertForm(raw) {
   const s = String(raw || '').trim();
   if (!s) return '';
-  return /^\d+$/.test(s) ? s : '';
+  return s.slice(0, 20);
 }
 
 /**
- * Resident Case ID in CaseFlow is usually a local ref (MRN, birthday, arbitrary label).
- * Those are prepended to ADS Comments so they are stored in ACGME. Digits-only values are
- * treated as ADS case ids (edits) and are not duplicated into Comments.
+ * ADS `Comments` — clinical / free text from CaseFlow (`comments` or `notes`).
+ * The Case ID reference is sent separately via `CaseId` (see caseIdForAdsInsertForm).
  */
 function mergeLocalCaseIdIntoComments(caseData) {
-  const base = String(caseData.comments != null ? caseData.comments : '');
-  const raw = String(caseData.caseId || '').trim();
-  if (!raw) return base;
-  if (sanitizeCaseIdForAds(raw)) {
-    return base;
-  }
-  const prefix = `Case ID: ${raw}`;
-  const trimmed = base.trim();
-  if (!trimmed) return prefix;
-  return `${prefix}\n\n${base}`;
+  const c =
+    caseData.comments != null && String(caseData.comments).trim() !== ''
+      ? caseData.comments
+      : (caseData.notes != null ? caseData.notes : '');
+  return String(c);
 }
 
 /**
@@ -847,7 +840,7 @@ function buildInsertFormPayload(token, hidden, caseData) {
     SelectedCodes:     codes,
     CodeDescription: codeDesc,
     Comments:        mergeLocalCaseIdIntoComments(caseData),
-    CaseId:          sanitizeCaseIdForAds(caseData.caseId),
+    CaseId:          caseIdForAdsInsertForm(caseData.caseId),
     // Do not force IsMobileApp / MobileViewMode — desktop Insert uses hidden defaults; Mobile=True on desktop 500s.
     SearchTerm:      'False',
   });
@@ -881,9 +874,11 @@ function logSubmitPayloadDiagnostics(payload, hidden, caseData) {
         String(caseData.caseId || '').length
       );
       const cid = String(caseData.caseId || '').trim();
-      if (cid && !/^\d+$/.test(cid)) {
+      if (cid) {
         console.warn(
-          '[ACGME] Local Case ID (non-numeric) is merged into ADS Comments; ADS CaseId left empty for new case.'
+          '[ACGME] CaseId field: %s (%s)',
+          /^\d+$/.test(cid) ? 'numeric (edit key)' : 'text (resident Case ID)',
+          `${cid.length}b`
         );
       }
       const scLen = String(caseData.selectedCodes || '').length;
