@@ -11,6 +11,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>CaseFlow</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <style>
 :root{
   --bg:#07090f;--bg1:#0d1119;--bg2:#131922;--bg3:#1a2130;
@@ -54,9 +55,97 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .chip b{color:var(--blue);font-weight:600}
 .user-chip{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--line2);border-radius:20px;padding:5px 12px 5px 8px;font-size:12px;color:var(--text2);cursor:pointer}
 .udot{width:7px;height:7px;background:var(--green);border-radius:50%;flex-shrink:0}
-.tabs{display:flex;border-bottom:1px solid var(--line);background:var(--bg);position:sticky;top:56px;z-index:50}
-.tab{flex:1;padding:14px 0;font-size:13px;font-weight:500;color:var(--text3);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:'Sora',sans-serif;transition:color .15s,border-color .15s}
-.tab.on{color:var(--text);border-bottom-color:var(--blue)}
+/* tabs hidden — navigation moved to StaggeredMenu */
+.tabs{display:none}
+.tab{display:none}
+
+/* ── Staggered Menu ──────────────────────────────────────────── */
+.app-bar-left{display:flex;align-items:center;gap:12px}
+.sm-toggle-btn{
+  display:flex;align-items:center;gap:8px;
+  background:none;border:none;cursor:pointer;
+  color:var(--text);font-family:'Sora',sans-serif;
+  font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  padding:4px 0;flex-shrink:0;
+}
+.sm-icon-wrap{
+  position:relative;width:18px;height:18px;flex-shrink:0;
+}
+.sm-icon-h,.sm-icon-v{
+  position:absolute;top:50%;left:50%;
+  width:16px;height:1.8px;background:currentColor;border-radius:2px;
+  transform-origin:center center;
+}
+.sm-icon-h{transform:translate(-50%,-50%)}
+.sm-icon-v{transform:translate(-50%,-50%) rotate(90deg)}
+.sm-toggle-text{font-size:12px;letter-spacing:.07em;opacity:.7}
+.sm-backdrop{
+  position:fixed;top:56px;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.55);z-index:179;
+  opacity:0;pointer-events:none;
+  backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+}
+.sm-backdrop.visible{pointer-events:all}
+.sm-prelayer{
+  position:fixed;top:56px;left:0;
+  width:min(78vw,360px);height:calc(100% - 56px);
+  will-change:transform;transform:translateX(-100%);
+}
+.sm-prelayer-1{background:#0a1322;z-index:180}
+.sm-prelayer-2{background:#1a3560;z-index:181}
+.sm-panel-wrap{
+  position:fixed;top:56px;left:0;
+  width:min(78vw,360px);height:calc(100% - 56px);
+  background:#0b1628;
+  border-right:1px solid rgba(79,142,247,0.12);
+  z-index:182;will-change:transform;transform:translateX(-100%);
+  display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:4px 0 40px rgba(0,0,0,.6);
+}
+.sm-panel-logo-row{
+  padding:28px 28px 20px;border-bottom:1px solid rgba(255,255,255,.05);
+}
+.sm-panel-logo{
+  font-size:20px;font-weight:700;letter-spacing:-1px;color:var(--text);
+}
+.sm-panel-logo em{
+  font-style:normal;
+  background:linear-gradient(135deg,#5a98ff 0%,#a78bfa 60%,#60a5fa 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.sm-nav-list{list-style:none;padding:16px 0;flex:1}
+.sm-nav-item{overflow:hidden}
+.sm-nav-btn{
+  display:flex;align-items:baseline;gap:14px;width:100%;
+  background:none;border:none;cursor:pointer;
+  color:var(--text);font-family:'Sora',sans-serif;
+  font-size:clamp(26px,8vw,38px);font-weight:700;letter-spacing:-1.2px;
+  padding:13px 28px;text-align:left;
+  border-bottom:1px solid rgba(255,255,255,.045);
+  transition:background .15s;
+}
+.sm-nav-item:last-child .sm-nav-btn{border-bottom:none}
+.sm-nav-btn:active{background:rgba(79,142,247,.06)}
+.sm-nav-num{
+  font-size:11px;font-weight:500;color:var(--text3);
+  letter-spacing:.06em;min-width:22px;margin-bottom:2px;
+  opacity:0;transition:color .2s;
+}
+.sm-nav-label{
+  display:block;
+  transform:translateY(140%) rotate(8deg);
+  transform-origin:left bottom;
+  transition:color .2s;
+}
+.sm-nav-btn.active .sm-nav-label{
+  background:linear-gradient(135deg,#5a98ff 0%,#a78bfa 60%,#60a5fa 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.sm-nav-btn.active .sm-nav-num{color:#5a98ff}
+.sm-panel-footer{
+  padding:20px 28px 28px;border-top:1px solid rgba(255,255,255,.05);
+}
+.sm-footer-note{font-size:11px;color:var(--text3);line-height:1.6}
 #pg-app{height:100%;display:flex;flex-direction:column}
 .pane{display:none;width:100%}
 .pane.on{display:block;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -595,7 +684,16 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 
 <div class="page" id="pg-app">
   <div class="app-bar">
-    <div class="app-logo" onclick="resetFlow()" style="cursor:pointer">Case<em>Flow</em></div>
+    <div class="app-bar-left">
+      <button class="sm-toggle-btn" id="sm-toggle" onclick="smToggle()" aria-label="Toggle menu" aria-expanded="false">
+        <div class="sm-icon-wrap" id="sm-icon-wrap">
+          <span class="sm-icon-h" id="sm-icon-h"></span>
+          <span class="sm-icon-v" id="sm-icon-v"></span>
+        </div>
+        <span class="sm-toggle-text" id="sm-toggle-text">Menu</span>
+      </button>
+      <div class="app-logo" onclick="smNavigate('log')" style="cursor:pointer">Case<em>Flow</em></div>
+    </div>
     <div class="bar-right">
       <div class="chip"><b id="hdr-n">0</b> cases</div>
       <button class="new-case-btn" id="new-case-btn" onclick="resetFlow()" style="display:none">
@@ -604,11 +702,6 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
       </button>
       <div class="user-chip" onclick="doLogout()"><div class="udot"></div><span id="hdr-u">&#8212;</span></div>
     </div>
-  </div>
-  <div class="tabs">
-    <button class="tab on" id="tb-log" onclick="goTab('log')">Log Case</button>
-    <button class="tab" id="tb-history" onclick="goTab('history')">History</button>
-    <button class="tab" id="tb-settings" onclick="goTab('settings')">Settings</button>
   </div>
   <div class="pane on" id="pn-log">
     <div class="voice-screen" id="voice-screen">
@@ -2302,9 +2395,16 @@ function pushCaseToSupabase(){}
 function updateCaseStatusInSupabase(){}
 
 function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));document.getElementById(id).classList.add('on')}
-function goTab(n){document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));document.getElementById('tb-'+n).classList.add('on');document.getElementById('pn-'+n).classList.add('on');if(n==='history')renderHistory();if(n==='settings')loadSettingsUI();}
+function goTab(n){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  const pane=document.getElementById('pn-'+n);if(pane)pane.classList.add('on');
+  if(typeof SM!=='undefined')SM.setActive(n);
+  if(n==='history')renderHistory();
+  if(n==='settings')loadSettingsUI();
+}
 
 document.addEventListener('DOMContentLoaded',()=>{
+  SM.init();
   startOrb();
   const wavesBg=document.getElementById('login-waves-bg');
   if(wavesBg) new LineWavesRenderer(wavesBg,{
@@ -2547,6 +2647,120 @@ void main(){
   }
   destroy(){cancelAnimationFrame(this._raf);window.removeEventListener('resize',this._onResize);if(this._canvas.parentNode)this._canvas.parentNode.removeChild(this._canvas);const ext=this._gl&&this._gl.getExtension('WEBGL_lose_context');if(ext)ext.loseContext();}
 }
+
+// ─── Staggered Menu ──────────────────────────────────────────────────────────
+const SM = (() => {
+  let isOpen = false;
+  let busy = false;
+  let layers, panel, backdrop, iconWrap, toggleText, toggleBtn;
+  let labelEls, numEls;
+
+  function init() {
+    layers = [
+      document.getElementById('sm-prelayer-1'),
+      document.getElementById('sm-prelayer-2')
+    ];
+    panel      = document.getElementById('sm-panel');
+    backdrop   = document.getElementById('sm-backdrop');
+    iconWrap   = document.getElementById('sm-icon-wrap');
+    toggleText = document.getElementById('sm-toggle-text');
+    toggleBtn  = document.getElementById('sm-toggle');
+    labelEls   = Array.from(document.querySelectorAll('.sm-nav-label'));
+    numEls     = Array.from(document.querySelectorAll('.sm-nav-num'));
+
+    gsap.set([...layers, panel], { xPercent: -100 });
+    gsap.set(labelEls, { yPercent: 140, rotate: 8 });
+    gsap.set(numEls, { opacity: 0 });
+    gsap.set(backdrop, { opacity: 0 });
+  }
+
+  function open() {
+    if (busy) return;
+    busy = true; isOpen = true;
+    if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
+
+    const tl = gsap.timeline({ onComplete: () => { busy = false; } });
+
+    layers.forEach((l, i) => tl.to(l, { xPercent: 0, duration: 0.45, ease: 'power4.out' }, i * 0.07));
+    tl.to(panel,    { xPercent: 0, duration: 0.62, ease: 'power4.out' }, 0.1);
+    tl.to(backdrop, { opacity: 1, duration: 0.28 }, 0);
+    backdrop.classList.add('visible');
+
+    tl.to(labelEls, { yPercent: 0, rotate: 0, duration: 0.75, ease: 'power4.out', stagger: 0.09 }, 0.27);
+    tl.to(numEls,   { opacity: 1, duration: 0.45, ease: 'power2.out', stagger: 0.09 }, 0.32);
+
+    gsap.to(iconWrap, { rotate: 45, duration: 0.55, ease: 'power4.out' });
+    if (toggleText) toggleText.textContent = 'Close';
+  }
+
+  function close() {
+    if (!isOpen) return;
+    busy = true; isOpen = false;
+    if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
+
+    gsap.to([...layers, panel], {
+      xPercent: -100, duration: 0.3, ease: 'power3.in', overwrite: 'auto',
+      onComplete: () => {
+        gsap.set(labelEls, { yPercent: 140, rotate: 8 });
+        gsap.set(numEls, { opacity: 0 });
+        busy = false;
+      }
+    });
+    gsap.to(backdrop, {
+      opacity: 0, duration: 0.28,
+      onComplete: () => backdrop.classList.remove('visible')
+    });
+    gsap.to(iconWrap, { rotate: 0, duration: 0.32, ease: 'power3.inOut' });
+    if (toggleText) toggleText.textContent = 'Menu';
+  }
+
+  function toggle()          { isOpen ? close() : open(); }
+  function navigate(tab)     { close(); goTab(tab); setActive(tab); }
+  function setActive(tab) {
+    document.querySelectorAll('.sm-nav-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.querySelector(`#sm-item-${tab} .sm-nav-btn`);
+    if (btn) btn.classList.add('active');
+  }
+
+  return { init, open, close, toggle, navigate, setActive };
+})();
+
+function smToggle()       { SM.toggle(); }
+function smClose()        { SM.close(); }
+function smNavigate(tab)  { SM.navigate(tab); }
 </script>
+
+<!-- Staggered Menu overlay (fixed, renders above panes, below app-bar) -->
+<div class="sm-backdrop" id="sm-backdrop" onclick="smClose()"></div>
+<div class="sm-prelayer sm-prelayer-1" id="sm-prelayer-1"></div>
+<div class="sm-prelayer sm-prelayer-2" id="sm-prelayer-2"></div>
+<aside class="sm-panel-wrap" id="sm-panel" aria-label="Main navigation">
+  <div class="sm-panel-logo-row">
+    <div class="sm-panel-logo">Case<em>Flow</em></div>
+  </div>
+  <ul class="sm-nav-list" role="list">
+    <li class="sm-nav-item" id="sm-item-log">
+      <button class="sm-nav-btn active" onclick="smNavigate('log')" type="button">
+        <span class="sm-nav-num">01</span>
+        <span class="sm-nav-label">Log Case</span>
+      </button>
+    </li>
+    <li class="sm-nav-item" id="sm-item-history">
+      <button class="sm-nav-btn" onclick="smNavigate('history')" type="button">
+        <span class="sm-nav-num">02</span>
+        <span class="sm-nav-label">History</span>
+      </button>
+    </li>
+    <li class="sm-nav-item" id="sm-item-settings">
+      <button class="sm-nav-btn" onclick="smNavigate('settings')" type="button">
+        <span class="sm-nav-num">03</span>
+        <span class="sm-nav-label">Settings</span>
+      </button>
+    </li>
+  </ul>
+  <div class="sm-panel-footer">
+    <div class="sm-footer-note">ACGME Case Logging</div>
+  </div>
+</aside>
 </body>
 </html>
