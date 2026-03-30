@@ -1915,6 +1915,15 @@ function openCaseEdit(id){
     editingCase=JSON.parse(JSON.stringify(c)); // deep copy
     renderCaseEditModal();
     document.getElementById('case-edit-modal').classList.add('on');
+    if(typeof ACGME_BACKEND_URL !== 'undefined' && ACGME_BACKEND_URL && localStorage.getItem('cf5-token')){
+      fetchAcgmeProfile().then(function(){
+        try{
+          if(editingCase && document.getElementById('case-edit-modal') && document.getElementById('case-edit-modal').classList.contains('on')){
+            renderCaseEditModal();
+          }
+        }catch(_){}
+      });
+    }
   } catch(e){
     toast('openCaseEdit error','err');
     console.warn('openCaseEdit error:',e);
@@ -2348,9 +2357,11 @@ async function fetchAcgmeProfile(){
       headers:{'Authorization':`Bearer ${token}`},
     });
     if(!resp.ok){ console.warn('fetchAcgmeProfile HTTP', resp.status); return; }
-    const {sites=[], attendings=[]} = await resp.json();
-    if(sites.length)     localStorage.setItem('cf5-sites',      JSON.stringify(sites));
-    if(attendings.length)localStorage.setItem('cf5-attendings', JSON.stringify(attendings));
+    const {sites=[], attendings=[], roles=[], patientTypes=[]} = await resp.json();
+    if(sites.length)        localStorage.setItem('cf5-sites',           JSON.stringify(sites));
+    if(attendings.length)    localStorage.setItem('cf5-attendings',     JSON.stringify(attendings));
+    if(roles.length)         localStorage.setItem('cf5-roles',           JSON.stringify(roles));
+    if(patientTypes.length) localStorage.setItem('cf5-patient-types',  JSON.stringify(patientTypes));
     _applyProfileToUI(sites, attendings);
   } catch(e){ console.warn('fetchAcgmeProfile:', e.message); }
 }
@@ -2408,14 +2419,15 @@ const PATIENT_IDS = {
   'Pediatric': '',
 };
 
-/** Resolve a label to an ACGME numeric ID using the cached profile data */
+/** Resolve a label to an ACGME ID using cached profile rows from Insert page selects */
 function resolveProfileId(cacheKey, label){
   if(!label) return '';
+  const needle = String(label).trim();
   try{
     const list = JSON.parse(localStorage.getItem(cacheKey)||'[]');
-    const found = list.find(item=>item.label===label);
-    return found ? found.id : label;
-  } catch(_){ return label; }
+    const found = list.find(item=>String(item.label).trim()===needle);
+    return found ? String(found.id) : '';
+  } catch(_){ return ''; }
 }
 
 function formatAcgmeDate(isoDate){
@@ -2424,23 +2436,40 @@ function formatAcgmeDate(isoDate){
   return `${parseInt(m)}/${parseInt(d)}/${y}`;
 }
 
+function acgmeProfileMapsReady(){
+  try{
+    const r = JSON.parse(localStorage.getItem('cf5-roles')||'[]');
+    const p = JSON.parse(localStorage.getItem('cf5-patient-types')||'[]');
+    return r.length>0 && p.length>0;
+  } catch(_){ return false; }
+}
+
 async function callSubmitAcgme(casePayload){
   const token=localStorage.getItem('cf5-token');
   if(!token) throw new Error('Not logged in');
   if(!ACGME_BACKEND_URL) throw new Error('ACGME backend not configured. Deploy Railway and set ACGME_BACKEND_URL in index.html.');
+
+  if(!acgmeProfileMapsReady()){
+    await fetchAcgmeProfile();
+  }
+  if(!acgmeProfileMapsReady()){
+    throw new Error('Could not load role and patient-type IDs from ACGME. Open Settings → ACGME, reconnect, wait a few seconds, then try again.');
+  }
 
   // Submit one request per procedure
   const procs = casePayload.procs || [];
   if(!procs.length) throw new Error('No procedures to submit');
 
   for(const proc of procs){
+    const roleId = resolveProfileId('cf5-roles', casePayload.role) || ROLE_IDS[casePayload.role] || '';
+    const ptId   = resolveProfileId('cf5-patient-types', casePayload.pt) || PATIENT_IDS[casePayload.pt] || '';
     const body={
       procedureDate:   formatAcgmeDate(casePayload.date),
       procedureYear:   String(casePayload.yr||'4').replace('Year ',''),
-      residentRoleId:  ROLE_IDS[casePayload.role]  || casePayload.role  || '',
-      institutionId:   resolveProfileId('cf5-sites',      casePayload.site),
-      attendingId:     resolveProfileId('cf5-attendings', casePayload.att),
-      patientTypeId:   PATIENT_IDS[casePayload.pt]      || casePayload.pt    || '',
+      residentRoleId:  roleId || String(casePayload.role||''),
+      institutionId:   resolveProfileId('cf5-sites',      casePayload.site) || String(casePayload.site||''),
+      attendingId:     resolveProfileId('cf5-attendings', casePayload.att) || String(casePayload.att||''),
+      patientTypeId:   ptId || String(casePayload.pt||''),
       selectedCodes:   proc.c,
       codeDescription: proc.d,
       comments:        casePayload.notes||'',
@@ -2560,6 +2589,8 @@ function doLogout(){
   localStorage.removeItem('cf5-vault');
   localStorage.removeItem('cf5-sites');
   localStorage.removeItem('cf5-attendings');
+  localStorage.removeItem('cf5-roles');
+  localStorage.removeItem('cf5-patient-types');
   resetFlow();
   showPage('pg-login');
 }
@@ -2581,7 +2612,7 @@ async function launchApp(name,email){
   if(cachedSites.length || cachedAttendants.length){
     _applyProfileToUI(cachedSites, cachedAttendants);
   }
-  if(localStorage.getItem('cf5-vault') && (!cachedSites.length || !cachedAttendants.length)){
+  if(localStorage.getItem('cf5-vault') && ACGME_BACKEND_URL && localStorage.getItem('cf5-token')){
     fetchAcgmeProfile();
   }
 }
@@ -2601,6 +2632,8 @@ async function syncAcgmeSettingsFromServer(){
       localStorage.removeItem('cf5-vault');
       localStorage.removeItem('cf5-sites');
       localStorage.removeItem('cf5-attendings');
+      localStorage.removeItem('cf5-roles');
+      localStorage.removeItem('cf5-patient-types');
     } else {
       localStorage.setItem('cf5-vault', JSON.stringify({ saved: true }));
     }

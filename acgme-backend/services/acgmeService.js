@@ -419,44 +419,89 @@ async function submitCase(sessionCookie, caseData) {
 // ── User Profile (sites + attendings) ─────────────────────────────────────────
 
 /**
- * Parses <select name="NAME"> options from HTML.
- * Returns [{id, label}] for all options that have a non-empty value.
+ * Parses <select name="NAME"> (or id="NAME") options from Insert HTML.
+ * Handles single/double-quoted value= and labels with nested tags/entities.
  */
 function parseSelectOptions(html, selectName) {
-  const re = new RegExp(
-    `<select[^>]+(?:id|name)=["']${selectName}["'][^>]*>([\\s\\S]*?)<\\/select>`,
+  const esc = selectName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const blockRe = new RegExp(
+    `<select\\b[^>]*\\b(?:name|id)=["']${esc}["'][^>]*>([\\s\\S]*?)<\\/select>`,
     'i'
   );
-  const selectMatch = html.match(re);
+  let selectMatch = html.match(blockRe);
+  if (!selectMatch) {
+    const alt = new RegExp(
+      `<select[^>]+(?:id|name)=["']${esc}["'][^>]*>([\\s\\S]*?)<\\/select>`,
+      'i'
+    );
+    selectMatch = html.match(alt);
+  }
   if (!selectMatch) return [];
-  const optRe = /<option[^>]+value="([^"]*)"[^>]*>([^<]*)</gi;
+
+  const inner = selectMatch[1];
   const results = [];
+  const optRe = /<option\b([^>]*)>([\s\S]*?)<\/option>/gi;
   let m;
-  while ((m = optRe.exec(selectMatch[1])) !== null) {
-    const id    = m[1].trim();
-    const label = m[2].trim();
-    if (id) results.push({ id, label });
+  while ((m = optRe.exec(inner)) !== null) {
+    const attrs = m[1];
+    let label = m[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    label = label.replace(/&nbsp;/gi, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    const vm = attrs.match(/\bvalue\s*=\s*(["'])([^"']*)\1/i);
+    const id = vm ? vm[2].trim() : '';
+    if (!id) continue;
+    results.push({ id, label: label || id });
   }
   return results;
 }
 
 /**
- * Fetches the ACGME Insert page and returns the user's program-specific
- * sites and attendings as {id, label} arrays.
+ * Fetches the ACGME Insert page and returns program-specific selects as {id, label} arrays.
+ * Same GET as getInsertPageData (manual redirect) so profile matches submit auth.
  */
 async function getUserProfile(sessionCookie) {
-  const res = await fetchT(`${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`, {
-    headers: { 'Cookie': sessionCookie, 'User-Agent': UA, 'Accept': 'text/html' },
+  const insertUrl = `${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`;
+  const res = await fetchT(insertUrl, {
+    headers: {
+      Cookie: sessionCookie,
+      'User-Agent': UA,
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      Referer: `${BASE_URL}/ads/`,
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'same-origin',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-User': '?1',
+    },
+    redirect: 'manual',
   }, 15000);
+
+  if (res.status === 301 || res.status === 302 || res.status === 303 || res.status === 307 || res.status === 308) {
+    const loc = res.headers.get('location') || '';
+    const authish = /b2clogin|login|microsoftonline|oauth|signin|authorize/i.test(loc);
+    throw new Error(
+      authish
+        ? 'ACGME session expired or not authenticated — open Settings and reconnect your ACGME account.'
+        : `ACGME Insert returned redirect ${res.status} to ${loc.slice(0, 160)}`
+    );
+  }
 
   if (!res.ok) throw new Error(`Failed to load ACGME Insert page: ${res.status}`);
   const html = await res.text();
 
-  const sites      = parseSelectOptions(html, 'Institutions');
-  const attendings = parseSelectOptions(html, 'Attendings');
+  let sites = parseSelectOptions(html, 'Institutions');
+  if (!sites.length) sites = parseSelectOptions(html, 'Institution');
+  let attendings = parseSelectOptions(html, 'Attendings');
+  if (!attendings.length) attendings = parseSelectOptions(html, 'Attending');
+  let roles = parseSelectOptions(html, 'ResidentRoles');
+  if (!roles.length) roles = parseSelectOptions(html, 'ResidentRole');
+  let patientTypes = parseSelectOptions(html, 'PatientTypes');
+  if (!patientTypes.length) patientTypes = parseSelectOptions(html, 'PatientType');
 
-  console.log(`[profile] sites: ${sites.length}, attendings: ${attendings.length}`);
-  return { sites, attendings };
+  console.log(
+    `[profile] sites: ${sites.length}, attendings: ${attendings.length}, roles: ${roles.length}, patientTypes: ${patientTypes.length}`
+  );
+  return { sites, attendings, roles, patientTypes };
 }
 
 async function getLookupData(sessionCookie, type, params = {}) {
