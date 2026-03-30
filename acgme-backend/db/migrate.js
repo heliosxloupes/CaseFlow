@@ -35,8 +35,21 @@ const schema = `
 
 // ALTER statements for columns added after initial deploy
 const alterStatements = [
+  // v1 — ACGME cookie storage
   `ALTER TABLE user_acgme_credentials ADD COLUMN IF NOT EXISTS browser_cookies TEXT`,
   `ALTER TABLE user_acgme_credentials ADD COLUMN IF NOT EXISTS cookies_updated_at TIMESTAMP`,
+  // v2 — multi-user auth
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255)`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT`,
+  // v2 — full case data storage
+  `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS role VARCHAR(50)`,
+  `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS site VARCHAR(100)`,
+  `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS attending VARCHAR(100)`,
+  `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS patient_type VARCHAR(20)`,
+  `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS case_year VARCHAR(10)`,
+  `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS notes TEXT`,
+  `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS procedures JSONB`,
+  `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS local_id VARCHAR(50)`,
 ];
 
 async function migrate() {

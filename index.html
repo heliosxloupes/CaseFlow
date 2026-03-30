@@ -11,6 +11,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>CaseFlow</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script type="module" src="https://unpkg.com/@splinetool/viewer@1.9.82/build/spline-viewer.js"></script>
 <style>
 :root{
   --bg:#07090f;--bg1:#0d1119;--bg2:#131922;--bg3:#1a2130;
@@ -36,8 +37,17 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .ifield{width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);padding:15px 16px;color:var(--text);font-family:'Sora',sans-serif;font-size:15px;outline:none;transition:border-color .18s,background .18s;margin-bottom:13px}
 .ifield:focus{border-color:var(--blue);background:var(--bg3)}
 .ifield::placeholder{color:var(--text3)}
-.btn-main{width:100%;padding:16px;background:var(--blue);border:none;border-radius:var(--r);color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:600;cursor:pointer;letter-spacing:-.2px;transition:opacity .15s,transform .1s;margin-top:4px}
-.btn-main:active{opacity:.87;transform:scale(.985)}
+.btn-main{
+  width:100%;padding:16px;
+  background:linear-gradient(135deg,#5a98ff 0%,var(--blue) 100%);
+  border:none;border-radius:var(--r);color:#fff;
+  font-family:'Sora',sans-serif;font-size:15px;font-weight:600;
+  cursor:pointer;letter-spacing:-.2px;
+  transition:opacity .15s,transform .1s,box-shadow .15s;
+  margin-top:4px;
+  box-shadow:0 4px 20px rgba(79,142,247,0.3);
+}
+.btn-main:active{opacity:.87;transform:scale(.985);box-shadow:0 2px 10px rgba(79,142,247,0.2)}
 .btn-main.busy{opacity:.55;pointer-events:none}
 .login-note{text-align:center;margin-top:32px;font-size:12px;color:var(--text3);line-height:1.7}
 .login-err{text-align:center;font-size:13px;color:var(--red);margin-top:11px;min-height:18px}
@@ -64,17 +74,39 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 }
 .orb-wrap{
   position:relative;
-  width:clamp(260px, 40vmin, 420px);
-  height:clamp(260px, 40vmin, 420px);
-  margin-bottom:36px;
-  cursor:pointer;flex-shrink:0;transition:transform .2s;
+  width:clamp(240px, 38vmin, 400px);
+  height:clamp(240px, 38vmin, 400px);
+  margin-bottom:32px;
+  cursor:pointer;flex-shrink:0;
+  transition:transform .2s;
 }
 .orb-wrap:active{transform:scale(.96)}
-.orb-wrap.inactive{opacity:.35;pointer-events:none}
-canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:50%}
-.orb-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;pointer-events:none;transition:opacity .3s}
+.orb-wrap.inactive{opacity:.3;pointer-events:none}
+.orb-spline-wrap{
+  position:absolute;inset:0;
+  border-radius:50%;overflow:hidden;
+  transition:transform .06s ease,filter .06s ease,opacity .3s;
+}
+.orb-spline-wrap spline-viewer{
+  width:100%;height:100%;display:block;
+  --spline-viewer-background:transparent;
+}
+/* Fallback shimmer shown while Spline loads */
+.orb-loading-fallback{
+  position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle at 38% 35%, #1e3568 0%, #0d1119 65%);
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .4s;
+}
+.orb-loading-fallback.hidden{opacity:0;pointer-events:none}
+.orb-hint{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:10px;pointer-events:none;
+  transition:opacity .3s;z-index:2;
+}
 .orb-hint.hide{opacity:0}
-.orb-hint svg{width:52px;height:52px;fill:rgba(255,255,255,.5)}
+.orb-hint svg{width:48px;height:48px;fill:rgba(255,255,255,.55)}
 .orb-hint span{font-size:13px;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;font-weight:500}
 .question-bubble{background:var(--bg2);border:1px solid var(--line2);border-radius:20px 20px 20px 4px;padding:16px 20px;font-size:17px;font-weight:400;color:var(--text);line-height:1.55;text-align:left;max-width:min(380px,90vw);width:100%;margin-bottom:16px;min-height:52px;opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s}
 .question-bubble.show{opacity:1;transform:translateY(0)}
@@ -333,44 +365,181 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
   overflow:hidden;pointer-events:none;
 }
 .state-label:empty{height:0;margin:0;}
-/* ── Login redesign ─────────────────────────────────────────────── */
-#pg-login{background:var(--bg);align-items:center;justify-content:center;padding:0}
-.login-outer{width:100%;max-width:380px;padding:40px 28px 52px;display:flex;flex-direction:column;align-items:center}
-.login-brand{text-align:center;margin-bottom:44px}
-.login-brand-name{font-size:36px;font-weight:700;letter-spacing:-2px}
-.login-brand-name em{font-style:normal;color:var(--blue)}
-.login-brand-tag{font-size:11px;color:var(--text3);letter-spacing:.14em;text-transform:uppercase;margin-top:6px}
-.btn-google{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 20px;background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);color:var(--text);font-family:'Sora',sans-serif;font-size:15px;font-weight:500;cursor:pointer;transition:border-color .15s,background .15s;margin-bottom:4px}
-.btn-google:active{background:var(--bg3);border-color:var(--blue)}
-.btn-google svg{width:20px;height:20px;flex-shrink:0}
-.login-divider{display:flex;align-items:center;gap:12px;width:100%;margin:18px 0}
-.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--line)}
-.login-divider span{font-size:12px;color:var(--text3);font-weight:500}
-.login-form{width:100%}
-.auth-toggle{display:flex;width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:3px;gap:3px;margin-bottom:20px}
-.auth-toggle-btn{flex:1;padding:9px;background:none;border:none;border-radius:calc(var(--r) - 2px);color:var(--text3);font-family:'Sora',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
-.auth-toggle-btn.on{background:var(--bg3);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+/* ── Login — Spline full-screen redesign ─────────────────────────── */
+#pg-login{
+  background:var(--bg);
+  align-items:center;justify-content:flex-end;
+  padding:0;position:relative;overflow:hidden;
+}
+.login-spline-bg{
+  position:absolute;inset:0;width:100%;height:100%;
+  pointer-events:none;
+}
+.login-spline-bg spline-viewer{
+  width:100%;height:100%;display:block;
+  --spline-viewer-background:transparent;
+}
+.login-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(
+    to bottom,
+    rgba(7,9,15,0.25) 0%,
+    rgba(7,9,15,0.05) 35%,
+    rgba(7,9,15,0.55) 65%,
+    rgba(7,9,15,0.97) 100%
+  );
+  pointer-events:none;
+}
+.login-brand-top{
+  position:absolute;top:52px;left:0;right:0;
+  text-align:center;z-index:10;pointer-events:none;
+}
+.login-brand-top-name{
+  font-size:38px;font-weight:700;letter-spacing:-2.5px;
+  color:#fff;text-shadow:0 2px 24px rgba(0,0,0,.45);
+}
+.login-brand-top-name em{font-style:normal;color:var(--blue)}
+.login-brand-top-tag{
+  font-size:11px;color:rgba(255,255,255,.45);
+  letter-spacing:.18em;text-transform:uppercase;margin-top:6px;
+}
+.login-card{
+  position:relative;z-index:10;
+  width:100%;max-width:420px;
+  padding:28px 28px 44px;
+  background:rgba(13,17,25,0.82);
+  backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+  border-top:1px solid rgba(255,255,255,0.08);
+  border-left:1px solid rgba(255,255,255,0.06);
+  border-right:1px solid rgba(255,255,255,0.06);
+  border-radius:28px 28px 0 0;
+}
+.auth-tabs{
+  display:flex;background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:10px;padding:3px;gap:3px;margin-bottom:24px;
+}
+.auth-tab{
+  flex:1;padding:9px;background:none;border:none;
+  border-radius:8px;color:var(--text3);
+  font-family:'Sora',sans-serif;font-size:13px;font-weight:500;
+  cursor:pointer;transition:all .18s;
+}
+.auth-tab.on{
+  background:rgba(79,142,247,0.15);
+  color:var(--blue);
+  box-shadow:0 0 0 1px rgba(79,142,247,0.25);
+}
+.form-field{margin-bottom:14px}
+.form-label{
+  display:block;font-size:11px;color:var(--text3);
+  letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;font-weight:600;
+}
+.form-input{
+  width:100%;background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:10px;padding:13px 14px;color:var(--text);
+  font-family:'Sora',sans-serif;font-size:15px;outline:none;
+  transition:border-color .18s,background .18s;box-sizing:border-box;
+}
+.form-input:focus{border-color:var(--blue);background:rgba(79,142,247,0.07)}
+.form-input::placeholder{color:var(--text3)}
+.auth-err{
+  text-align:center;font-size:13px;color:var(--red);
+  margin-top:10px;min-height:18px;line-height:1.5;
+}
+.login-footer{
+  position:relative;z-index:10;
+  text-align:center;padding:14px 28px 20px;
+  font-size:11px;color:rgba(255,255,255,0.2);letter-spacing:.04em;
+}
+/* keep backward compat refs */
 .login-err{width:100%;text-align:center;font-size:13px;color:#f87171;margin-top:10px;min-height:18px}
-.login-footer-note{text-align:center;margin-top:28px;font-size:12px;color:var(--text3);line-height:1.7}
+.ifield{
+  width:100%;background:var(--bg2);border:1px solid var(--line2);
+  border-radius:var(--r);padding:15px 16px;color:var(--text);
+  font-family:'Sora',sans-serif;font-size:15px;outline:none;
+  transition:border-color .18s,background .18s;margin-bottom:13px;box-sizing:border-box;
+}
+.ifield:focus{border-color:var(--blue);background:var(--bg3)}
+.ifield::placeholder{color:var(--text3)}
 </style>
 </head>
 <body>
 <div class="page on" id="pg-login">
-  <div class="login-outer">
-    <div class="login-brand">
-      <div class="login-brand-name">Case<em>Flow</em></div>
-      <div class="login-brand-tag">ACGME Case Logging</div>
-    </div>
-    <div class="login-form">
-      <label class="lbl">Email</label>
-      <input class="ifield" type="email" id="l-email" placeholder="you@hospital.com" autocomplete="email" autocapitalize="none">
-      <label class="lbl">Password</label>
-      <input class="ifield" type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password">
-      <button class="btn-main" id="l-btn" onclick="doLogin()">Sign In</button>
-      <div class="login-err" id="l-err"></div>
-    </div>
-    <div class="login-footer-note">Your session is stored securely on this device.</div>
+  <!-- Spline 3D background -->
+  <div class="login-spline-bg">
+    <spline-viewer
+      url="https://prod.spline.design/fba5a24b-a843-461d-b983-e5c140313420/scene.splinecode"
+      loading="lazy"
+    ></spline-viewer>
   </div>
+  <div class="login-overlay"></div>
+
+  <!-- Brand — top center -->
+  <div class="login-brand-top">
+    <div class="login-brand-top-name">Case<em>Flow</em></div>
+    <div class="login-brand-top-tag">ACGME Case Logging</div>
+  </div>
+
+  <!-- Auth card — anchored to bottom -->
+  <div class="login-card">
+    <!-- Tab switcher -->
+    <div class="auth-tabs">
+      <button class="auth-tab on" id="tab-signin" onclick="switchAuthTab('signin')">Sign In</button>
+      <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Create Account</button>
+    </div>
+
+    <!-- Sign In form -->
+    <div id="form-signin">
+      <div class="form-field">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" id="l-email" placeholder="you@hospital.com"
+               autocomplete="email" autocapitalize="none" autocorrect="off"
+               onkeydown="if(event.key==='Enter')document.getElementById('l-pass').focus()">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="l-pass" placeholder="••••••••"
+               autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn-main" id="l-btn" onclick="doLogin()" style="margin-top:8px">Sign In</button>
+      <div class="auth-err" id="l-err"></div>
+    </div>
+
+    <!-- Create Account form -->
+    <div id="form-signup" style="display:none">
+      <div class="form-field">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" type="text" id="r-name" placeholder="Dr. Jane Smith"
+               autocomplete="name"
+               onkeydown="if(event.key==='Enter')document.getElementById('r-email').focus()">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" id="r-email" placeholder="you@hospital.com"
+               autocomplete="email" autocapitalize="none" autocorrect="off"
+               onkeydown="if(event.key==='Enter')document.getElementById('r-pass').focus()">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="r-pass" placeholder="Min. 8 characters"
+               autocomplete="new-password"
+               onkeydown="if(event.key==='Enter')document.getElementById('r-pass2').focus()">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Confirm Password</label>
+        <input class="form-input" type="password" id="r-pass2" placeholder="Repeat password"
+               autocomplete="new-password"
+               onkeydown="if(event.key==='Enter')doRegister()">
+      </div>
+      <button class="btn-main" id="r-btn" onclick="doRegister()" style="margin-top:8px">Create Account</button>
+      <div class="auth-err" id="r-err"></div>
+    </div>
+  </div>
+
+  <div class="login-footer">Your data is encrypted and stored securely.</div>
 </div>
 
 <div class="page" id="pg-app">
@@ -393,7 +562,16 @@ canvas#orb-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius
   <div class="pane on" id="pn-log">
     <div class="voice-screen" id="voice-screen">
       <div class="orb-wrap" id="orb-wrap" onclick="handleOrbTap()">
-        <canvas id="orb-canvas" width="480" height="480"></canvas>
+        <div class="orb-spline-wrap" id="orb-spline-wrap">
+          <spline-viewer
+            id="orb-viewer"
+            url="https://prod.spline.design/3ff7b617-2fe9-46c7-8e06-b6d7c382f4db/scene.splinecode"
+            loading="lazy"
+            events-target="global"
+          ></spline-viewer>
+        </div>
+        <!-- Fallback shown until Spline loads -->
+        <div class="orb-loading-fallback" id="orb-fallback"></div>
         <div class="orb-hint" id="orb-hint">
           <svg viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 14.9A7.002 7.002 0 0 1 5 9H3a9 9 0 0 0 8 8.94V20H8v2h8v-2h-3v-2.06A9 9 0 0 0 21 9h-2a7 7 0 0 1-5.5 6.9z"/></svg>
           <span>Tap to start</span>
@@ -625,69 +803,62 @@ function kwMatch(text){
   }
   return matched.slice(0,5);
 }
-// ORB
-const canvas=document.getElementById('orb-canvas');
-const ctx=canvas.getContext('2d');
-const W=480,H=480,CX=W/2,CY=H/2;
+// ── ORB — Spline-based with CSS audio reactivity ──────────────────────────
 let orbState='idle',audioLevel=0,smoothLevel=0,analyser=null,dataArray=null,animFrame=null;
-const N=10;
-let bAngles=Array.from({length:N},(_,i)=>i*(2*Math.PI/N));
-let bNoise=Array.from({length:N},()=>Math.random()*1000);
-const PAL={idle:['#1a2a50','#1e3568','#243f80'],listening:['#4f8ef7','#6fa8ff','#a78bfa'],thinking:['#a78bfa','#c084fc','#818cf8'],done:['#34d399','#6ee7b7','#10b981']};
+let splineApp=null; // Spline runtime reference (set when viewer fires 'load')
+
+// Wire up the Spline viewer once it finishes loading
+document.addEventListener('DOMContentLoaded',()=>{
+  const viewer=document.getElementById('orb-viewer');
+  if(!viewer)return;
+  viewer.addEventListener('load',()=>{
+    const fallback=document.getElementById('orb-fallback');
+    if(fallback)fallback.classList.add('hidden');
+    // Store runtime reference for variable control
+    splineApp=viewer.spline||null;
+    console.log('[Spline] Orb loaded',splineApp?'(runtime available)':'(no runtime)');
+  });
+});
+
+function readMic(){
+  if(!analyser){audioLevel=0;return;}
+  analyser.getByteFrequencyData(dataArray);
+  let s=0;for(let i=0;i<dataArray.length;i++)s+=dataArray[i];
+  audioLevel=Math.min(1,(s/dataArray.length)/42);
+}
+
+function updateOrbVisual(level,state){
+  const wrap=document.getElementById('orb-spline-wrap');
+  if(!wrap)return;
+  // CSS-based reactivity — always works regardless of Spline scene variables
+  const scale=state==='idle'?1:1+level*0.09;
+  const brightness=state==='listening'?1+level*0.35:state==='thinking'?1.12:1;
+  const blur=state==='listening'?0:0;
+  wrap.style.transform=`scale(${scale.toFixed(3)})`;
+  wrap.style.filter=`brightness(${brightness.toFixed(2)})`;
+  // Try to push audio level into Spline scene variables
+  if(splineApp){
+    try{splineApp.setVariable('audioLevel',level);}catch(_){}
+    try{splineApp.setVariable('intensity',level);}catch(_){}
+    try{splineApp.setVariable('scale',scale);}catch(_){}
+  }
+}
+
 let lastTs=0;
-function drawOrb(ts){
-  ctx.clearRect(0,0,W,H);
-  const t=ts*0.0007,pal=PAL[orbState];
-  const base=orbState==='idle'?100:112;
-  const R=base+smoothLevel*(orbState==='listening'?48:orbState==='thinking'?28:0);
-  for(let layer=2;layer>=0;layer--){
-    const sc=1-layer*.085;
-    const sp=orbState==='listening'?4:orbState==='thinking'?6:1.2;
-    const amp=orbState==='listening'?20+smoothLevel*55:orbState==='thinking'?15+Math.sin(ts*.003)*10:8+Math.sin(ts*.0005+layer)*4;
-    ctx.beginPath();
-    const pts=[];
-    for(let i=0;i<N;i++){
-      const n=Math.sin(bNoise[i]+t*sp+layer*.5)*Math.cos(bNoise[i]*.7+t*sp*.6);
-      pts.push([CX+Math.cos(bAngles[i])*(R*sc+n*amp),CY+Math.sin(bAngles[i])*(R*sc+n*amp)]);
-    }
-    ctx.moveTo((pts[0][0]+pts[N-1][0])/2,(pts[0][1]+pts[N-1][1])/2);
-    for(let i=0;i<N;i++){const c=pts[i],nx=pts[(i+1)%N];ctx.quadraticCurveTo(c[0],c[1],(c[0]+nx[0])/2,(c[1]+nx[1])/2)}
-    ctx.closePath();
-    const g=ctx.createRadialGradient(CX-R*.25,CY-R*.28,R*.06,CX,CY,R*sc*1.15);
-    g.addColorStop(0,pal[layer%pal.length]);g.addColorStop(1,pal[(layer+2)%pal.length]);
-    ctx.globalAlpha=.58+layer*.16;ctx.fillStyle=g;ctx.fill();
-  }
-  // Outer glow — bigger and softer when listening
-  const glowR = orbState==='listening' ? R*1.7 : R*1.5;
-  const gc=orbState==='listening'?'rgba(79,142,247,':orbState==='thinking'?'rgba(167,139,250,':'rgba(26,50,110,';
-  const glowAlpha=orbState==='listening'?(.22+smoothLevel*.15):'.14';
-  const gr=ctx.createRadialGradient(CX,CY,R*.65,CX,CY,glowR);
-  gr.addColorStop(0,gc+glowAlpha+')');gr.addColorStop(1,gc+'0)');
-  ctx.globalAlpha=1;ctx.beginPath();ctx.arc(CX,CY,glowR,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();
-  // Secondary inner glow ring when listening
-  if(orbState==='listening'&&smoothLevel>.1){
-    const ring=ctx.createRadialGradient(CX,CY,R*.85,CX,CY,R*1.15);
-    ring.addColorStop(0,'rgba(127,183,255,0)');
-    ring.addColorStop(.5,`rgba(127,183,255,${(smoothLevel*.18).toFixed(2)})`);
-    ring.addColorStop(1,'rgba(127,183,255,0)');
-    ctx.beginPath();ctx.arc(CX,CY,R*1.15,0,Math.PI*2);ctx.fillStyle=ring;ctx.fill();
-  }
-  // Specular highlight
-  const hl=ctx.createRadialGradient(CX-R*.32,CY-R*.38,0,CX-R*.32,CY-R*.38,R*.55);
-  hl.addColorStop(0,'rgba(255,255,255,.14)');hl.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.fillStyle=hl;ctx.globalAlpha=1;ctx.fill();
-  ctx.globalAlpha=1;
-}
-function readMic(){if(!analyser){audioLevel=0;return}analyser.getByteFrequencyData(dataArray);let s=0;for(let i=0;i<dataArray.length;i++)s+=dataArray[i];audioLevel=Math.min(1,(s/dataArray.length)/42)}
 function orbLoop(ts){
-  const dt=Math.min(ts-lastTs,50)/1000;lastTs=ts;readMic();
-  const tgt=orbState==='listening'?audioLevel:orbState==='thinking'?.5+Math.sin(ts*.0025)*.35:0;
-  smoothLevel+=(tgt-smoothLevel)*(orbState==='listening'?.38:.06);
-  const spd=orbState==='listening'?.005:orbState==='thinking'?.007:.0012;
-  for(let i=0;i<N;i++)bAngles[i]+=spd*(i%2===0?1:-1)*(1+smoothLevel*.6);
-  drawOrb(ts);animFrame=requestAnimationFrame(orbLoop);
+  const dt=Math.min(ts-lastTs,50)/1000;lastTs=ts;
+  readMic();
+  const tgt=orbState==='listening'?audioLevel:orbState==='thinking'?0.5+Math.sin(ts*0.0025)*0.35:0;
+  smoothLevel+=(tgt-smoothLevel)*(orbState==='listening'?0.38:0.06);
+  updateOrbVisual(smoothLevel,orbState);
+  animFrame=requestAnimationFrame(orbLoop);
 }
-function startOrb(){if(animFrame)cancelAnimationFrame(animFrame);lastTs=performance.now();animFrame=requestAnimationFrame(orbLoop)}
+
+function startOrb(){
+  if(animFrame)cancelAnimationFrame(animFrame);
+  lastTs=performance.now();
+  animFrame=requestAnimationFrame(orbLoop);
+}
 // MIC
 let micStream=null,audioCtx2=null;
 async function startMic(stream){
@@ -1353,6 +1524,7 @@ function saveSummaryChip(key, val, e){
   toast('Updated','ok');
 }
 let cases=JSON.parse(localStorage.getItem('cf5-cases')||'[]');
+let _currentCaseId=null; // set before saving to avoid duplicate DB inserts
 async function submitCase(){
   // If no ACGME credentials, send user to Settings to set them up first
   if(!localStorage.getItem('cf5-vault')){
@@ -1404,9 +1576,10 @@ async function submitCase(){
   clearTimeout(duoTimer);
   duoEl.classList.remove('on');
   labelEl.textContent='Submitting to ACGME…';
-  const c={id:Date.now(),...payload,yr:payload.yr,cid:caseData.caseId,status,ts:new Date().toISOString()};
+  const localId='cf-'+Date.now();
+  const c={id:localId,...payload,yr:payload.yr,cid:caseData.caseId,status,ts:new Date().toISOString()};
   cases.unshift(c);localStorage.setItem('cf5-cases',JSON.stringify(cases));
-  pushCaseToSupabase(c); // async, fire-and-forget
+  saveCaseToDB(c); // async, fire-and-forget sync to DB
   document.getElementById('hdr-n').textContent=cases.length;
   overlay.classList.remove('on');
   btn.disabled=false;
@@ -1928,47 +2101,149 @@ async function callSubmitAcgme(casePayload){
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
-// JWT helpers (decode only — verification happens server-side)
 function jwtDecode(token){try{return JSON.parse(atob(token.split('.')[1]));}catch{return null;}}
 function jwtValid(token){const p=jwtDecode(token);return p&&p.exp*1000>Date.now();}
+
+function switchAuthTab(tab){
+  document.getElementById('tab-signin').classList.toggle('on',tab==='signin');
+  document.getElementById('tab-signup').classList.toggle('on',tab==='signup');
+  document.getElementById('form-signin').style.display=tab==='signin'?'block':'none';
+  document.getElementById('form-signup').style.display=tab==='signup'?'block':'none';
+  document.getElementById('l-err').textContent='';
+  document.getElementById('r-err').textContent='';
+}
 
 async function doLogin(){
   const email=document.getElementById('l-email').value.trim();
   const pass=document.getElementById('l-pass').value;
-  const err=document.getElementById('l-err');
-  err.textContent='';
-  if(!email||!pass){err.textContent='Please enter your email and password.';return}
+  const errEl=document.getElementById('l-err');
+  errEl.textContent='';
+  if(!email||!pass){errEl.textContent='Please enter your email and password.';return;}
   const btn=document.getElementById('l-btn');
-  btn.innerHTML='<span class="spin"></span>';btn.classList.add('busy');
+  btn.textContent='Signing in…';btn.classList.add('busy');
   try{
     const res=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
     const data=await res.json();
-    btn.innerHTML='Sign In';btn.classList.remove('busy');
-    if(!res.ok){err.textContent=data.error||'Sign in failed.';return}
-    localStorage.setItem('cf5-token',data.token);
-    localStorage.setItem('cf5-email',email);
-    sessionPassword=pass;
-    launchApp(email);
+    btn.textContent='Sign In';btn.classList.remove('busy');
+    if(!res.ok){errEl.textContent=data.error||'Sign in failed.';return;}
+    _onAuthSuccess(data,pass);
   }catch(e){
-    btn.innerHTML='Sign In';btn.classList.remove('busy');
-    err.textContent='Network error — check your connection.';
+    btn.textContent='Sign In';btn.classList.remove('busy');
+    errEl.textContent='Network error — check your connection.';
   }
+}
+
+async function doRegister(){
+  const name=document.getElementById('r-name').value.trim();
+  const email=document.getElementById('r-email').value.trim();
+  const pass=document.getElementById('r-pass').value;
+  const pass2=document.getElementById('r-pass2').value;
+  const errEl=document.getElementById('r-err');
+  errEl.textContent='';
+  if(!name){errEl.textContent='Please enter your name.';return;}
+  if(!email){errEl.textContent='Please enter your email.';return;}
+  if(pass.length<8){errEl.textContent='Password must be at least 8 characters.';return;}
+  if(pass!==pass2){errEl.textContent='Passwords do not match.';return;}
+  const btn=document.getElementById('r-btn');
+  btn.textContent='Creating account…';btn.classList.add('busy');
+  try{
+    const res=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pass})});
+    const data=await res.json();
+    btn.textContent='Create Account';btn.classList.remove('busy');
+    if(!res.ok){errEl.textContent=data.error||'Registration failed.';return;}
+    _onAuthSuccess(data,pass);
+  }catch(e){
+    btn.textContent='Create Account';btn.classList.remove('busy');
+    errEl.textContent='Network error — check your connection.';
+  }
+}
+
+function _onAuthSuccess(data,pass){
+  localStorage.setItem('cf5-token',data.token);
+  const email=data.user?.email||'';
+  const name=data.user?.name||email.split('@')[0];
+  localStorage.setItem('cf5-email',email);
+  localStorage.setItem('cf5-name',name);
+  sessionPassword=pass;
+  launchApp(name,email);
 }
 
 function doLogout(){
   if(!confirm('Sign out?'))return;
   sessionPassword='';
   localStorage.removeItem('cf5-token');
+  localStorage.removeItem('cf5-name');
   resetFlow();
   showPage('pg-login');
 }
 
-function launchApp(email){
-  document.getElementById('hdr-u').textContent=(email||'').split('@')[0];
-  document.getElementById('hdr-n').textContent=cases.length;
+async function launchApp(name,email){
+  const displayName=(name||(email||'').split('@')[0]||'—');
+  document.getElementById('hdr-u').textContent=displayName.split(' ')[0];
   showPage('pg-app');
   startOrb();
+  // Load cases from DB, fall back to localStorage cache
+  await loadCasesFromDB();
+  document.getElementById('hdr-n').textContent=cases.length;
   renderHistory();
+}
+
+// ── DB-backed case storage ─────────────────────────────────────────────────
+async function loadCasesFromDB(){
+  try{
+    const token=localStorage.getItem('cf5-token');
+    if(!token||!ACGME_BACKEND_URL)return;
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/cases/history`,{
+      headers:{'Authorization':`Bearer ${token}`},
+    });
+    if(!res.ok)return;
+    const rows=await res.json();
+    // Convert DB rows to frontend case format
+    const dbCases=rows.map(r=>({
+      id:       String(r.id),
+      dbId:     r.id,
+      localId:  r.local_id,
+      ts:       r.submitted_at,
+      date:     r.procedure_date,
+      procs:    r.procedures||r.selected_codes?.split(',').map(c=>c.trim()).filter(Boolean).map(c=>({c,d:r.code_description||c,a:''})),
+      role:     r.role||'',
+      site:     r.site||'',
+      att:      r.attending||'',
+      pt:       r.patient_type||'Adult',
+      yr:       r.case_year||'Year 4',
+      notes:    r.notes||'',
+      status:   r.status||'pending',
+    }));
+    cases=dbCases;
+    localStorage.setItem('cf5-cases',JSON.stringify(cases));
+  }catch(e){
+    console.warn('[CaseFlow] Could not load cases from DB, using local cache:',e.message);
+    cases=JSON.parse(localStorage.getItem('cf5-cases')||'[]');
+  }
+}
+
+async function saveCaseToDB(caseObj){
+  try{
+    const token=localStorage.getItem('cf5-token');
+    if(!token||!ACGME_BACKEND_URL)return;
+    await fetch(`${ACGME_BACKEND_URL}/api/cases/save`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+      body:JSON.stringify({
+        localId:      caseObj.id,
+        procedureDate:caseObj.date,
+        procedures:   caseObj.procs||[],
+        role:         caseObj.role,
+        site:         caseObj.site,
+        attending:    caseObj.att,
+        patientType:  caseObj.pt,
+        caseYear:     caseObj.yr,
+        notes:        caseObj.notes||'',
+      }),
+    });
+  }catch(e){
+    console.warn('[CaseFlow] Could not save case to DB:',e.message);
+  }
 }
 
 // getAcgmeCredentials is defined earlier above (near saveAcgmeCredentials)
@@ -1981,16 +2256,16 @@ function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.
 function goTab(n){document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));document.getElementById('tb-'+n).classList.add('on');document.getElementById('pn-'+n).classList.add('on');if(n==='history')renderHistory();if(n==='settings')loadSettingsUI();}
 
 document.addEventListener('DOMContentLoaded',()=>{
-  document.getElementById('l-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
-  document.getElementById('l-email').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('l-pass').focus()});
   startOrb();
   function tryBuildIndex(){if(typeof CPT_DB!=='undefined'){buildIndex();}else{setTimeout(tryBuildIndex,100);}}
   setTimeout(tryBuildIndex,200);
+
   // Auto-login if a valid JWT token exists
   const token=localStorage.getItem('cf5-token');
+  const name=localStorage.getItem('cf5-name')||'';
   const email=localStorage.getItem('cf5-email')||'';
   if(token&&jwtValid(token)){
-    launchApp(email);
+    launchApp(name,email);
   } else {
     localStorage.removeItem('cf5-token');
     if(email) document.getElementById('l-email').value=email;

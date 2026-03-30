@@ -71,18 +71,88 @@ router.post('/submit', async (req, res, next) => {
 
 /**
  * GET /api/cases/history
+ * Returns full case data for the authenticated user
  */
 router.get('/history', async (req, res, next) => {
   try {
     const { rows } = await db.query(
-      `SELECT id, procedure_date, procedure_year, selected_codes, code_description, status, error_message, submitted_at
+      `SELECT id, local_id, procedure_date, procedure_year, selected_codes, code_description,
+              role, site, attending, patient_type, case_year, notes, procedures,
+              status, error_message, submitted_at
        FROM case_submissions
        WHERE user_id = $1
        ORDER BY submitted_at DESC
-       LIMIT 100`,
+       LIMIT 200`,
       [req.userId]
     );
     res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/cases/save
+ * Saves a full case locally without ACGME submission (pending status).
+ * Body: { localId, procedureDate, procedures, role, site, attending, patientType, caseYear, notes }
+ */
+router.post('/save', async (req, res, next) => {
+  try {
+    const {
+      localId, procedureDate, procedures = [], role, site,
+      attending, patientType, caseYear, notes = '',
+    } = req.body;
+
+    const codeDescription = procedures.map(p => p.d).join(', ');
+    const selectedCodes   = procedures.map(p => p.c).join(', ');
+
+    const { rows } = await db.query(
+      `INSERT INTO case_submissions
+        (user_id, local_id, procedure_date, selected_codes, code_description,
+         role, site, attending, patient_type, case_year, notes, procedures, status, submitted_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'pending',NOW())
+       ON CONFLICT DO NOTHING
+       RETURNING id`,
+      [
+        req.userId, localId || null, procedureDate, selectedCodes, codeDescription,
+        role, site, attending, patientType, caseYear, notes, JSON.stringify(procedures),
+      ]
+    );
+
+    res.json({ success: true, id: rows[0]?.id });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * PATCH /api/cases/:id/status
+ * Update the status of a case (e.g. after re-submission)
+ */
+router.patch('/:id/status', async (req, res, next) => {
+  try {
+    const { status, errorMessage } = req.body;
+    await db.query(
+      `UPDATE case_submissions SET status=$1, error_message=$2, submitted_at=NOW()
+       WHERE id=$3 AND user_id=$4`,
+      [status, errorMessage || null, req.params.id, req.userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * DELETE /api/cases/:id
+ */
+router.delete('/:id', async (req, res, next) => {
+  try {
+    await db.query(
+      'DELETE FROM case_submissions WHERE id=$1 AND user_id=$2',
+      [req.params.id, req.userId]
+    );
+    res.json({ success: true });
   } catch (err) {
     next(err);
   }

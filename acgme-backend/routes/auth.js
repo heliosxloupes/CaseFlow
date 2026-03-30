@@ -1,10 +1,100 @@
 const express  = require('express');
 const router   = express.Router();
+const bcrypt   = require('bcryptjs');
+const jwt      = require('jsonwebtoken');
 const { encrypt, decrypt } = require('../services/encryptionService');
 const { clearSession }     = require('../services/sessionCache');
 const { authenticate }     = require('../middleware/authenticate');
 const pw = require('../services/playwrightService');
 const db = require('../db');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/auth/register
+// Body: { name, email, password }
+// Returns: { token, user: { id, name, email } }
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/register', async (req, res, next) => {
+  try {
+    const { name, email, password } = req.body || {};
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required.' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+    }
+    const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRx.test(email)) {
+      return res.status(400).json({ error: 'Please enter a valid email address.' });
+    }
+
+    // Check if email already exists
+    const existing = await db.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
+    if (existing.rows.length) {
+      return res.status(409).json({ error: 'An account with that email already exists.' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const { rows } = await db.query(
+      `INSERT INTO users (name, email, password_hash, created_at)
+       VALUES ($1, $2, $3, NOW()) RETURNING id, name, email`,
+      [name.trim(), email.toLowerCase(), passwordHash]
+    );
+
+    const user  = rows[0];
+    const secret = process.env.JWT_SECRET;
+    if (!secret) return res.status(500).json({ error: 'JWT_SECRET not configured.' });
+
+    const token = jwt.sign({ userId: user.id, email: user.email }, secret, { expiresIn: '30d' });
+    return res.status(201).json({ token, user: { id: user.id, name: user.name, email: user.email } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/auth/login
+// Body: { email, password }
+// Returns: { token, user: { id, name, email } }
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/login', async (req, res, next) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    const { rows } = await db.query(
+      'SELECT id, name, email, password_hash FROM users WHERE email = $1',
+      [email.toLowerCase()]
+    );
+
+    if (!rows.length) {
+      return res.status(401).json({ error: 'Incorrect email or password.' });
+    }
+
+    const user = rows[0];
+
+    // Support legacy single-user accounts that have no password_hash yet
+    if (!user.password_hash) {
+      return res.status(401).json({ error: 'Account requires a password reset. Please create a new account or contact your administrator.' });
+    }
+
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Incorrect email or password.' });
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) return res.status(500).json({ error: 'JWT_SECRET not configured.' });
+
+    const token = jwt.sign({ userId: user.id, email: user.email }, secret, { expiresIn: '30d' });
+    return res.json({ token, user: { id: user.id, name: user.name || email.split('@')[0], email: user.email } });
+  } catch (err) {
+    next(err);
+  }
+});
 
 /**
  * POST /api/auth/save-credentials
