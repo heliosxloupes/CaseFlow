@@ -515,25 +515,68 @@ async function submitCase(sessionCookie, caseData) {
       'User-Agent': UA,
       'Referer': `${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`,
       'Origin': BASE_URL,
+      'Sec-Fetch-Site': 'same-origin',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-User': '?1',
+      'Sec-Fetch-Dest': 'document',
     },
     body: payload,
     redirect: 'manual',
-  }, 15000);
+  }, 60000);
 
-  if (res.status === 302) {
-    const loc = res.headers.get('location') || '';
-    if (loc.includes('Insert') || loc.includes('CaseLogs')) {
+  const html = await res.text();
+  const loc = res.headers.get('location') || '';
+
+  if (res.status >= 300 && res.status < 400) {
+    if (
+      loc.includes('Insert') ||
+      loc.includes('CaseLogs') ||
+      loc.includes('CaseEntry') ||
+      /\/ads\/CaseLogs\//i.test(loc)
+    ) {
       return { success: true, message: 'Case submitted successfully' };
     }
+    if (/b2clogin|microsoftonline|oauth|signin|authorize|login\.microsoft/i.test(loc)) {
+      throw new Error(
+        'ACGME session expired or not authenticated — open Settings and reconnect your ACGME account.'
+      );
+    }
+    const hint = extractAcgmeSubmitErrorHint(html);
+    throw new Error(
+      hint
+        ? `ACGME redirect (${res.status}) to ${loc.slice(0, 120)} — ${hint}`
+        : `ACGME unexpected redirect (${res.status}): ${loc.slice(0, 200) || '(no Location header)'}`
+    );
   }
+
+  if (res.status === 200 && looksLikeAcgmeSubmitSuccess(html)) {
+    return { success: true, message: 'Case submitted successfully' };
+  }
+
   if (res.status === 200) {
-    const html = await res.text();
-    if (html.includes('submitted successfully') || html.includes('case was submitted')) {
-      return { success: true, message: 'Case submitted successfully' };
-    }
     const err = html.match(/class="[^"]*error[^"]*"[^>]*>([^<]+)</i);
     if (err) throw new Error(`ACGME error: ${err[1].trim()}`);
+    const hint = extractAcgmeSubmitErrorHint(html);
+    if (hint) throw new Error(`ACGME: ${hint}`);
+    console.warn('[ACGME] submit 200 unrecognized:', (html || '').slice(0, 900).replace(/\s+/g, ' '));
+    throw new Error(
+      'ACGME returned the form again (200) with no clear success — check required fields or ACGME Case Log.'
+    );
   }
+
+  if (res.status >= 400) {
+    const hint = extractAcgmeSubmitErrorHint(html);
+    console.warn(
+      `[ACGME] submit POST ${res.status} body snippet:`,
+      (html || '').slice(0, 600).replace(/\s+/g, ' ')
+    );
+    throw new Error(
+      hint
+        ? `ACGME returned ${res.status}: ${hint}`
+        : `ACGME server returned ${res.status} (no details in body). Check procedure/codes and try again.`
+    );
+  }
+
   throw new Error(`Unexpected submission response: ${res.status}`);
 }
 
@@ -629,13 +672,56 @@ function scrapeHiddenFields(html) {
     const attrs = m[1];
     if (!/type\s*=\s*["']hidden["']/i.test(attrs)) continue;
     const nameM = attrs.match(/\bname\s*=\s*["']([^"']+)["']/i);
-    const valM  = attrs.match(/\bvalue\s*=\s*["']([^"']*)["']/i);
     if (!nameM) continue;
     const name = nameM[1];
     if (name === '__RequestVerificationToken') continue;
+    const valM =
+      attrs.match(/\bvalue\s*=\s*["']([^"']*)["']/i) ||
+      attrs.match(/\bvalue\s*=\s*'([^']*)'/i) ||
+      attrs.match(/\bvalue\s*=\s*([^\s>]+)/i);
     fields[name] = valM ? valM[1] : '';
   }
   return fields;
+}
+
+/** Best-effort parse of ASP.NET / IIS error HTML from ACGME POST responses */
+function extractAcgmeSubmitErrorHint(html) {
+  if (!html || typeof html !== 'string') return '';
+  const t = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ');
+  const tryPatterns = [
+    /<div[^>]*class="[^"]*validation-summary-errors[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<ul[^>]*class="[^"]*validation-summary-errors[^"]*"[^>]*>([\s\S]*?)<\/ul>/i,
+    /<span[^>]*class="[^"]*field-validation-error[^"]*"[^>]*>([^<]+)/i,
+    /<h1[^>]*>([^<]{5,400})<\/h1>/i,
+    /<h2[^>]*>([^<]{5,400})<\/h2>/i,
+    /<title[^>]*>([^<]{5,300})<\/title>/i,
+    /Exception Message:\s*([^<\n]{10,400})/i,
+    /System\.[\w.]+\s*:\s*([^<\n]{15,400})/i,
+  ];
+  for (const re of tryPatterns) {
+    const m = t.match(re);
+    if (m && m[1]) {
+      const s = m[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      if (s.length > 8 && !/^case log$/i.test(s)) return s.slice(0, 500);
+    }
+  }
+  const plain = t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (plain.length > 20 && plain.length < 2000) return plain.slice(0, 400);
+  return '';
+}
+
+function looksLikeAcgmeSubmitSuccess(html) {
+  if (!html) return false;
+  const h = html.toLowerCase();
+  return (
+    h.includes('submitted successfully') ||
+    h.includes('case was submitted') ||
+    h.includes('successfully submitted') ||
+    h.includes('submission complete') ||
+    h.includes('case log entry') && h.includes('success')
+  );
 }
 
 module.exports = { loginToACGME, getInsertPageData, submitCase, getLookupData, getUserProfile };
