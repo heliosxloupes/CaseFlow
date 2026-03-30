@@ -46,8 +46,8 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .btn-main.busy{opacity:.55;pointer-events:none}
 .login-note{text-align:center;margin-top:32px;font-size:12px;color:var(--text3);line-height:1.7}
 .login-err{text-align:center;font-size:13px;color:var(--red);margin-top:11px;min-height:18px}
-#pg-app{background:var(--bg)}
-.app-bar{display:flex;align-items:center;justify-content:space-between;padding:15px 20px 13px;border-bottom:1px solid var(--line);background:rgba(7,9,15,.95);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);position:sticky;top:0;z-index:60}
+#pg-app{background:var(--bg);position:relative;isolation:isolate;z-index:1;touch-action:manipulation}
+.app-bar{display:flex;align-items:center;justify-content:space-between;padding:15px 20px 13px;border-bottom:1px solid var(--line);background:rgba(7,9,15,.95);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);position:sticky;top:0;z-index:400}
 .app-logo{font-size:19px;font-weight:700;letter-spacing:-1px}
 .app-logo em{font-style:normal;color:var(--blue)}
 .bar-right{display:flex;align-items:center;gap:9px}
@@ -82,13 +82,12 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .sm-backdrop{
   position:fixed;top:56px;left:0;right:0;bottom:0;
   background:rgba(0,0,0,.55);z-index:179;
-  opacity:0;pointer-events:none;
+  opacity:0;pointer-events:none!important;
   backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+  visibility:hidden;
 }
-/* Menu overlays must NOT intercept taps when closed — transform alone is unreliable on mobile */
+/* Pointer-events + visibility when open/closed are set inline in JS (beats iOS ghost hit-testing) */
 .sm-prelayer{pointer-events:none!important}
-body.sm-menu-open .sm-backdrop{pointer-events:auto}
-body.sm-menu-open .sm-panel-wrap{pointer-events:auto}
 .sm-prelayer{
   position:fixed;top:56px;left:0;
   width:min(78vw,360px);height:calc(100% - 56px);
@@ -104,7 +103,6 @@ body.sm-menu-open .sm-panel-wrap{pointer-events:auto}
   z-index:182;will-change:transform;
   display:flex;flex-direction:column;overflow:hidden;
   box-shadow:4px 0 40px rgba(0,0,0,.6);
-  pointer-events:none;
 }
 .sm-panel-logo-row{
   padding:28px 28px 20px;border-bottom:1px solid rgba(255,255,255,.05);
@@ -859,6 +857,39 @@ body.sm-menu-open .sm-panel-wrap{pointer-events:auto}
 
     </div>
   </div>
+
+  <!-- Staggered menu: inside #pg-app so it shares stacking; sealed when closed (visibility+pointer-events via JS) -->
+  <div class="sm-backdrop" id="sm-backdrop" onclick="smClose()"></div>
+  <div class="sm-prelayer sm-prelayer-1" id="sm-prelayer-1"></div>
+  <div class="sm-prelayer sm-prelayer-2" id="sm-prelayer-2"></div>
+  <aside class="sm-panel-wrap" id="sm-panel" aria-label="Main navigation">
+    <div class="sm-panel-logo-row">
+      <div class="sm-panel-logo">Case<em>Flow</em></div>
+    </div>
+    <ul class="sm-nav-list" role="list">
+      <li class="sm-nav-item" id="sm-item-log">
+        <button class="sm-nav-btn active" onclick="smNavigate('log')" type="button">
+          <span class="sm-nav-num">01</span>
+          <span class="sm-nav-label">Log Case</span>
+        </button>
+      </li>
+      <li class="sm-nav-item" id="sm-item-history">
+        <button class="sm-nav-btn" onclick="smNavigate('history')" type="button">
+          <span class="sm-nav-num">02</span>
+          <span class="sm-nav-label">History</span>
+        </button>
+      </li>
+      <li class="sm-nav-item" id="sm-item-settings">
+        <button class="sm-nav-btn" onclick="smNavigate('settings')" type="button">
+          <span class="sm-nav-num">03</span>
+          <span class="sm-nav-label">Settings</span>
+        </button>
+      </li>
+    </ul>
+    <div class="sm-panel-footer">
+      <div class="sm-footer-note">ACGME Case Logging</div>
+    </div>
+  </aside>
 </div>
 <div class="search-modal" id="search-modal" onclick="if(event.target===this)closeSearchModal()">
   <button class="search-modal-close" onclick="closeSearchModal()">&#x2715;</button>
@@ -2723,6 +2754,38 @@ const SM = (() => {
   let layers, panel, backdrop, iconWrap, toggleText, toggleBtn;
   let labelEls, numEls;
 
+  function sealMenuFully() {
+    if (backdrop) {
+      backdrop.style.setProperty('pointer-events', 'none', 'important');
+      backdrop.style.visibility = 'hidden';
+      gsap.set(backdrop, { opacity: 0 });
+    }
+    layers.forEach(l => {
+      if (!l) return;
+      l.style.setProperty('pointer-events', 'none', 'important');
+      l.style.visibility = 'hidden';
+    });
+    if (panel) {
+      panel.style.setProperty('pointer-events', 'none', 'important');
+      panel.style.visibility = 'hidden';
+    }
+  }
+  function unsealMenuForOpen() {
+    if (backdrop) {
+      backdrop.style.visibility = 'visible';
+      backdrop.style.setProperty('pointer-events', 'auto', 'important');
+    }
+    layers.forEach(l => { if (l) l.style.visibility = 'visible'; });
+    if (panel) {
+      panel.style.visibility = 'visible';
+      panel.style.setProperty('pointer-events', 'auto', 'important');
+    }
+  }
+  function stopMenuPointerCapture() {
+    if (backdrop) backdrop.style.setProperty('pointer-events', 'none', 'important');
+    if (panel) panel.style.setProperty('pointer-events', 'none', 'important');
+  }
+
   function init() {
     layers = [
       document.getElementById('sm-prelayer-1'),
@@ -2740,12 +2803,13 @@ const SM = (() => {
     gsap.set([...layers, panel], { xPercent: -100 });
     gsap.set(labelEls, { yPercent: 140, rotate: 8 });
     gsap.set(numEls, { opacity: 0 });
-    gsap.set(backdrop, { opacity: 0 });
+    sealMenuFully();
   }
 
   function open() {
     if (busy) return;
     busy = true; isOpen = true;
+    unsealMenuForOpen();
     document.body.classList.add('sm-menu-open');
     if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
 
@@ -2765,6 +2829,7 @@ const SM = (() => {
   function close() {
     if (!isOpen) return;
     document.body.classList.remove('sm-menu-open');
+    stopMenuPointerCapture();
     busy = true; isOpen = false;
     if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
 
@@ -2773,6 +2838,7 @@ const SM = (() => {
       onComplete: () => {
         gsap.set(labelEls, { yPercent: 140, rotate: 8 });
         gsap.set(numEls, { opacity: 0 });
+        sealMenuFully();
         busy = false;
       }
     });
@@ -2796,38 +2862,5 @@ function smToggle()       { SM.toggle(); }
 function smClose()        { SM.close(); }
 function smNavigate(tab)  { SM.navigate(tab); }
 </script>
-
-<!-- Staggered Menu overlay (fixed, renders above panes, below app-bar) -->
-<div class="sm-backdrop" id="sm-backdrop" onclick="smClose()"></div>
-<div class="sm-prelayer sm-prelayer-1" id="sm-prelayer-1"></div>
-<div class="sm-prelayer sm-prelayer-2" id="sm-prelayer-2"></div>
-<aside class="sm-panel-wrap" id="sm-panel" aria-label="Main navigation">
-  <div class="sm-panel-logo-row">
-    <div class="sm-panel-logo">Case<em>Flow</em></div>
-  </div>
-  <ul class="sm-nav-list" role="list">
-    <li class="sm-nav-item" id="sm-item-log">
-      <button class="sm-nav-btn active" onclick="smNavigate('log')" type="button">
-        <span class="sm-nav-num">01</span>
-        <span class="sm-nav-label">Log Case</span>
-      </button>
-    </li>
-    <li class="sm-nav-item" id="sm-item-history">
-      <button class="sm-nav-btn" onclick="smNavigate('history')" type="button">
-        <span class="sm-nav-num">02</span>
-        <span class="sm-nav-label">History</span>
-      </button>
-    </li>
-    <li class="sm-nav-item" id="sm-item-settings">
-      <button class="sm-nav-btn" onclick="smNavigate('settings')" type="button">
-        <span class="sm-nav-num">03</span>
-        <span class="sm-nav-label">Settings</span>
-      </button>
-    </li>
-  </ul>
-  <div class="sm-panel-footer">
-    <div class="sm-footer-note">ACGME Case Logging</div>
-  </div>
-</aside>
 </body>
 </html>
