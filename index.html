@@ -294,6 +294,16 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 
 .sum-row{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);gap:12px}
 .sum-row:last-child{border-bottom:none}
+.sum-caseid-block{padding:0 0 12px;border-bottom:1px solid var(--line)}
+.sum-caseid-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px;gap:12px}
+.sum-caseid-head .sum-lbl{padding:0}
+.sum-caseid-edit{background:transparent;border:none;padding:6px;cursor:pointer;opacity:.4;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.sum-caseid-edit:active{opacity:.75}
+.sum-caseid-input{width:calc(100% - 32px);margin:0 16px 4px;box-sizing:border-box;background:var(--bg2);border:1px solid var(--line2);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Sora',sans-serif;font-size:15px;outline:none;transition:border-color .18s}
+.sum-caseid-input:focus{border-color:var(--blue)}
+.sum-edit-combo .flow-combo{margin-top:4px}
+.flow-combo-wrap{width:100%;max-width:min(380px,90vw);margin-bottom:16px}
+.flow-combo-wrap .flow-combo-hint{font-size:11px;color:var(--text3);margin-top:8px;padding:0 4px;line-height:1.45}
 .sum-lbl{font-size:11px;color:var(--text3);min-width:72px;flex-shrink:0}
 .sum-val{font-size:14px;color:var(--text);flex:1;font-weight:500;line-height:1.4}
 .sum-val.empty{color:var(--text3);font-weight:400;font-style:italic}
@@ -426,8 +436,20 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .search-modal .srch-ico svg{width:18px;height:18px}
 .search-modal .srch-results{max-height:52vh;border-radius:12px;margin-top:10px}
 /* Submit overlay */
-.submit-overlay{position:fixed;inset:0;z-index:9000;background:rgba(7,9,15,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;opacity:0;pointer-events:none!important;transition:opacity .25s}
+.submit-overlay{position:fixed;inset:0;z-index:9000;background:rgba(7,9,15,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;opacity:0;pointer-events:none!important;transition:opacity .25s;padding:24px;box-sizing:border-box}
 .submit-overlay.on{opacity:1;pointer-events:all!important}
+.submit-overlay.use-orb .submit-spinner-wrap{display:none}
+.submit-orb-slot{min-height:160px;display:flex;align-items:center;justify-content:center;width:100%;max-width:360px}
+.submit-orb-slot .orb-wrap{margin:0 auto}
+.submit-success-panel{display:none;flex-direction:column;align-items:center;gap:12px;text-align:center;max-width:340px;padding:8px 12px 0}
+.submit-overlay.success-show .submit-label{display:none!important}
+.submit-overlay.success-show .submit-orb-slot{display:none}
+.submit-overlay.success-show .submit-spinner-wrap{display:none}
+.submit-overlay.success-show .submit-success-panel{display:flex!important;animation:sdFadeUp .45s ease}
+.submit-overlay.success-show .submit-duo{display:none!important}
+.submit-success-icon{width:72px;height:72px;border-radius:50%;background:rgba(52,211,153,.15);border:2px solid rgba(52,211,153,.45);display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--green);line-height:1}
+.submit-success-title{font-family:'Sora',sans-serif;font-size:26px;font-weight:700;color:#fff;letter-spacing:-.02em;line-height:1.2}
+.submit-success-sub{font-family:'Sora',sans-serif;font-size:17px;color:rgba(255,255,255,.78);line-height:1.55;max-width:300px}
 .submit-spinner-wrap{position:relative;width:100px;height:100px;display:flex;align-items:center;justify-content:center}
 .spinner{background-image:linear-gradient(rgb(186,66,255) 35%,rgb(0,225,255));width:100px;height:100px;animation:spinning82341 1.7s linear infinite;border-radius:50px;filter:blur(1px);box-shadow:0px -5px 20px 0px rgb(186,66,255),0px 5px 20px 0px rgb(0,225,255);display:flex;align-items:center;justify-content:center}
 .spinner1{background-color:rgb(20,22,30);width:82px;height:82px;border-radius:50px;filter:blur(8px)}
@@ -452,6 +474,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 /* Collapse hidden flow elements so the orb is truly centered on initial load */
 .question-bubble:not(.show),
 .answer-chips:not(.show),
+.flow-combo-wrap:not(.show),
 .answer-input-wrap:not(.show),
 .voice-answer-row:not(.show),
 .cpt-search-box:not(.show),
@@ -733,6 +756,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
       </div>
       <div class="question-bubble" id="q-bubble"></div>
       <div class="answer-chips" id="a-chips"></div>
+      <div class="flow-combo-wrap" id="a-combo-wrap"></div>
       <div class="cpt-search-box" id="cpt-search-box">
         <div class="srch-wrap">
           <div class="srch-ico"><svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></div>
@@ -931,10 +955,16 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   </div>
 </div>
 <div class="submit-overlay" id="submit-overlay">
-  <div class="submit-spinner-wrap">
+  <div class="submit-orb-slot" id="submit-orb-slot"></div>
+  <div class="submit-spinner-wrap" id="submit-spinner-wrap">
     <div class="spinner"><div class="spinner1"></div></div>
   </div>
   <div class="submit-label" id="submit-label">Submitting to ACGME…</div>
+  <div class="submit-success-panel" id="submit-success-panel">
+    <div class="submit-success-icon">&#10003;</div>
+    <div class="submit-success-title" id="submit-success-title">Submitted to ACGME</div>
+    <div class="submit-success-sub" id="submit-success-sub">Your case was sent successfully.</div>
+  </div>
   <div class="submit-duo" id="submit-duo">
     <div class="submit-duo-icon">📱</div>
     <div class="submit-duo-title">Approve Duo Push</div>
@@ -1084,8 +1114,8 @@ let pendingQs=[],currentQ=-1;
 const QUESTIONS=[
   {key:'procedures',isEmpty:()=>caseData.procedures.length===0,question:"I couldn't identify the procedure. What was performed? Search by name or CPT code.",type:'cpt-search'},
   {key:'role',isEmpty:()=>!caseData.role,question:'What was your role in this case?',type:'chips',options:['Surgeon','Assistant','Teaching Assistant','Observer']},
-  {key:'site',isEmpty:()=>!caseData.site,question:'At which hospital or site was this performed?',type:'chips',options:['Larkin Community Hospital','Larkin Palm Springs','Affiliated Site']},
-  {key:'attending',isEmpty:()=>!caseData.attending,question:'Who was the attending physician?',type:'chips',options:['Dr. Smith','Dr. Johnson','Dr. Williams','Dr. Brown']},
+  {key:'site',isEmpty:()=>!caseData.site,question:'At which hospital or site was this performed?',type:'combo',combo:'site'},
+  {key:'attending',isEmpty:()=>!caseData.attending,question:'Who was the attending physician?',type:'combo',combo:'att'},
   {key:'patientType',isEmpty:()=>!caseData.patientType,question:'Was this an adult or pediatric patient?',type:'chips',options:['Adult','Pediatric']},
   {key:'caseYear',isEmpty:()=>!caseData.caseYear,question:'What year of residency are you in?',type:'chips',options:['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6']},
 ];
@@ -1183,6 +1213,7 @@ function nextQuestion(){
   setTimeout(()=>{
     showBubble(q.question);document.getElementById('q-bubble').classList.add('show');
     if(q.type==='chips')showChips(typeof q.options==='function'?q.options():q.options);
+    else if(q.type==='combo')showFlowCombo(q.combo);
     else if(q.type==='cpt-search')showCptSearchPanel();
     else showTextAndVoice();
   },320);
@@ -1230,6 +1261,7 @@ function submitTextAnswer(){const val=document.getElementById('a-text-input').va
 function showBubble(text){const el=document.getElementById('q-bubble');el.textContent=text;if(text)el.classList.add('show')}
 function hideAnswerUI(){
   document.getElementById('a-chips').classList.remove('show');
+  const acw=document.getElementById('a-combo-wrap');if(acw){acw.classList.remove('show');acw.innerHTML='';}
   document.getElementById('a-text-wrap').classList.remove('show');
   document.getElementById('a-voice-row').classList.remove('show');
   document.getElementById('cpt-search-box').classList.remove('show');
@@ -1241,6 +1273,73 @@ function hideAnswerUI(){
 }
 function hideAll(){hideAnswerUI();document.getElementById('cpt-found-box').classList.remove('show');document.getElementById('cpt-select-box').classList.remove('show');document.getElementById('add-more-box').classList.remove('show');document.getElementById('summary-card').classList.remove('show');document.getElementById('final-actions').classList.remove('show')}
 function showChips(opts){const el=document.getElementById('a-chips');el.innerHTML=opts.map(o=>`<div class="chip-opt" onclick="chipPick('${o}',this)">${o}</div>`).join('');el.classList.add('show');}
+/** Site / attending: searchable combo (same data as ACGME profile lists) */
+function showFlowCombo(which){
+  const labels=which==='site'?getSitesForEdit():getAttendingsForEdit();
+  const cur=which==='site'?(caseData.site||''):(caseData.attending||'');
+  const hint=hasProfileCache(which==='site'?'cf5-sites':'cf5-attendings')
+    ? 'Type to filter or open the list — from your ACGME program.'
+    : 'Connect ACGME in Settings to load your program list. Defaults shown below.';
+  const ph=which==='site'?'Search or select site…':'Search or select attending…';
+  const wrap=document.getElementById('a-combo-wrap');
+  wrap.innerHTML=
+    '<div class="ce-combo flow-combo" data-which="'+which+'">'+
+    '<input type="text" class="ce-sel-input" id="flow-'+which+'-inp" placeholder="'+ph+'" autocomplete="off" autocorrect="off" autocapitalize="off" value="'+escAttr(cur)+'" '+
+    'onfocus="flowComboOpen(\''+which+'\')" oninput="flowComboInput(\''+which+'\',this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();flowComboTrySubmit(\''+which+'\');}">'+
+    '<div class="ce-combo-panel" id="flow-'+which+'-panel"></div></div>'+
+    '<div class="flow-combo-hint">'+escHtml(hint)+'</div>';
+  wrap.classList.add('show');
+  flowComboFilter(which, cur);
+  setTimeout(function(){const inp=document.getElementById('flow-'+which+'-inp');if(inp){inp.focus();inp.select();flowComboOpen(which);}},120);
+}
+function flowComboOpen(which){
+  const panel=document.getElementById('flow-'+which+'-panel');
+  const inp=document.getElementById('flow-'+which+'-inp');
+  if(!panel||!inp)return;
+  panel.classList.add('open');
+  flowComboFilter(which, inp.value);
+}
+function flowComboClose(which){
+  const p=document.getElementById('flow-'+which+'-panel');
+  if(p) p.classList.remove('open');
+}
+function flowComboFilter(which, q){
+  const labels=which==='site'?getSitesForEdit():getAttendingsForEdit();
+  const needle=(q||'').toLowerCase().trim();
+  const filtered=needle?labels.filter(function(l){return l.toLowerCase().indexOf(needle)!==-1;}):labels;
+  const panel=document.getElementById('flow-'+which+'-panel');
+  if(!panel)return;
+  if(!labels.length){
+    panel.innerHTML='<div class="ce-combo-empty">No sites/attendings loaded. Open Settings and connect ACGME.</div>';
+    return;
+  }
+  const slice=filtered.slice(0,150);
+  panel.innerHTML=slice.length
+    ? slice.map(function(l){
+        return '<button type="button" class="ce-combo-opt" data-lbl="'+escAttr(l)+'" onmousedown="event.preventDefault()" onclick="flowComboPick(\''+which+'\',this.dataset.lbl)">'+escHtml(l)+'</button>';
+      }).join('')
+    : '<div class="ce-combo-empty">No matches — clear the search to see all.</div>';
+}
+function flowComboInput(which, val){
+  if(which==='site') caseData.site=val; else caseData.attending=val;
+  flowComboFilter(which, val);
+}
+function flowComboPick(which, label){
+  const inp=document.getElementById('flow-'+which+'-inp');
+  if(inp) inp.value=label;
+  if(which==='site') caseData.site=label; else caseData.attending=label;
+  flowComboClose(which);
+  answerQuestion(label);
+}
+function flowComboTrySubmit(which){
+  const inp=document.getElementById('flow-'+which+'-inp');
+  if(!inp)return;
+  const v=inp.value.trim();
+  if(!v)return;
+  const labels=which==='site'?getSitesForEdit():getAttendingsForEdit();
+  const exact=labels.find(function(l){return l.toLowerCase()===v.toLowerCase();});
+  flowComboPick(which, exact||v);
+}
 function showTextAndVoice(){document.getElementById('a-text-wrap').classList.add('show');document.getElementById('a-voice-row').classList.add('show');setTimeout(()=>document.getElementById('a-text-input').focus(),200)}
 function chipPick(val,el){document.querySelectorAll('.chip-opt').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');setTimeout(()=>answerQuestion(val),220)}
 // Detect if returned codes are similar enough to need user selection
@@ -1631,11 +1730,11 @@ function setStateLabel(t){document.getElementById('state-label').textContent=t}
 const SUMMARY_FIELDS = [
   {key:'date',      label:'Date',      type:'date',  get:()=>caseData.date,      set:v=>{caseData.date=v}},
   {key:'role',      label:'Role',      type:'chips', get:()=>caseData.role,      set:v=>{caseData.role=v},      options:['Surgeon','Assistant','Teaching Assistant','Observer']},
-  {key:'site',      label:'Site',      type:'chips', get:()=>caseData.site,      set:v=>{caseData.site=v},      options:['Larkin Community Hospital','Larkin Palm Springs','Affiliated Site']},
-  {key:'attending', label:'Attending', type:'chips', get:()=>caseData.attending, set:v=>{caseData.attending=v}, options:['Dr. Smith','Dr. Johnson','Dr. Williams','Dr. Brown']},
+  {key:'site',      label:'Site',      type:'combo', combo:'site', get:()=>caseData.site,      set:v=>{caseData.site=v}},
+  {key:'attending', label:'Attending', type:'combo', combo:'att', get:()=>caseData.attending, set:v=>{caseData.attending=v}},
   {key:'patient',   label:'Patient',   type:'chips', get:()=>caseData.patientType,set:v=>{caseData.patientType=v},options:['Adult','Pediatric']},
   {key:'year',      label:'Year',      type:'chips', get:()=>caseData.caseYear,  set:v=>{caseData.caseYear=v},  options:['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6']},
-  {key:'caseId',    label:'Case ID',   type:'text',  get:()=>caseData.caseId,    set:v=>{caseData.caseId=v},    placeholder:'MRN, birthday, your ref — sent to ACGME in Comments'},
+  {key:'caseId',    label:'Case ID',   type:'caseid', get:()=>caseData.caseId,    set:v=>{caseData.caseId=v},    placeholder:'MRN, birthday, your ref — sent to ACGME in Comments'},
 ];
 let summaryEditKey = null;
 
@@ -1653,6 +1752,10 @@ function renderSummaryCard(){
   const procs = caseData.procedures.map(p=>p.d).join(', ') || '—';
   let html = `<div class="sum-row"><div class="sum-lbl">Procedures</div><div class="sum-val">${procs}</div></div>`;
   for(const f of SUMMARY_FIELDS){
+    if(f.type==='caseid'){
+      html += renderCaseIdSummaryBlock();
+      continue;
+    }
     const val = f.get();
     const isEditing = summaryEditKey === f.key;
     const displayVal = f.type==='date' && val ? formatDate(val) : (val || '');
@@ -1663,24 +1766,101 @@ function renderSummaryCard(){
     </div>`;
     if(isEditing){
       if(f.type==='date'){
-        html += `<div class="sum-edit-panel">
+        html += `<div class="sum-edit-panel" onclick="event.stopPropagation()">
           <input type="date" class="sum-date-input" value="${val||''}" onchange="saveSummaryDate(this.value)">
         </div>`;
-      } else if(f.type==='text'){
-        html += `<div class="sum-edit-panel">
-          <input type="text" class="sum-date-input" value="${val||''}" placeholder="${f.placeholder||''}"
-                 oninput="saveSummaryText('${f.key}',this.value)"
-                 style="font-size:14px;letter-spacing:normal">
+      } else if(f.type==='combo'){
+        const w=f.combo;
+        html += `<div class="sum-edit-panel sum-edit-combo" onclick="event.stopPropagation()">
+          <div class="ce-combo flow-combo" data-which="${w}">
+            <input type="text" class="ce-sel-input" id="sum-edit-${f.key}-inp" placeholder="${w==='site'?'Search or select site…':'Search or select attending…'}" autocomplete="off" value="${escAttr(val||'')}"
+              onfocus="sumFlowComboOpen('${f.key}')" oninput="sumFlowComboInput('${f.key}',this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();sumFlowComboPickExact('${f.key}');}">
+            <div class="ce-combo-panel" id="sum-edit-${f.key}-panel"></div>
+          </div>
         </div>`;
       } else {
         const opts = typeof f.options==='function' ? f.options() : (f.options||[]);
-        html += `<div class="sum-edit-panel">
+        html += `<div class="sum-edit-panel" onclick="event.stopPropagation()">
           ${opts.map(o=>`<div class="chip-opt sum-chip ${val===o?'selected':''}" onclick="saveSummaryChip('${f.key}','${o}',event)">${o}</div>`).join('')}
         </div>`;
       }
     }
   }
   document.getElementById('summary-card').innerHTML = html;
+  if(summaryEditKey && (summaryEditKey==='site'||summaryEditKey==='attending')){
+    setTimeout(function(){
+      sumFlowComboFilter(summaryEditKey, (SUMMARY_FIELDS.find(function(x){return x.key===summaryEditKey;})||{}).get()||'');
+      var inp=document.getElementById('sum-edit-'+summaryEditKey+'-inp');
+      if(inp){ inp.focus(); }
+    }, 0);
+  }
+}
+function renderCaseIdSummaryBlock(){
+  const f=SUMMARY_FIELDS.find(function(x){return x.key==='caseId';});
+  const val=caseData.caseId||'';
+  const ph=f.placeholder||'';
+  return '<div class="sum-caseid-block" onclick="event.stopPropagation()">'+
+    '<div class="sum-caseid-head">'+
+    '<div class="sum-lbl">'+escHtml(f.label)+'</div>'+
+    '<button type="button" class="sum-caseid-edit" onclick="event.stopPropagation();var el=document.getElementById(\'sum-caseid-inp\');if(el){el.focus();try{el.select();}catch(_){}}" aria-label="Edit Case ID">'+
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="display:block"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'+
+    '</button></div>'+
+    '<input type="text" id="sum-caseid-inp" class="sum-caseid-input" placeholder="'+escAttr(ph)+'" value="'+escAttr(val)+'" '+
+    'oninput="saveSummaryText(\'caseId\',this.value)" onclick="event.stopPropagation()">'+
+    '</div>';
+}
+function sumFlowComboOpen(key){
+  const panel=document.getElementById('sum-edit-'+key+'-panel');
+  const inp=document.getElementById('sum-edit-'+key+'-inp');
+  if(panel) panel.classList.add('open');
+  if(inp) sumFlowComboFilter(key, inp.value);
+}
+function sumFlowComboClose(key){
+  const p=document.getElementById('sum-edit-'+key+'-panel');
+  if(p) p.classList.remove('open');
+}
+function sumFlowComboFilter(key, q){
+  const which=key==='site'?'site':'att';
+  const labels=which==='site'?getSitesForEdit():getAttendingsForEdit();
+  const needle=(q||'').toLowerCase().trim();
+  const filtered=needle?labels.filter(function(l){return l.toLowerCase().indexOf(needle)!==-1;}):labels;
+  const panel=document.getElementById('sum-edit-'+key+'-panel');
+  if(!panel)return;
+  if(!labels.length){
+    panel.innerHTML='<div class="ce-combo-empty">No list loaded. Connect ACGME in Settings.</div>';
+    return;
+  }
+  const slice=filtered.slice(0,120);
+  panel.innerHTML=slice.length
+    ? slice.map(function(l){
+        return '<button type="button" class="ce-combo-opt" data-lbl="'+escAttr(l)+'" onmousedown="event.preventDefault()" onclick="sumFlowComboPick(\''+key+'\',this.dataset.lbl)">'+escHtml(l)+'</button>';
+      }).join('')
+    : '<div class="ce-combo-empty">No matches — clear search to see all.</div>';
+}
+function sumFlowComboInput(key, val){
+  const f=SUMMARY_FIELDS.find(function(x){return x.key===key;});
+  if(f) f.set(val);
+  sumFlowComboFilter(key, val);
+}
+function sumFlowComboPick(key, label){
+  const f=SUMMARY_FIELDS.find(function(x){return x.key===key;});
+  if(f) f.set(label);
+  const inp=document.getElementById('sum-edit-'+key+'-inp');
+  if(inp) inp.value=label;
+  sumFlowComboClose(key);
+  summaryEditKey=null;
+  renderSummaryCard();
+  toast('Updated','ok');
+}
+function sumFlowComboPickExact(key){
+  const inp=document.getElementById('sum-edit-'+key+'-inp');
+  if(!inp)return;
+  const v=inp.value.trim();
+  if(!v)return;
+  const which=key==='site'?'site':'att';
+  const labels=which==='site'?getSitesForEdit():getAttendingsForEdit();
+  const exact=labels.find(function(l){return l.toLowerCase()===v.toLowerCase();});
+  sumFlowComboPick(key, exact||v);
 }
 
 function toggleSummaryEdit(key){
@@ -1713,6 +1893,35 @@ function saveSummaryChip(key, val, e){
 }
 let cases=JSON.parse(localStorage.getItem('cf5-cases')||'[]');
 let _currentCaseId=null; // set before saving to avoid duplicate DB inserts
+/** While submitting, the live orb is moved into #submit-orb-slot so the gradient “thinking” orb shows on the overlay. */
+let _orbSlotRestore=null;
+function moveOrbToSubmitOverlay(){
+  const ow=document.getElementById('orb-wrap');
+  const slot=document.getElementById('submit-orb-slot');
+  if(!ow||!slot)return;
+  if(ow.parentElement!==slot){
+    _orbSlotRestore={parent:ow.parentElement,next:ow.nextSibling};
+    slot.appendChild(ow);
+  }
+  ow.style.display='';
+  orbState='thinking';
+}
+function restoreOrbFromSubmitOverlay(){
+  const ow=document.getElementById('orb-wrap');
+  const slot=document.getElementById('submit-orb-slot');
+  if(!ow||!slot||ow.parentElement!==slot)return;
+  if(_orbSlotRestore&&_orbSlotRestore.parent){
+    const {parent,next}=_orbSlotRestore;
+    try{
+      if(next&&next.parentNode===parent) parent.insertBefore(ow,next);
+      else parent.appendChild(ow);
+    }catch(_){ parent.appendChild(ow); }
+  } else {
+    const vs=document.getElementById('voice-screen');
+    if(vs) vs.insertBefore(ow, vs.firstChild);
+  }
+  _orbSlotRestore=null;
+}
 async function submitCase(){
   // If no ACGME credentials, send user to Settings to set them up first
   if(!localStorage.getItem('cf5-vault')){
@@ -1730,10 +1939,22 @@ async function submitCase(){
   const overlay=document.getElementById('submit-overlay');
   const labelEl=document.getElementById('submit-label');
   const duoEl=document.getElementById('submit-duo');
+  const succPanel=document.getElementById('submit-success-panel');
+  const succTitle=document.getElementById('submit-success-title');
+  const succSub=document.getElementById('submit-success-sub');
+
+  document.getElementById('cpt-found-box').classList.remove('show');
+  document.getElementById('summary-card').classList.remove('show');
+  document.getElementById('final-actions').classList.remove('show');
+
   btn.disabled=true;
+  overlay.classList.remove('success-show');
+  succPanel.style.display='none';
+  labelEl.style.display='';
   labelEl.textContent='Submitting to ACGME…';
   duoEl.classList.remove('on');
-  overlay.classList.add('on');
+  moveOrbToSubmitOverlay();
+  overlay.classList.add('on','use-orb');
   // Don’t auto-show “Duo” after a fixed delay — that misleads when the failure is session/auth (not Duo).
   const waitHintTimer=setTimeout(()=>{
     if(overlay.classList.contains('on')) labelEl.textContent='Still contacting ACGME… If your hospital uses Duo, you may get a push to approve.';
@@ -1753,33 +1974,52 @@ async function submitCase(){
 
   let status='submitted';
   try{
-    await callSubmitAcgme(payload);
-  } catch(e){
-    // Save locally even if ACGME submission fails; user can re-submit from History
-    status='pending';
-    if(e.mfaRequired){
-      showErrBanner('Case saved. ACGME session expired — tap to go to Settings and reconnect.', ()=>{goTab('settings');toggleAcgmeForm();});
-    } else {
-      const hint2=/session expired|not authenticated|reconnect/i.test(e.message||'')
-        ? '\n\nTip: CaseFlow login is not the same as ACGME. Use Settings → ACGME to reconnect.'
-        : '';
-      showErrBanner('Case saved locally. ACGME submission failed:\n\n'+e.message+'\n\nYou can re-submit from Case History. Tap to dismiss.'+hint2);
+    try{
+      await callSubmitAcgme(payload);
+    } catch(e){
+      // Save locally even if ACGME submission fails; user can re-submit from History
+      status='pending';
+      if(e.mfaRequired){
+        showErrBanner('Case saved. ACGME session expired — tap to go to Settings and reconnect.', ()=>{goTab('settings');toggleAcgmeForm();});
+      } else {
+        const hint2=/session expired|not authenticated|reconnect/i.test(e.message||'')
+          ? '\n\nTip: CaseFlow login is not the same as ACGME. Use Settings → ACGME to reconnect.'
+          : '';
+        showErrBanner('Case saved locally. ACGME submission failed:\n\n'+e.message+'\n\nYou can re-submit from Case History. Tap to dismiss.'+hint2);
+      }
+      console.warn('ACGME submit error:',e);
     }
-    console.warn('ACGME submit error:',e);
-  }
 
-  clearTimeout(waitHintTimer);
-  duoEl.classList.remove('on');
-  labelEl.textContent='Submitting to ACGME…';
-  const localId='cf-'+Date.now();
-  const c={id:localId,...payload,yr:payload.yr,cid:caseData.caseId,status,ts:new Date().toISOString()};
-  cases.unshift(c);localStorage.setItem('cf5-cases',JSON.stringify(cases));
-  saveCaseToDB(c); // async, fire-and-forget sync to DB
-  document.getElementById('hdr-n').textContent=cases.length;
-  overlay.classList.remove('on');
-  btn.disabled=false;
-  orbState='done';await sleep(700);orbState='idle';
-  if(status==='submitted') toast('Case submitted to ACGME ✓','ok');
+    clearTimeout(waitHintTimer);
+    duoEl.classList.remove('on');
+    labelEl.textContent='Submitting to ACGME…';
+    const localId='cf-'+Date.now();
+    const c={id:localId,...payload,yr:payload.yr,cid:caseData.caseId,status,ts:new Date().toISOString()};
+    cases.unshift(c);localStorage.setItem('cf5-cases',JSON.stringify(cases));
+    saveCaseToDB(c); // async, fire-and-forget sync to DB
+    document.getElementById('hdr-n').textContent=cases.length;
+
+    if(status==='submitted'){
+      labelEl.style.display='none';
+      succTitle.textContent='Submitted to ACGME';
+      succSub.textContent='Your case was logged successfully.';
+      succPanel.style.display='flex';
+      overlay.classList.add('success-show');
+      orbState='idle';
+      await sleep(2400);
+    } else {
+      orbState='idle';
+    }
+  } finally {
+    clearTimeout(waitHintTimer);
+    duoEl.classList.remove('on');
+    overlay.classList.remove('on','use-orb','success-show');
+    succPanel.style.display='none';
+    labelEl.style.display='';
+    labelEl.textContent='Submitting to ACGME…';
+    restoreOrbFromSubmitOverlay();
+    btn.disabled=false;
+  }
   resetFlow();
 }
 function resetFlow(){
@@ -2132,51 +2372,78 @@ async function resubmitCase(){
   const overlay=document.getElementById('submit-overlay');
   const labelEl2=document.getElementById('submit-label');
   const duoEl2=document.getElementById('submit-duo');
+  const succPanel=document.getElementById('submit-success-panel');
+  const succTitle=document.getElementById('submit-success-title');
+  const succSub=document.getElementById('submit-success-sub');
   btn.disabled=true;
+  overlay.classList.remove('success-show');
+  succPanel.style.display='none';
+  labelEl2.style.display='';
   labelEl2.textContent='Submitting to ACGME…';
   duoEl2.classList.remove('on');
-  overlay.classList.add('on');
+  moveOrbToSubmitOverlay();
+  overlay.classList.add('on','use-orb');
   const waitHintTimer2=setTimeout(()=>{
     if(overlay.classList.contains('on')) labelEl2.textContent='Still contacting ACGME… If your hospital uses Duo, you may get a push to approve.';
   },15000);
 
   let newStatus='submitted';
   try{
-    await callSubmitAcgme({
-      date:editingCase.date,
-      procs:editingCase.procs||[],
-      role:editingCase.role,
-      site:editingCase.site,
-      att:editingCase.att,
-      pt:editingCase.pt,
-      yr:editingCase.yr,
-      notes:editingCase.notes||'',
-      caseId:editingCase.cid||editingCase.caseId||'',
-    });
-  } catch(e){
-    newStatus='pending';
-    const hint=/session expired|not authenticated|reconnect/i.test(e.message||'')
-      ? '\n\nTip: Signing into CaseFlow is separate from your ACGME browser session. Open Settings → ACGME and reconnect if this keeps happening.'
-      : '';
-    showErrBanner('Re-submission failed. ACGME error:\n\n'+e.message+'\n\nCase status set to pending. Tap to dismiss.'+hint);
-    console.warn('ACGME resubmit error:',e);
-  }
+    try{
+      await callSubmitAcgme({
+        date:editingCase.date,
+        procs:editingCase.procs||[],
+        role:editingCase.role,
+        site:editingCase.site,
+        att:editingCase.att,
+        pt:editingCase.pt,
+        yr:editingCase.yr,
+        notes:editingCase.notes||'',
+        caseId:editingCase.cid||editingCase.caseId||'',
+      });
+    } catch(e){
+      newStatus='pending';
+      const hint=/session expired|not authenticated|reconnect/i.test(e.message||'')
+        ? '\n\nTip: Signing into CaseFlow is separate from your ACGME browser session. Open Settings → ACGME and reconnect if this keeps happening.'
+        : '';
+      showErrBanner('Re-submission failed. ACGME error:\n\n'+e.message+'\n\nCase status set to pending. Tap to dismiss.'+hint);
+      console.warn('ACGME resubmit error:',e);
+    }
 
-  clearTimeout(waitHintTimer2);
-  duoEl2.classList.remove('on');
-  labelEl2.textContent='Submitting to ACGME…';
-  const idx=cases.findIndex(c=>c.id===editingCase.id);
-  if(idx>-1){
-    cases[idx]={...editingCase,status:newStatus,ts:new Date().toISOString()};
-    localStorage.setItem('cf5-cases',JSON.stringify(cases));
-    pushCaseToSupabase(cases[idx]); // sync edits to Supabase
-    document.getElementById('hdr-n').textContent=cases.length;
+    clearTimeout(waitHintTimer2);
+    duoEl2.classList.remove('on');
+    labelEl2.textContent='Submitting to ACGME…';
+    const idx=cases.findIndex(c=>c.id===editingCase.id);
+    if(idx>-1){
+      cases[idx]={...editingCase,status:newStatus,ts:new Date().toISOString()};
+      localStorage.setItem('cf5-cases',JSON.stringify(cases));
+      pushCaseToSupabase(cases[idx]); // sync edits to Supabase
+      document.getElementById('hdr-n').textContent=cases.length;
+    }
+
+    if(newStatus==='submitted'){
+      labelEl2.style.display='none';
+      succTitle.textContent='Re-submitted to ACGME';
+      succSub.textContent='Your case update was sent successfully.';
+      succPanel.style.display='flex';
+      overlay.classList.add('success-show');
+      orbState='idle';
+      await sleep(2400);
+    } else {
+      orbState='idle';
+    }
+  } finally {
+    clearTimeout(waitHintTimer2);
+    duoEl2.classList.remove('on');
+    overlay.classList.remove('on','use-orb','success-show');
+    succPanel.style.display='none';
+    labelEl2.style.display='';
+    labelEl2.textContent='Submitting to ACGME…';
+    restoreOrbFromSubmitOverlay();
+    btn.disabled=false;
   }
-  overlay.classList.remove('on');
-  btn.disabled=false;
   closeCaseEdit();
   renderHistory();
-  if(newStatus==='submitted') toast('Case re-submitted to ACGME ✓','ok');
 }
 // ── CREDENTIAL ENCRYPTION (AES-GCM via Web Crypto API) ───────────────────────
 // Credentials never leave the device unencrypted. Key derived from user's login
