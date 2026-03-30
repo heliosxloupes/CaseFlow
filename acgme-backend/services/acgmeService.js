@@ -757,6 +757,9 @@ function extractAcgmeSubmitErrorHint(html) {
     .replace(/<style[\s\S]*?<\/style>/gi, ' ');
 
   const patterns = [
+    // ADS generic error page — primary user-visible line (see body.errorLayout)
+    /<span[^>]*\bid=["']errorMessage["'][^>]*>([^<]+)<\/span>/i,
+    /\bid=["']errorMessage["'][^>]*>([^<]+)</i,
     /<div[^>]*class="[^"]*validation-summary-errors[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     /<ul[^>]*class="[^"]*validation-summary-errors[^"]*"[^>]*>([\s\S]*?)<\/ul>/i,
     /<div[^>]*class="[^"]*alert[^"]*danger[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
