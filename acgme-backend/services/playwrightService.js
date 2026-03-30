@@ -96,31 +96,57 @@ function cookiesArrayToHeader(cookies) {
     .join('; ');
 }
 
-/** True if this Cookie header can load Case Entry Insert (same check as submit). */
+/**
+ * Probe the lightweight GetResidentRoles JSON endpoint — returns true if the
+ * session cookie is accepted by ACGME (200 + JSON array), false otherwise.
+ * Using a JSON API instead of the Insert HTML page avoids false negatives caused
+ * by ACGME redirecting the Insert page for reasons unrelated to auth (program
+ * setup, role assignment, etc.).
+ */
+const fetch        = require('node-fetch');
+const ACGME_BASE   = 'https://apps.acgme.org';
+const PROBE_UA     = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const ROLES_URL    = `${ACGME_BASE}/ads/CaseLogs/CaseEntryMobile/GetResidentRoles`;
+
 async function testCookieHeaderValid(cookieHeader) {
   if (!cookieHeader) return false;
   try {
-    await getInsertPageData(cookieHeader);
-    return true;
+    const res = await fetch(ROLES_URL, {
+      headers: {
+        Cookie: cookieHeader,
+        'User-Agent': PROBE_UA,
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        Referer: `${ACGME_BASE}/ads/`,
+      },
+    });
+    if (!res.ok) {
+      console.log(`[PW] Session probe: GetResidentRoles returned ${res.status}`);
+      return false;
+    }
+    const data = await res.json();
+    const valid = Array.isArray(data) && data.length > 0;
+    if (!valid) console.log('[PW] Session probe: GetResidentRoles returned empty/non-array');
+    return valid;
   } catch (e) {
-    console.log('[PW] Insert-page session probe failed:', e.message);
+    console.log('[PW] Session probe failed:', e.message);
     return false;
   }
 }
 
 /**
- * Test whether stored Playwright cookies can load the Case Entry Insert page.
+ * Test whether stored Playwright cookies are accepted by ACGME.
  */
 async function testCookiesValid(cookies) {
   return testCookieHeaderValid(cookiesArrayToHeader(cookies));
 }
 
 /**
- * Get a valid Cookie header string for a user, attempting refresh if necessary.
+ * Get a valid Cookie header string for a user.
  * Returns null if no valid session is available (user must reconnect ACGME).
  */
 async function getValidCookieHeader(userId) {
-  // 1. In-memory cache (25-min TTL) — must still pass Insert probe; stale entries are dropped
+  // 1. In-memory cache (25-min TTL)
   const cached = getSession(userId);
   if (cached) {
     const ok = await testCookieHeaderValid(cached);
@@ -137,7 +163,7 @@ async function getValidCookieHeader(userId) {
   const valid = await testCookiesValid(cookies);
   if (valid) {
     const header = cookiesArrayToHeader(cookies);
-    setSession(userId, header); // warm cache for 25 min
+    setSession(userId, header);
     return header;
   }
 
