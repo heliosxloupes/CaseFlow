@@ -1843,7 +1843,21 @@ function updateDateToggleLabel(){
 function escAttr(s){
   return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 }
+/** Legacy DB rows from failed /api/cases/submit with no case payload — not real cases */
+function isJunkHistoryCase(c){
+  if((c.status||'')!=='failed')return false;
+  const hasDate=c.date&&String(c.date).trim()!==''&&!Number.isNaN(Date.parse(String(c.date).split('T')[0]+'T12:00:00'));
+  const hasProcs=Array.isArray(c.procs)&&c.procs.length>0;
+  return !hasDate&&!hasProcs;
+}
 function filterHistory(){
+  const beforeLen=cases.length;
+  cases=cases.filter(c=>!isJunkHistoryCase(c));
+  if(cases.length!==beforeLen){
+    try{localStorage.setItem('cf5-cases',JSON.stringify(cases));}catch(e){}
+    const hdr=document.getElementById('hdr-n');
+    if(hdr)hdr.textContent=String(cases.length);
+  }
   const q=(document.getElementById('hist-search')?.value||'').toLowerCase().trim();
   const from=document.getElementById('hist-from')?.value||'';
   const to=document.getElementById('hist-to')?.value||'';
@@ -1866,7 +1880,9 @@ function filterHistory(){
   if(!filtered.length){list.innerHTML='<div class="empty"><p>No cases match your filters.</p></div>';return}
   list.innerHTML=filtered.map(c=>{
     const procs=c.procs?.length?c.procs.map(p=>p.d).join(', '):'No procedures listed';
-    const d=new Date(c.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const d=c.date&&String(c.date).trim()&&!Number.isNaN(Date.parse(String(c.date).split('T')[0]+'T12:00:00'))
+      ? new Date(String(c.date).split('T')[0]+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+      : '—';
     return`<div class="hist-item" data-case-id="${escAttr(c.id)}">
       <div style="flex:1;min-width:0">
         <div class="hprocs">${procs}</div>
@@ -2578,8 +2594,15 @@ async function loadCasesFromDB(){
     });
     if(!res.ok)return;
     const rows=await res.json();
+    // Drop legacy error-stub rows (failed submit with no case fields) — never show as real cases
+    const cleanRows=rows.filter(r=>{
+      if(r.status!=='failed')return true;
+      const hasDate=r.procedure_date&&String(r.procedure_date).trim()!=='';
+      const hasCodes=r.selected_codes&&String(r.selected_codes).trim()!=='';
+      return hasDate||hasCodes;
+    });
     // Convert DB rows to frontend case format
-    const dbCases=rows.map(r=>({
+    const dbCases=cleanRows.map(r=>({
       id:       String(r.id),
       dbId:     r.id,
       localId:  r.local_id,
@@ -2590,7 +2613,7 @@ async function loadCasesFromDB(){
       site:     r.site||'',
       att:      r.attending||'',
       pt:       r.patient_type||'Adult',
-      yr:       r.case_year||'Year 4',
+      yr:       String(r.case_year||'4').replace(/^Year\s+/i,'').trim()||'4',
       notes:    r.notes||'',
       status:   r.status||'pending',
     }));

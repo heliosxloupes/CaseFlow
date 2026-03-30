@@ -79,11 +79,9 @@ router.post('/submit', async (req, res, next) => {
 
     res.json(result);
   } catch (err) {
-    await db.query(
-      `INSERT INTO case_submissions (user_id, status, error_message, submitted_at)
-       VALUES ($1, 'failed', $2, NOW())`,
-      [req.userId, err.message]
-    ).catch(() => {});
+    // Do NOT insert a bare “failed” row with no case data — those polluted history as
+    // “No procedures listed / Invalid Date”. Errors are returned to the client; real cases
+    // stay in /api/cases/save rows or localStorage.
 
     // Surface MFA requirement as a structured response (not a 500)
     if (err.mfaRequired) {
@@ -109,6 +107,11 @@ router.get('/history', async (req, res, next) => {
               status, error_message, submitted_at
        FROM case_submissions
        WHERE user_id = $1
+         AND NOT (
+           status = 'failed'
+           AND (procedure_date IS NULL OR TRIM(procedure_date) = '')
+           AND (selected_codes IS NULL OR TRIM(selected_codes) = '')
+         )
        ORDER BY submitted_at DESC
        LIMIT 200`,
       [req.userId]
