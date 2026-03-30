@@ -2348,7 +2348,6 @@ function _finishAcgmeConnect(){
   loadSettingsUI();
   toast('ACGME account connected ✓','ok');
   acgmeServerSessionActive = true;
-  // Fetch sites/attendings; retry with verify-acgme if Insert was slow to accept new cookies
   fetchAcgmeProfile({ afterNewLogin: true });
 }
 
@@ -2356,7 +2355,7 @@ function _finishAcgmeConnect(){
  * Fetches the user's program-specific sites and attendings from the Railway
  * backend and caches them in localStorage (cf5-sites, cf5-attendings).
  * Also patches QUESTIONS and SUMMARY_FIELDS with the live data.
- * @param {{ afterNewLogin?: boolean }} opts - after saving credentials, set true to retry once with verify-acgme if profile is empty or errors.
+ * @param {{ afterNewLogin?: boolean }} opts - after saving credentials, brief delay so cookies are readable before profile fetch.
  */
 async function fetchAcgmeProfile(opts){
   if(!ACGME_BACKEND_URL) return;
@@ -2387,14 +2386,7 @@ async function fetchAcgmeProfile(opts){
 
   try{
     if(afterNew) await new Promise(function(r){ setTimeout(r, 400); });
-    let result = await loadOnce();
-    if(!result.ok){
-      const refreshed = await tryRefreshAcgmeSession();
-      if(refreshed) result = await loadOnce();
-    } else if(afterNew && !result.sitesLen && !result.attLen){
-      const refreshed = await tryRefreshAcgmeSession();
-      if(refreshed) result = await loadOnce();
-    }
+    const result = await loadOnce();
     if(!result.ok){
       console.warn('fetchAcgmeProfile:', result.error);
       toast(String(result.error || 'Could not load ACGME sites/attendings'), '');
@@ -2402,29 +2394,6 @@ async function fetchAcgmeProfile(opts){
       toast('Connected, but ACGME returned no sites/attendings. Try Edit → Save again, or check Railway logs.', '');
     }
   } catch(e){ console.warn('fetchAcgmeProfile:', e.message); toast(e.message, ''); }
-}
-
-/** Ask server to re-check cookies or run a silent Playwright re-login (no MFA if SSO still valid). */
-async function tryRefreshAcgmeSession(){
-  if(!ACGME_BACKEND_URL) return false;
-  const token = localStorage.getItem('cf5-token');
-  if(!token) return false;
-  try{
-    const r = await fetch(`${ACGME_BACKEND_URL}/api/auth/verify-acgme`,{
-      method:'POST',
-      headers:{'Authorization':`Bearer ${token}`},
-    });
-    const d = await r.json().catch(function(){ return {}; });
-    if(d.mfaRequired){
-      toast('ACGME requires verification — open Settings → Edit and sign in again.', '');
-      return false;
-    }
-    if(r.ok && d.success){
-      acgmeServerSessionActive = true;
-      return true;
-    }
-  } catch(e){ console.warn('tryRefreshAcgmeSession', e); }
-  return false;
 }
 
 /** Patches QUESTIONS and SUMMARY_FIELDS with fetched site/attending data */
@@ -2674,10 +2643,6 @@ async function launchApp(name,email){
     _applyProfileToUI(cachedSites, cachedAttendants);
   }
   if(localStorage.getItem('cf5-vault') && ACGME_BACKEND_URL && localStorage.getItem('cf5-token')){
-    if(acgmeServerSessionActive === false){
-      await tryRefreshAcgmeSession();
-      await syncAcgmeSettingsFromServer();
-    }
     await fetchAcgmeProfile();
   }
 }

@@ -176,42 +176,29 @@ router.post('/complete-mfa', authenticate, async (req, res, next) => {
 /**
  * POST /api/auth/verify-acgme
  *
- * Re-test whether stored session cookies are still valid.
- * If they've expired, attempts a fresh Playwright login (no MFA needed if within 14-day SSO window).
+ * Re-test whether stored session cookies still work against the Insert page.
+ * Never runs Playwright login here — that would send MFA/Duo codes unexpectedly.
+ * To refresh an expired session, the user must use Settings → Save credentials.
  */
 router.post('/verify-acgme', authenticate, async (req, res, next) => {
   try {
     const { rows } = await db.query(
-      'SELECT acgme_username, acgme_password_encrypted FROM user_acgme_credentials WHERE user_id = $1',
+      'SELECT acgme_username FROM user_acgme_credentials WHERE user_id = $1',
       [req.userId]
     );
     if (!rows.length) return res.status(404).json({ error: 'No ACGME credentials saved' });
 
-    // Check if stored cookies still work
     const cookieHeader = await pw.getValidCookieHeader(req.userId);
     if (cookieHeader) {
-      return res.json({ success: true, message: 'ACGME session is active' });
+      return res.json({ success: true, sessionActive: true, message: 'ACGME session is active' });
     }
 
-    // Cookies expired — try a fresh Playwright login (usually works within 14-day MFA window)
-    const password = decrypt(rows[0].acgme_password_encrypted);
-    const result   = await pw.startLogin(rows[0].acgme_username, password);
-
-    if (result.success) {
-      await pw.storeSessionCookies(req.userId, result.cookies);
-      return res.json({ success: true, message: 'ACGME re-authenticated successfully' });
-    }
-
-    if (result.mfaRequired) {
-      return res.json({
-        success: false,
-        mfaRequired: true,
-        sessionId: result.sessionId,
-        message: 'Your ACGME session has expired and MFA is required to reconnect.',
-      });
-    }
-
-    return res.status(500).json({ error: 'Re-authentication failed' });
+    return res.json({
+      success: false,
+      sessionActive: false,
+      message:
+        'ACGME session expired. Open Settings → ACGME Auto-Submit → Edit, enter credentials, and Save (only that action sends verification codes).',
+    });
   } catch (err) {
     next(err);
   }

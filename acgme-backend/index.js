@@ -22,6 +22,9 @@ app.use(express.json());
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
+  // Railway sits behind a proxy; trust proxy stays on for req.ip, but this silences
+  // express-rate-limit's permissive-trust-proxy validation error in logs.
+  validate: { trustProxy: false },
 });
 app.use(limiter);
 
