@@ -85,7 +85,10 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
   opacity:0;pointer-events:none;
   backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
 }
-.sm-backdrop.visible{pointer-events:all}
+/* Menu overlays must NOT intercept taps when closed — transform alone is unreliable on mobile */
+.sm-prelayer{pointer-events:none!important}
+body.sm-menu-open .sm-backdrop{pointer-events:auto}
+body.sm-menu-open .sm-panel-wrap{pointer-events:auto}
 .sm-prelayer{
   position:fixed;top:56px;left:0;
   width:min(78vw,360px);height:calc(100% - 56px);
@@ -101,6 +104,7 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
   z-index:182;will-change:transform;
   display:flex;flex-direction:column;overflow:hidden;
   box-shadow:4px 0 40px rgba(0,0,0,.6);
+  pointer-events:none;
 }
 .sm-panel-logo-row{
   padding:28px 28px 20px;border-bottom:1px solid rgba(255,255,255,.05);
@@ -2732,6 +2736,7 @@ const SM = (() => {
     labelEls   = Array.from(document.querySelectorAll('.sm-nav-label'));
     numEls     = Array.from(document.querySelectorAll('.sm-nav-num'));
 
+    document.body.classList.remove('sm-menu-open');
     gsap.set([...layers, panel], { xPercent: -100 });
     gsap.set(labelEls, { yPercent: 140, rotate: 8 });
     gsap.set(numEls, { opacity: 0 });
@@ -2741,6 +2746,7 @@ const SM = (() => {
   function open() {
     if (busy) return;
     busy = true; isOpen = true;
+    document.body.classList.add('sm-menu-open');
     if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
 
     const tl = gsap.timeline({ onComplete: () => { busy = false; } });
@@ -2748,7 +2754,6 @@ const SM = (() => {
     layers.forEach((l, i) => tl.to(l, { xPercent: 0, duration: 0.45, ease: 'power4.out' }, i * 0.07));
     tl.to(panel,    { xPercent: 0, duration: 0.62, ease: 'power4.out' }, 0.1);
     tl.to(backdrop, { opacity: 1, duration: 0.28 }, 0);
-    backdrop.classList.add('visible');
 
     tl.to(labelEls, { yPercent: 0, rotate: 0, duration: 0.75, ease: 'power4.out', stagger: 0.09 }, 0.27);
     tl.to(numEls,   { opacity: 1, duration: 0.45, ease: 'power2.out', stagger: 0.09 }, 0.32);
@@ -2759,6 +2764,7 @@ const SM = (() => {
 
   function close() {
     if (!isOpen) return;
+    document.body.classList.remove('sm-menu-open');
     busy = true; isOpen = false;
     if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
 
@@ -2770,10 +2776,7 @@ const SM = (() => {
         busy = false;
       }
     });
-    gsap.to(backdrop, {
-      opacity: 0, duration: 0.28,
-      onComplete: () => backdrop.classList.remove('visible')
-    });
+    gsap.to(backdrop, { opacity: 0, duration: 0.28 });
     gsap.to(iconWrap, { rotate: 0, duration: 0.32, ease: 'power3.inOut' });
     if (toggleText) toggleText.textContent = 'Menu';
   }
