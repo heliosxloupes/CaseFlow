@@ -24,6 +24,7 @@ const crypto = require('crypto');
 const db = require('../db');
 const { encrypt, decrypt } = require('./encryptionService');
 const { setSession, getSession } = require('./sessionCache');
+const { getInsertPageData } = require('./acgmeService');
 
 const ACGME_ORIGIN = 'https://apps.acgme.org';
 const B2C_TENANT   = 'acgmeras.b2clogin.com';
@@ -96,22 +97,18 @@ function cookiesArrayToHeader(cookies) {
 }
 
 /**
- * Test whether stored cookies are still valid by hitting an authenticated ACGME endpoint.
+ * Test whether stored cookies can load the Case Entry Insert page (same gate as submit).
+ * GetResidentRoles alone can return 200 while Insert still redirects to B2C login — that
+ * caused false "valid session" and confusing errors at submit time.
  */
 async function testCookiesValid(cookies) {
-  const fetch       = require('node-fetch');
   const cookieHeader = cookiesArrayToHeader(cookies);
   if (!cookieHeader) return false;
   try {
-    const res = await fetch(`${ACGME_ORIGIN}/ads/CaseLogs/CaseEntryMobile/GetResidentRoles`, {
-      headers: {
-        Cookie:              cookieHeader,
-        'X-Requested-With': 'XMLHttpRequest',
-        Accept:              'application/json',
-      },
-    });
-    return res.status === 200;
-  } catch {
+    await getInsertPageData(cookieHeader);
+    return true;
+  } catch (e) {
+    console.log('[PW] Insert-page session probe failed:', e.message);
     return false;
   }
 }

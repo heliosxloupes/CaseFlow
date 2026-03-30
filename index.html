@@ -1757,7 +1757,10 @@ async function submitCase(){
     if(e.mfaRequired){
       showErrBanner('Case saved. ACGME session expired — tap to go to Settings and reconnect.', ()=>{goTab('settings');toggleAcgmeForm();});
     } else {
-      showErrBanner('Case saved locally. ACGME submission failed:\n\n'+e.message+'\n\nYou can re-submit from Case History. Tap to dismiss.');
+      const hint2=/session expired|not authenticated|reconnect/i.test(e.message||'')
+        ? '\n\nTip: CaseFlow login is not the same as ACGME. Use Settings → ACGME to reconnect.'
+        : '';
+      showErrBanner('Case saved locally. ACGME submission failed:\n\n'+e.message+'\n\nYou can re-submit from Case History. Tap to dismiss.'+hint2);
     }
     console.warn('ACGME submit error:',e);
   }
@@ -2121,7 +2124,10 @@ async function resubmitCase(){
     });
   } catch(e){
     newStatus='pending';
-    showErrBanner('Re-submission failed. ACGME error:\n\n'+e.message+'\n\nCase status set to pending. Tap to dismiss.');
+    const hint=/session expired|not authenticated|reconnect/i.test(e.message||'')
+      ? '\n\nTip: Signing into CaseFlow is separate from your ACGME browser session. Open Settings → ACGME and reconnect if this keeps happening.'
+      : '';
+    showErrBanner('Re-submission failed. ACGME error:\n\n'+e.message+'\n\nCase status set to pending. Tap to dismiss.'+hint);
     console.warn('ACGME resubmit error:',e);
   }
 
