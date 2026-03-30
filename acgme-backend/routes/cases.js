@@ -27,6 +27,7 @@ router.post('/submit', async (req, res, next) => {
       procedureDate, procedureYear, residentRoleId,
       institutionId, attendingId, patientTypeId,
       selectedCodes, codeDescription, comments,
+      caseId = '',
     } = req.body;
 
     const required = { procedureDate, procedureYear, residentRoleId, institutionId, attendingId, patientTypeId, selectedCodes };
@@ -41,6 +42,7 @@ router.post('/submit', async (req, res, next) => {
       procedureDate, procedureYear, residentRoleId,
       institutionId, attendingId, patientTypeId,
       selectedCodes, codeDescription, comments,
+      caseId,
     });
 
     await db.query(

@@ -1129,7 +1129,7 @@ function nextQuestion(){
   document.getElementById('q-bubble').classList.add('show');
   setTimeout(()=>{
     showBubble(q.question);document.getElementById('q-bubble').classList.add('show');
-    if(q.type==='chips')showChips(q.options);
+    if(q.type==='chips')showChips(typeof q.options==='function'?q.options():q.options);
     else if(q.type==='cpt-search')showCptSearchPanel();
     else showTextAndVoice();
   },320);
@@ -1582,6 +1582,7 @@ const SUMMARY_FIELDS = [
   {key:'attending', label:'Attending', type:'chips', get:()=>caseData.attending, set:v=>{caseData.attending=v}, options:['Dr. Smith','Dr. Johnson','Dr. Williams','Dr. Brown']},
   {key:'patient',   label:'Patient',   type:'chips', get:()=>caseData.patientType,set:v=>{caseData.patientType=v},options:['Adult','Pediatric']},
   {key:'year',      label:'Year',      type:'chips', get:()=>caseData.caseYear,  set:v=>{caseData.caseYear=v},  options:['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6']},
+  {key:'caseId',    label:'Case ID',   type:'text',  get:()=>caseData.caseId,    set:v=>{caseData.caseId=v},    placeholder:'Optional'},
 ];
 let summaryEditKey = null;
 
@@ -1612,9 +1613,16 @@ function renderSummaryCard(){
         html += `<div class="sum-edit-panel">
           <input type="date" class="sum-date-input" value="${val||''}" onchange="saveSummaryDate(this.value)">
         </div>`;
-      } else {
+      } else if(f.type==='text'){
         html += `<div class="sum-edit-panel">
-          ${f.options.map(o=>`<div class="chip-opt sum-chip ${val===o?'selected':''}" onclick="saveSummaryChip('${f.key}','${o}',event)">${o}</div>`).join('')}
+          <input type="text" class="sum-date-input" value="${val||''}" placeholder="${f.placeholder||''}"
+                 oninput="saveSummaryText('${f.key}',this.value)"
+                 style="font-size:14px;letter-spacing:normal">
+        </div>`;
+      } else {
+        const opts = typeof f.options==='function' ? f.options() : (f.options||[]);
+        html += `<div class="sum-edit-panel">
+          ${opts.map(o=>`<div class="chip-opt sum-chip ${val===o?'selected':''}" onclick="saveSummaryChip('${f.key}','${o}',event)">${o}</div>`).join('')}
         </div>`;
       }
     }
@@ -1635,6 +1643,11 @@ function saveSummaryDate(val){
   if(f) f.set(val);
   summaryEditKey=null;
   renderSummaryCard();
+}
+function saveSummaryText(key, val){
+  const f = SUMMARY_FIELDS.find(f=>f.key===key);
+  if(f) f.set(val);
+  // Don't re-render (would steal focus); user closes by tapping elsewhere
 }
 
 function saveSummaryChip(key, val, e){
@@ -1679,6 +1692,7 @@ async function submitCase(){
     pt:caseData.patientType||'Adult',
     yr:(caseData.caseYear||'Year 4').replace('Year ',''),
     notes:caseData.notes||'',
+    caseId:caseData.caseId||'',
   };
 
   let status='submitted';
@@ -2128,6 +2142,47 @@ function _finishAcgmeConnect(){
   document.getElementById('s-acgme-form').classList.remove('open');
   loadSettingsUI();
   toast('ACGME account connected ✓','ok');
+  // Fetch user-specific sites and attendings in the background
+  fetchAcgmeProfile();
+}
+
+/**
+ * Fetches the user's program-specific sites and attendings from the Railway
+ * backend and caches them in localStorage (cf5-sites, cf5-attendings).
+ * Also patches QUESTIONS and SUMMARY_FIELDS with the live data.
+ */
+async function fetchAcgmeProfile(){
+  if(!ACGME_BACKEND_URL) return;
+  const token = localStorage.getItem('cf5-token');
+  if(!token) return;
+  try{
+    const resp = await fetch(`${ACGME_BACKEND_URL}/api/lookups/user-profile`,{
+      headers:{'Authorization':`Bearer ${token}`},
+    });
+    if(!resp.ok){ console.warn('fetchAcgmeProfile HTTP', resp.status); return; }
+    const {sites=[], attendings=[]} = await resp.json();
+    if(sites.length)     localStorage.setItem('cf5-sites',      JSON.stringify(sites));
+    if(attendings.length)localStorage.setItem('cf5-attendings', JSON.stringify(attendings));
+    _applyProfileToUI(sites, attendings);
+  } catch(e){ console.warn('fetchAcgmeProfile:', e.message); }
+}
+
+/** Patches QUESTIONS and SUMMARY_FIELDS with fetched site/attending data */
+function _applyProfileToUI(sites, attendings){
+  const siteLabels = sites.map(s=>s.label);
+  const attLabels  = attendings.map(a=>a.label);
+  if(siteLabels.length){
+    const qSite = QUESTIONS.find(q=>q.key==='site');
+    const sSite = SUMMARY_FIELDS.find(f=>f.key==='site');
+    if(qSite) qSite.options = siteLabels;
+    if(sSite) sSite.options = siteLabels;
+  }
+  if(attLabels.length){
+    const qAtt = QUESTIONS.find(q=>q.key==='attending');
+    const sAtt = SUMMARY_FIELDS.find(f=>f.key==='attending');
+    if(qAtt) qAtt.options = attLabels;
+    if(sAtt) sAtt.options = attLabels;
+  }
 }
 async function getAcgmeCredentials(){
   // When backend is configured, credentials live in the Railway DB — no local decryption needed.
@@ -2152,29 +2207,28 @@ function togglePassVis(){
 // e.g. "https://acgme-backend-production.up.railway.app"
 const ACGME_BACKEND_URL = 'https://caseflow-production.up.railway.app';
 
-// Static ID maps — fill these in using /api/lookups/* once the backend is deployed.
-// These are specific to your program (Larkin / Plastic Surgery - Integrated).
+// Static ID maps for role and patient type (program-independent).
+// Site and attending IDs are resolved dynamically from cf5-sites / cf5-attendings.
 const ROLE_IDS = {
   'Surgeon':            '',  // e.g. "119"
   'Assistant':          '',
   'Teaching Assistant': '',
   'Observer':           '',
 };
-const INSTITUTION_IDS = {
-  'Larkin Community Hospital': '',  // e.g. "29262"
-  'Larkin Palm Springs':       '',
-  'Affiliated Site':           '',
-};
-const ATTENDING_IDS = {
-  'Dr. Smith':    '',  // e.g. "633696"
-  'Dr. Johnson':  '',
-  'Dr. Williams': '',
-  'Dr. Brown':    '',
-};
 const PATIENT_IDS = {
   'Adult':     '',  // e.g. "474"
   'Pediatric': '',
 };
+
+/** Resolve a label to an ACGME numeric ID using the cached profile data */
+function resolveProfileId(cacheKey, label){
+  if(!label) return '';
+  try{
+    const list = JSON.parse(localStorage.getItem(cacheKey)||'[]');
+    const found = list.find(item=>item.label===label);
+    return found ? found.id : label;
+  } catch(_){ return label; }
+}
 
 function formatAcgmeDate(isoDate){
   // "2026-03-28" → "3/28/2026"
@@ -2196,12 +2250,13 @@ async function callSubmitAcgme(casePayload){
       procedureDate:   formatAcgmeDate(casePayload.date),
       procedureYear:   String(casePayload.yr||'4').replace('Year ',''),
       residentRoleId:  ROLE_IDS[casePayload.role]  || casePayload.role  || '',
-      institutionId:   INSTITUTION_IDS[casePayload.site] || casePayload.site || '',
-      attendingId:     ATTENDING_IDS[casePayload.att]   || casePayload.att   || '',
+      institutionId:   resolveProfileId('cf5-sites',      casePayload.site),
+      attendingId:     resolveProfileId('cf5-attendings', casePayload.att),
       patientTypeId:   PATIENT_IDS[casePayload.pt]      || casePayload.pt    || '',
       selectedCodes:   proc.c,
       codeDescription: proc.d,
       comments:        casePayload.notes||'',
+      caseId:          casePayload.caseId||'',
     };
 
     const resp=await fetch(`${ACGME_BACKEND_URL}/api/cases/submit`,{
@@ -2327,6 +2382,16 @@ async function launchApp(name,email){
   await loadCasesFromDB();
   document.getElementById('hdr-n').textContent=cases.length;
   renderHistory();
+  // Apply any cached sites/attendings immediately, then refresh if vault is connected
+  const cachedSites      = JSON.parse(localStorage.getItem('cf5-sites')||'[]');
+  const cachedAttendants = JSON.parse(localStorage.getItem('cf5-attendings')||'[]');
+  if(cachedSites.length || cachedAttendants.length){
+    _applyProfileToUI(cachedSites, cachedAttendants);
+  }
+  // If ACGME credentials are saved but cache is empty, fetch in background
+  if(localStorage.getItem('cf5-vault') && (!cachedSites.length || !cachedAttendants.length)){
+    fetchAcgmeProfile();
+  }
 }
 
 // ── DB-backed case storage ─────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 const express = require('express');
 const router  = express.Router();
-const { getLookupData } = require('../services/acgmeService');
+const { getLookupData, getUserProfile } = require('../services/acgmeService');
 const { decrypt }       = require('../services/encryptionService');
 const pw  = require('../services/playwrightService');
 const db  = require('../db');
@@ -34,6 +34,16 @@ router.get('/codes', async (req, res, next) => {
   try {
     const cookie = await getOrRefreshSession(req.userId);
     res.json(await getLookupData(cookie, 'codes', req.query));
+  } catch (err) { next(err); }
+});
+
+// GET /api/lookups/user-profile
+// Returns the user's program-specific sites and attendings fetched from ACGME.
+router.get('/user-profile', async (req, res, next) => {
+  try {
+    const cookie = await getOrRefreshSession(req.userId);
+    const profile = await getUserProfile(cookie);
+    res.json(profile);
   } catch (err) { next(err); }
 });
 

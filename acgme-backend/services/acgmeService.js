@@ -321,6 +321,7 @@ async function submitCase(sessionCookie, caseData) {
     SelectedCodes:   caseData.selectedCodes,
     CodeDescription: caseData.codeDescription || '',
     Comments:        caseData.comments || '',
+    CaseId:          caseData.caseId || '',
     IsMobileApp:     'True',
     MobileViewMode:  '0',
     SearchTerm:      'False',
@@ -356,6 +357,49 @@ async function submitCase(sessionCookie, caseData) {
   throw new Error(`Unexpected submission response: ${res.status}`);
 }
 
+// ── User Profile (sites + attendings) ─────────────────────────────────────────
+
+/**
+ * Parses <select name="NAME"> options from HTML.
+ * Returns [{id, label}] for all options that have a non-empty value.
+ */
+function parseSelectOptions(html, selectName) {
+  const re = new RegExp(
+    `<select[^>]+(?:id|name)=["']${selectName}["'][^>]*>([\\s\\S]*?)<\\/select>`,
+    'i'
+  );
+  const selectMatch = html.match(re);
+  if (!selectMatch) return [];
+  const optRe = /<option[^>]+value="([^"]*)"[^>]*>([^<]*)</gi;
+  const results = [];
+  let m;
+  while ((m = optRe.exec(selectMatch[1])) !== null) {
+    const id    = m[1].trim();
+    const label = m[2].trim();
+    if (id) results.push({ id, label });
+  }
+  return results;
+}
+
+/**
+ * Fetches the ACGME Insert page and returns the user's program-specific
+ * sites and attendings as {id, label} arrays.
+ */
+async function getUserProfile(sessionCookie) {
+  const res = await fetchT(`${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`, {
+    headers: { 'Cookie': sessionCookie, 'User-Agent': UA, 'Accept': 'text/html' },
+  }, 15000);
+
+  if (!res.ok) throw new Error(`Failed to load ACGME Insert page: ${res.status}`);
+  const html = await res.text();
+
+  const sites      = parseSelectOptions(html, 'Institutions');
+  const attendings = parseSelectOptions(html, 'Attendings');
+
+  console.log(`[profile] sites: ${sites.length}, attendings: ${attendings.length}`);
+  return { sites, attendings };
+}
+
 async function getLookupData(sessionCookie, type, params = {}) {
   const endpoints = {
     cptCodes:  '/ads/CaseLogs/CaseEntryMobile/GetCptTypeToAreaInfosBySpecialtyActiveDate',
@@ -385,4 +429,4 @@ function scrapeHiddenFields(html) {
   return fields;
 }
 
-module.exports = { loginToACGME, getInsertPageData, submitCase, getLookupData };
+module.exports = { loginToACGME, getInsertPageData, submitCase, getLookupData, getUserProfile };
