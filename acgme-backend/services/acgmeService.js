@@ -653,6 +653,9 @@ async function resolveSelectedCodesIfNeeded(sessionCookie, hidden, caseData) {
  * fields (so programmatic values override any duplicate names from hidden).
  */
 function buildInsertFormPayload(token, hidden, caseData) {
+  const codes = caseData.selectedCodes || '';
+  // Insert HTML sets HoldSelectedCodes + SelectedCodes together in the UI; leaving Hold* as bare CPT
+  // while posting a resolved tuple (or vice versa) can trigger ADS 500s.
   return new URLSearchParams({
     ...hidden,
     __RequestVerificationToken: token,
@@ -662,7 +665,8 @@ function buildInsertFormPayload(token, hidden, caseData) {
     Institutions:    caseData.institutionId,
     Attendings:      caseData.attendingId,
     PatientTypes:    caseData.patientTypeId,
-    SelectedCodes:   caseData.selectedCodes,
+    HoldSelectedCodes: codes,
+    SelectedCodes:     codes,
     CodeDescription: caseData.codeDescription || '',
     Comments:        caseData.comments || '',
     CaseId:          sanitizeCaseIdForAds(caseData.caseId),
@@ -703,6 +707,14 @@ function logSubmitPayloadDiagnostics(payload, hidden, caseData) {
       if (cid && !/^\d+$/.test(cid)) {
         console.warn(
           '[ACGME] hint: CaseId is non-numeric — optional Case ID in CaseFlow may not be ACGME server id; try clearing it or use only ADS numeric case id if editing.'
+        );
+      }
+      const scLen = String(caseData.selectedCodes || '').length;
+      const scRaw = String(caseData.selectedCodes || '').trim();
+      if (scLen > 0 && scLen < 12 && !scRaw.includes(',')) {
+        console.warn(
+          '[ACGME] hint: SelectedCodes is very short and has no commas — likely bare CPT only. ' +
+            'Redeploy backend with GetCodes resolution, or expect ADS 500. After deploy you should see log line "[ACGME] Resolved CPT …".'
         );
       }
     }
