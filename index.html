@@ -2228,9 +2228,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   const loginBg=document.getElementById('login-colorbends');
   if(loginBg) new ColorBendsRenderer(loginBg,{
     rotation:30, speed:0.18, autoRotate:4,
-    colors:['#040d1f','#0a1f3d','#0d2a5e','#1a4a8a','#4f8ef7','#0e3060','#071428'],
-    warpStrength:1.4, frequency:0.9, mouseInfluence:0.5,
-    parallax:0.4, noise:0.04, transparent:false
+    colors:['#0047ab','#0072ff','#00b4d8','#4f8ef7','#7209b7','#3a0ca3','#023e8a','#48cae4'],
+    warpStrength:1.5, frequency:0.85, mouseInfluence:0.0,
+    parallax:0.0, noise:0.04, transparent:false
   });
   function tryBuildIndex(){if(typeof CPT_DB!=='undefined'){buildIndex();}else{setTimeout(tryBuildIndex,100);}}
   setTimeout(tryBuildIndex,200);
