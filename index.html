@@ -395,7 +395,13 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
   font-size:40px;font-weight:700;letter-spacing:-2.5px;
   color:#fff;text-shadow:0 2px 32px rgba(0,0,0,.6);
 }
-.login-logo-name em{font-style:normal;color:var(--blue)}
+.login-logo-name em{
+  font-style:normal;
+  background:linear-gradient(135deg,#5a98ff 0%,#a78bfa 55%,#60a5fa 100%);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+  text-shadow:none;
+}
 .login-logo-tag{
   font-size:11px;color:rgba(255,255,255,.38);
   letter-spacing:.2em;text-transform:uppercase;margin-top:8px;
@@ -412,12 +418,19 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
   border:1.5px solid transparent;
 }
 .login-cta-btn.primary{
-  background:var(--blue);color:#fff;
-  box-shadow:0 4px 22px rgba(79,142,247,0.35);
+  background:linear-gradient(135deg,#5a98ff 0%,#a78bfa 60%,#60a5fa 100%);
+  color:#fff;border-color:transparent;
+  box-shadow:0 4px 24px rgba(100,120,255,0.45);
 }
-.login-cta-btn.primary:hover{opacity:.88}
+.login-cta-btn.primary:hover{opacity:.88;box-shadow:0 6px 28px rgba(120,100,255,0.55)}
 .login-cta-btn.primary.active{
-  background:transparent;color:var(--blue);border-color:var(--blue);
+  background:transparent;
+  color:transparent;
+  background-clip:text;-webkit-background-clip:text;
+  background-image:linear-gradient(135deg,#5a98ff 0%,#a78bfa 60%,#60a5fa 100%);
+  -webkit-text-fill-color:transparent;
+  border-image:linear-gradient(135deg,#5a98ff,#a78bfa,#60a5fa) 1;
+  border-style:solid;border-width:1.5px;
   box-shadow:none;
 }
 .login-cta-btn.secondary{
