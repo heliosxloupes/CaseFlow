@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>CaseFlow</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script type="module" src="https://unpkg.com/@splinetool/viewer@1.12.73/build/spline-viewer.js"></script>
+<script src="https://unpkg.com/three@0.167.1/build/three.min.js"></script>
 <style>
 :root{
   --bg:#07090f;--bg1:#0d1119;--bg2:#131922;--bg3:#1a2130;
@@ -82,16 +82,14 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 }
 .orb-wrap:active{transform:scale(.96)}
 .orb-wrap.inactive{opacity:.3;pointer-events:none}
-.orb-spline-wrap{
+.orb-canvas-wrap{
   position:absolute;inset:0;
-  border-radius:50%;overflow:hidden;
   transition:transform .06s ease,filter .06s ease,opacity .3s;
 }
-.orb-spline-wrap spline-viewer{
-  width:100%;height:100%;display:block;
-  --spline-viewer-background:transparent;
+.orb-canvas-wrap canvas{
+  width:100%!important;height:100%!important;display:block;
 }
-/* Fallback shimmer shown while Spline loads */
+/* Fallback shimmer shown while WebGL loads */
 .orb-loading-fallback{
   position:absolute;inset:0;border-radius:50%;
   background:radial-gradient(circle at 38% 35%, #1e3568 0%, #0d1119 65%);
@@ -371,13 +369,9 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
   align-items:center;justify-content:flex-end;
   padding:0;position:relative;overflow:hidden;
 }
-.login-spline-bg{
+.login-colorbends-bg{
   position:absolute;inset:0;width:100%;height:100%;
-  pointer-events:none;
-}
-.login-spline-bg spline-viewer{
-  width:100%;height:100%;display:block;
-  --spline-viewer-background:transparent;
+  pointer-events:none;overflow:hidden;
 }
 .login-overlay{
   position:absolute;inset:0;
@@ -467,13 +461,8 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 </head>
 <body>
 <div class="page on" id="pg-login">
-  <!-- Spline 3D background -->
-  <div class="login-spline-bg">
-    <spline-viewer
-      url="https://prod.spline.design/fba5a24b-a843-461d-b983-e5c140313420/scene.splinecode"
-      loading="lazy"
-    ></spline-viewer>
-  </div>
+  <!-- ColorBends animated background -->
+  <div class="login-colorbends-bg" id="login-colorbends"></div>
   <div class="login-overlay"></div>
 
   <!-- Brand — top center -->
@@ -562,15 +551,7 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
   <div class="pane on" id="pn-log">
     <div class="voice-screen" id="voice-screen">
       <div class="orb-wrap" id="orb-wrap" onclick="handleOrbTap()">
-        <div class="orb-spline-wrap" id="orb-spline-wrap">
-          <spline-viewer
-            id="orb-viewer"
-            url="https://prod.spline.design/3ff7b617-2fe9-46c7-8e06-b6d7c382f4db/scene.splinecode"
-            events-target="global"
-          ></spline-viewer>
-        </div>
-        <!-- Fallback shown until Spline loads -->
-        <div class="orb-loading-fallback" id="orb-fallback"></div>
+        <div class="orb-canvas-wrap" id="orb-canvas-wrap"></div>
         <div class="orb-hint" id="orb-hint">
           <svg viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 14.9A7.002 7.002 0 0 1 5 9H3a9 9 0 0 0 8 8.94V20H8v2h8v-2h-3v-2.06A9 9 0 0 0 21 9h-2a7 7 0 0 1-5.5 6.9z"/></svg>
           <span>Tap to start</span>
@@ -802,22 +783,9 @@ function kwMatch(text){
   }
   return matched.slice(0,5);
 }
-// ── ORB — Spline-based with CSS audio reactivity ──────────────────────────
+// ── ORB — WebGL OrbRenderer (ReactBits) with audio reactivity ────────────
 let orbState='idle',audioLevel=0,smoothLevel=0,analyser=null,dataArray=null,animFrame=null;
-let splineApp=null; // Spline runtime reference (set when viewer fires 'load')
-
-// Wire up the Spline viewer once it finishes loading
-document.addEventListener('DOMContentLoaded',()=>{
-  const viewer=document.getElementById('orb-viewer');
-  if(!viewer)return;
-  viewer.addEventListener('load',()=>{
-    const fallback=document.getElementById('orb-fallback');
-    if(fallback)fallback.classList.add('hidden');
-    // Store runtime reference for variable control
-    splineApp=viewer.spline||null;
-    console.log('[Spline] Orb loaded',splineApp?'(runtime available)':'(no runtime)');
-  });
-});
+let orbRenderer=null; // OrbRenderer instance
 
 function readMic(){
   if(!analyser){audioLevel=0;return;}
@@ -827,19 +795,15 @@ function readMic(){
 }
 
 function updateOrbVisual(level,state){
-  const wrap=document.getElementById('orb-spline-wrap');
+  const wrap=document.getElementById('orb-canvas-wrap');
   if(!wrap)return;
-  // CSS-based reactivity — always works regardless of Spline scene variables
   const scale=state==='idle'?1:1+level*0.09;
   const brightness=state==='listening'?1+level*0.35:state==='thinking'?1.12:1;
-  const blur=state==='listening'?0:0;
   wrap.style.transform=`scale(${scale.toFixed(3)})`;
   wrap.style.filter=`brightness(${brightness.toFixed(2)})`;
-  // Try to push audio level into Spline scene variables
-  if(splineApp){
-    try{splineApp.setVariable('audioLevel',level);}catch(_){}
-    try{splineApp.setVariable('intensity',level);}catch(_){}
-    try{splineApp.setVariable('scale',scale);}catch(_){}
+  if(orbRenderer){
+    const active=(state==='listening'||state==='thinking');
+    orbRenderer.setActive(active);
   }
 }
 
@@ -857,6 +821,11 @@ function startOrb(){
   if(animFrame)cancelAnimationFrame(animFrame);
   lastTs=performance.now();
   animFrame=requestAnimationFrame(orbLoop);
+  // Init WebGL orb if not already running
+  if(!orbRenderer){
+    const wrap=document.getElementById('orb-canvas-wrap');
+    if(wrap) orbRenderer=new OrbRenderer(wrap,{hue:220,hoverIntensity:0.3,backgroundColor:[0.027,0.035,0.059]});
+  }
 }
 // MIC
 let micStream=null,audioCtx2=null;
@@ -2256,6 +2225,14 @@ function goTab(n){document.querySelectorAll('.tab').forEach(b=>b.classList.remov
 
 document.addEventListener('DOMContentLoaded',()=>{
   startOrb();
+  // Init ColorBends login background
+  const loginBg=document.getElementById('login-colorbends');
+  if(loginBg) new ColorBendsRenderer(loginBg,{
+    rotation:30, speed:0.18, autoRotate:4,
+    colors:['#040d1f','#0a1f3d','#0d2a5e','#1a4a8a','#4f8ef7','#0e3060','#071428'],
+    warpStrength:1.4, frequency:0.9, mouseInfluence:0.5,
+    parallax:0.4, noise:0.04, transparent:false
+  });
   function tryBuildIndex(){if(typeof CPT_DB!=='undefined'){buildIndex();}else{setTimeout(tryBuildIndex,100);}}
   setTimeout(tryBuildIndex,200);
 
@@ -2278,6 +2255,178 @@ function toast(msg,type=''){const t=document.getElementById('toast');t.textConte
 function showErrBanner(msg,onClick){const b=document.getElementById('err-banner');document.getElementById('err-banner-text').textContent=msg;b.style.display='block';b.onclick=onClick?function(){onClick();closeErrBanner();}:closeErrBanner;}
 function closeErrBanner(){document.getElementById('err-banner').style.display='none';}
 if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}
+
+/* ================================================================
+   OrbRenderer — WebGL glowing orb (ReactBits port to vanilla JS)
+   ================================================================ */
+class OrbRenderer{
+  constructor(container,opts={}){
+    this.container=container;
+    this.hue=opts.hue??0;
+    this.hoverIntensity=opts.hoverIntensity??0.2;
+    this.bgColor=opts.backgroundColor??[0.02,0.02,0.06];
+    this.targetHover=0;this.currentHover=0;this.currentRot=0;this.lastTs=0;
+    this.canvas=document.createElement('canvas');
+    this.canvas.style.cssText='width:100%;height:100%;display:block;';
+    this.container.appendChild(this.canvas);
+    this.gl=this.canvas.getContext('webgl',{alpha:true,premultipliedAlpha:false,antialias:false});
+    if(!this.gl){console.warn('WebGL not available');return;}
+    this._build();this._resize();
+    this._onResize=this._resize.bind(this);
+    window.addEventListener('resize',this._onResize);
+    this._raf=requestAnimationFrame(this._loop.bind(this));
+  }
+  static VERT=`precision highp float;attribute vec2 position;attribute vec2 uv;varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position,0.0,1.0);}`;
+  static FRAG=`precision highp float;
+uniform float iTime;uniform vec3 iResolution;uniform float hue;uniform float hover;uniform float rot;uniform float hoverIntensity;uniform vec3 backgroundColor;varying vec2 vUv;
+vec3 rgb2yiq(vec3 c){return vec3(dot(c,vec3(.299,.587,.114)),dot(c,vec3(.596,-.274,-.322)),dot(c,vec3(.211,-.523,.312)));}
+vec3 yiq2rgb(vec3 c){return vec3(c.x+.956*c.y+.621*c.z,c.x-.272*c.y-.647*c.z,c.x-1.106*c.y+1.703*c.z);}
+vec3 adjustHue(vec3 color,float hueDeg){float h=hueDeg*3.14159265/180.0;vec3 yiq=rgb2yiq(color);float cosA=cos(h);float sinA=sin(h);float i2=yiq.y*cosA-yiq.z*sinA;float q2=yiq.y*sinA+yiq.z*cosA;yiq.y=i2;yiq.z=q2;return yiq2rgb(yiq);}
+vec3 hash33(vec3 p3){p3=fract(p3*vec3(.1031,.11369,.13787));p3+=dot(p3,p3.yxz+19.19);return -1.0+2.0*fract(vec3(p3.x+p3.y,p3.x+p3.z,p3.y+p3.z)*p3.zyx);}
+float snoise3(vec3 p){const float K1=.333333333;const float K2=.166666667;vec3 i=floor(p+(p.x+p.y+p.z)*K1);vec3 d0=p-(i-(i.x+i.y+i.z)*K2);vec3 e=step(vec3(0.0),d0-d0.yzx);vec3 i1=e*(1.0-e.zxy);vec3 i2=1.0-e.zxy*(1.0-e);vec3 d1=d0-(i1-K2);vec3 d2=d0-(i2-K1);vec3 d3=d0-0.5;vec4 h=max(0.6-vec4(dot(d0,d0),dot(d1,d1),dot(d2,d2),dot(d3,d3)),0.0);vec4 n=h*h*h*h*vec4(dot(d0,hash33(i)),dot(d1,hash33(i+i1)),dot(d2,hash33(i+i2)),dot(d3,hash33(i+1.0)));return dot(vec4(31.316),n);}
+vec4 extractAlpha(vec3 c){float a=max(max(c.r,c.g),c.b);return vec4(c/(a+1e-5),a);}
+const vec3 baseColor1=vec3(.611765,.262745,.996078);
+const vec3 baseColor2=vec3(.298039,.760784,.913725);
+const vec3 baseColor3=vec3(.062745,.078431,.600000);
+const float innerRadius=0.6;const float noiseScale=0.65;
+float light1(float i,float a,float d){return i/(1.0+d*a);}
+float light2(float i,float a,float d){return i/(1.0+d*d*a);}
+vec4 draw(vec2 uv){
+  vec3 c1=adjustHue(baseColor1,hue);vec3 c2=adjustHue(baseColor2,hue);vec3 c3=adjustHue(baseColor3,hue);
+  float ang=atan(uv.y,uv.x);float len=length(uv);float invLen=len>0.0?1.0/len:0.0;
+  float bgLum=dot(backgroundColor,vec3(.299,.587,.114));
+  float n0=snoise3(vec3(uv*noiseScale,iTime*0.5))*0.5+0.5;
+  float r0=mix(mix(innerRadius,1.0,0.4),mix(innerRadius,1.0,0.6),n0);
+  float d0=distance(uv,(r0*invLen)*uv);
+  float v0=light1(1.0,10.0,d0);v0*=smoothstep(r0*1.05,r0,len);
+  float innerFade=smoothstep(r0*0.8,r0*0.95,len);v0*=mix(innerFade,1.0,bgLum*0.7);
+  float cl=cos(ang+iTime*2.0)*0.5+0.5;
+  float a2=iTime*-1.0;vec2 pos=vec2(cos(a2),sin(a2))*r0;float d=distance(uv,pos);
+  float v1=light2(1.5,5.0,d);v1*=light1(1.0,50.0,d0);
+  float v2=smoothstep(1.0,mix(innerRadius,1.0,n0*0.5),len);
+  float v3=smoothstep(innerRadius,mix(innerRadius,1.0,0.5),len);
+  vec3 colBase=mix(c1,c2,cl);float fadeAmt=mix(1.0,0.1,bgLum);
+  vec3 darkCol=mix(c3,colBase,v0);darkCol=(darkCol+v1)*v2*v3;darkCol=clamp(darkCol,0.0,1.0);
+  vec3 lightCol=(colBase+v1)*mix(1.0,v2*v3,fadeAmt);lightCol=mix(backgroundColor,lightCol,v0);lightCol=clamp(lightCol,0.0,1.0);
+  vec3 fc=mix(darkCol,lightCol,bgLum);return extractAlpha(fc);
+}
+vec4 mainImage(vec2 fragCoord){
+  vec2 center=iResolution.xy*0.5;float sz=min(iResolution.x,iResolution.y);
+  vec2 uv=(fragCoord-center)/sz*2.0;
+  float s2=sin(rot);float c2=cos(rot);uv=vec2(c2*uv.x-s2*uv.y,s2*uv.x+c2*uv.y);
+  uv.x+=hover*hoverIntensity*0.1*sin(uv.y*10.0+iTime);
+  uv.y+=hover*hoverIntensity*0.1*sin(uv.x*10.0+iTime);
+  return draw(uv);
+}
+void main(){vec2 fc=vUv*iResolution.xy;vec4 col=mainImage(fc);gl_FragColor=vec4(col.rgb*col.a,col.a);}`;
+  _compile(type,src){const gl=this.gl;const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){console.error('Shader error:',gl.getShaderInfoLog(s));gl.deleteShader(s);return null;}return s;}
+  _build(){
+    const gl=this.gl;
+    const vs=this._compile(gl.VERTEX_SHADER,OrbRenderer.VERT);
+    const fs=this._compile(gl.FRAGMENT_SHADER,OrbRenderer.FRAG);
+    if(!vs||!fs)return;
+    this.pgm=gl.createProgram();gl.attachShader(this.pgm,vs);gl.attachShader(this.pgm,fs);gl.linkProgram(this.pgm);
+    if(!gl.getProgramParameter(this.pgm,gl.LINK_STATUS)){console.error('Program error:',gl.getProgramInfoLog(this.pgm));return;}
+    gl.useProgram(this.pgm);
+    const posLoc=gl.getAttribLocation(this.pgm,'position');const uvLoc=gl.getAttribLocation(this.pgm,'uv');
+    const posBuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,posBuf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);gl.enableVertexAttribArray(posLoc);gl.vertexAttribPointer(posLoc,2,gl.FLOAT,false,0,0);
+    const uvBuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,uvBuf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,2,0,0,2]),gl.STATIC_DRAW);gl.enableVertexAttribArray(uvLoc);gl.vertexAttribPointer(uvLoc,2,gl.FLOAT,false,0,0);
+    this.u={};['iTime','iResolution','hue','hover','rot','hoverIntensity','backgroundColor'].forEach(n=>{this.u[n]=gl.getUniformLocation(this.pgm,n);});
+    gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.clearColor(0,0,0,0);
+  }
+  _resize(){const dpr=window.devicePixelRatio||1;const w=this.container.clientWidth;const h=this.container.clientHeight;this.canvas.width=w*dpr;this.canvas.height=h*dpr;if(this.gl)this.gl.viewport(0,0,this.canvas.width,this.canvas.height);}
+  _loop(ts){
+    this._raf=requestAnimationFrame(this._loop.bind(this));if(!this.pgm)return;
+    const gl=this.gl;const t=ts*0.001;const dt=this.lastTs?t-this.lastTs:0.016;this.lastTs=t;
+    this.currentHover+=(this.targetHover-this.currentHover)*Math.min(dt*4,1);
+    if(this.currentHover>0.5)this.currentRot+=dt*0.3;
+    gl.clear(gl.COLOR_BUFFER_BIT);gl.useProgram(this.pgm);
+    gl.uniform1f(this.u.iTime,t);gl.uniform3f(this.u.iResolution,this.canvas.width,this.canvas.height,this.canvas.width/this.canvas.height);
+    gl.uniform1f(this.u.hue,this.hue);gl.uniform1f(this.u.hover,this.currentHover);gl.uniform1f(this.u.rot,this.currentRot);gl.uniform1f(this.u.hoverIntensity,this.hoverIntensity);
+    gl.uniform3f(this.u.backgroundColor,this.bgColor[0],this.bgColor[1],this.bgColor[2]);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+  }
+  setActive(active){this.targetHover=active?1.0:0.0;}
+  destroy(){cancelAnimationFrame(this._raf);window.removeEventListener('resize',this._onResize);if(this.canvas.parentNode)this.canvas.parentNode.removeChild(this.canvas);const ext=this.gl.getExtension('WEBGL_lose_context');if(ext)ext.loseContext();}
+}
+
+/* ================================================================
+   ColorBendsRenderer — Three.js animated background (ReactBits port)
+   ================================================================ */
+class ColorBendsRenderer{
+  constructor(container,opts={}){
+    if(typeof THREE==='undefined'){console.warn('Three.js not loaded');return;}
+    this._container=container;
+    this._opts={rotation:opts.rotation??45,speed:opts.speed??0.2,colors:opts.colors??[],transparent:opts.transparent??true,autoRotate:opts.autoRotate??0,scale:opts.scale??1,frequency:opts.frequency??1,warpStrength:opts.warpStrength??1,mouseInfluence:opts.mouseInfluence??1,parallax:opts.parallax??0.5,noise:opts.noise??0.1};
+    this._rotRef=this._opts.rotation;this._arRef=this._opts.autoRotate;
+    this._ptrTarget=new THREE.Vector2(0,0);this._ptrCurrent=new THREE.Vector2(0,0);
+    this._init();
+  }
+  static _MAX=8;
+  static FRAG=`
+#define MAX_COLORS 8
+uniform vec2 uCanvas;uniform float uTime;uniform float uSpeed;uniform vec2 uRot;uniform int uColorCount;uniform vec3 uColors[MAX_COLORS];uniform int uTransparent;uniform float uScale;uniform float uFrequency;uniform float uWarpStrength;uniform vec2 uPointer;uniform float uMouseInfluence;uniform float uParallax;uniform float uNoise;varying vec2 vUv;
+void main(){
+  float t=uTime*uSpeed;vec2 p=vUv*2.0-1.0;p+=uPointer*uParallax*0.1;
+  vec2 rp=vec2(p.x*uRot.x-p.y*uRot.y,p.x*uRot.y+p.y*uRot.x);
+  vec2 q=vec2(rp.x*(uCanvas.x/uCanvas.y),rp.y);q/=max(uScale,0.0001);q/=0.5+0.2*dot(q,q);q+=0.2*cos(t)-7.56;
+  vec2 toward=(uPointer-rp);q+=toward*uMouseInfluence*0.2;
+  vec3 col=vec3(0.0);float a=1.0;
+  if(uColorCount>0){
+    vec2 s=q;vec3 sumCol=vec3(0.0);float cover=0.0;
+    for(int i=0;i<MAX_COLORS;++i){if(i>=uColorCount)break;
+      s-=0.01;vec2 r=sin(1.5*(s.yx*uFrequency)+2.0*cos(s*uFrequency));
+      float m0=length(r+sin(5.0*r.y*uFrequency-3.0*t+float(i))/4.0);
+      float kBelow=clamp(uWarpStrength,0.0,1.0);float kMix=pow(kBelow,0.3);float gain=1.0+max(uWarpStrength-1.0,0.0);
+      vec2 disp=(r-s)*kBelow;vec2 warped=s+disp*gain;
+      float m1=length(warped+sin(5.0*warped.y*uFrequency-3.0*t+float(i))/4.0);
+      float m=mix(m0,m1,kMix);float w=1.0-exp(-6.0/exp(6.0*m));
+      sumCol+=uColors[i]*w;cover=max(cover,w);}
+    col=clamp(sumCol,0.0,1.0);a=uTransparent>0?cover:1.0;
+  }else{
+    vec2 s=q;for(int k=0;k<3;++k){s-=0.01;vec2 r=sin(1.5*(s.yx*uFrequency)+2.0*cos(s*uFrequency));float m0=length(r+sin(5.0*r.y*uFrequency-3.0*t+float(k))/4.0);float kBelow=clamp(uWarpStrength,0.0,1.0);float kMix=pow(kBelow,0.3);float gain=1.0+max(uWarpStrength-1.0,0.0);vec2 disp=(r-s)*kBelow;vec2 warped=s+disp*gain;float m1=length(warped+sin(5.0*warped.y*uFrequency-3.0*t+float(k))/4.0);float m=mix(m0,m1,kMix);col[k]=1.0-exp(-6.0/exp(6.0*m));}
+    a=uTransparent>0?max(max(col.r,col.g),col.b):1.0;}
+  if(uNoise>0.0001){float n=fract(sin(dot(gl_FragCoord.xy+vec2(uTime),vec2(12.9898,78.233)))*43758.5453123);col+=(n-0.5)*uNoise;col=clamp(col,0.0,1.0);}
+  vec3 rgb=uTransparent>0?col*a:col;gl_FragColor=vec4(rgb,a);}`;
+  static VERT=`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position,1.0);}`;
+  _toVec3(hex){const h=hex.replace('#','').trim();const v=h.length===3?[parseInt(h[0]+h[0],16),parseInt(h[1]+h[1],16),parseInt(h[2]+h[2],16)]:[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];return new THREE.Vector3(v[0]/255,v[1]/255,v[2]/255);}
+  _init(){
+    const o=this._opts;const c=this._container;
+    const scene=new THREE.Scene();const camera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+    const geometry=new THREE.PlaneGeometry(2,2);
+    const uColorsArray=Array.from({length:ColorBendsRenderer._MAX},()=>new THREE.Vector3(0,0,0));
+    const material=new THREE.ShaderMaterial({vertexShader:ColorBendsRenderer.VERT,fragmentShader:ColorBendsRenderer.FRAG,uniforms:{uCanvas:{value:new THREE.Vector2(1,1)},uTime:{value:0},uSpeed:{value:o.speed},uRot:{value:new THREE.Vector2(1,0)},uColorCount:{value:0},uColors:{value:uColorsArray},uTransparent:{value:o.transparent?1:0},uScale:{value:o.scale},uFrequency:{value:o.frequency},uWarpStrength:{value:o.warpStrength},uPointer:{value:new THREE.Vector2(0,0)},uMouseInfluence:{value:o.mouseInfluence},uParallax:{value:o.parallax},uNoise:{value:o.noise}},premultipliedAlpha:true,transparent:true});
+    this._mat=material;
+    // Set colors
+    const arr=(o.colors||[]).filter(Boolean).slice(0,ColorBendsRenderer._MAX).map(this._toVec3.bind(this));
+    for(let i=0;i<ColorBendsRenderer._MAX;i++){const vec=material.uniforms.uColors.value[i];if(i<arr.length)vec.copy(arr[i]);else vec.set(0,0,0);}
+    material.uniforms.uColorCount.value=arr.length;
+    const mesh=new THREE.Mesh(geometry,material);scene.add(mesh);
+    const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',alpha:true});
+    this._renderer=renderer;
+    renderer.outputColorSpace=THREE.SRGBColorSpace;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    renderer.setClearColor(0x000000,o.transparent?0:1);
+    renderer.domElement.style.cssText='position:absolute;inset:0;width:100%;height:100%;display:block;';
+    c.appendChild(renderer.domElement);
+    const handleResize=()=>{const w=c.clientWidth||1;const h=c.clientHeight||1;renderer.setSize(w,h,false);material.uniforms.uCanvas.value.set(w,h);};
+    handleResize();
+    if('ResizeObserver' in window){this._ro=new ResizeObserver(handleResize);this._ro.observe(c);}else{window.addEventListener('resize',handleResize);}
+    const clock=new THREE.Clock();
+    const loop=()=>{
+      const dt=clock.getDelta();const elapsed=clock.elapsedTime;
+      material.uniforms.uTime.value=elapsed;
+      const deg=(this._rotRef%360)+this._arRef*elapsed;const rad=deg*Math.PI/180;const cs=Math.cos(rad);const sn=Math.sin(rad);
+      material.uniforms.uRot.value.set(cs,sn);
+      const cur=this._ptrCurrent;const tgt=this._ptrTarget;cur.lerp(tgt,Math.min(1,dt*8));
+      material.uniforms.uPointer.value.copy(cur);
+      renderer.render(scene,camera);
+      this._raf=requestAnimationFrame(loop);};
+    this._raf=requestAnimationFrame(loop);
+    c.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect();const x=((e.clientX-r.left)/(r.width||1))*2-1;const y=-(((e.clientY-r.top)/(r.height||1))*2-1);this._ptrTarget.set(x,y);});
+  }
+  destroy(){cancelAnimationFrame(this._raf);if(this._ro)this._ro.disconnect();if(this._renderer){this._renderer.dispose();this._renderer.forceContextLoss();if(this._renderer.domElement.parentNode)this._renderer.domElement.parentNode.removeChild(this._renderer.domElement);}}
+}
 </script>
 </body>
 </html>
