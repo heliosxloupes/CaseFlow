@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { submitCase } = require('../services/acgmeService');
+const { decrypt } = require('../services/encryptionService');
+const pw = require('../services/playwrightService');
 const sessionCache = require('../services/sessionCache');
-const { getOrRefreshSession } = require('../services/acgmeSession');
 const db = require('../db');
 
 /** One retry after clearing in-memory ACGME cookie cache + forcing refresh (handles flaky / racey sessions). */
@@ -187,5 +188,43 @@ router.delete('/:id', async (req, res, next) => {
     next(err);
   }
 });
+
+// ─── Helper ──────────────────────────────────────────────────────────────────
+
+async function getOrRefreshSession(userId) {
+  // 1. Try in-memory cache or still-valid stored cookies
+  const cookieHeader = await pw.getValidCookieHeader(userId);
+  if (cookieHeader) return cookieHeader;
+
+  // 2. Cookies expired — try a silent Playwright re-login (works within 14-day B2C SSO window)
+  const { rows } = await db.query(
+    'SELECT acgme_username, acgme_password_encrypted FROM user_acgme_credentials WHERE user_id = $1',
+    [userId]
+  );
+  if (!rows.length) {
+    throw new Error('No ACGME credentials found. Go to Settings → ACGME Account to connect your account.');
+  }
+
+  const password = decrypt(rows[0].acgme_password_encrypted);
+  const result   = await pw.startLogin(rows[0].acgme_username, password);
+
+  if (result.success) {
+    await pw.storeSessionCookies(userId, result.cookies);
+    return pw.cookiesArrayToHeader(result.cookies);
+  }
+
+  if (result.mfaRequired) {
+    // Can't proceed with case submission — user must complete MFA first
+    const err = new Error(
+      'Your ACGME session has expired and MFA verification is required. ' +
+      'Please go to Settings → ACGME Account → Reconnect to re-authenticate.'
+    );
+    err.mfaRequired = true;
+    err.sessionId   = result.sessionId;
+    throw err;
+  }
+
+  throw new Error('Failed to refresh ACGME session. Please reconnect your account in Settings.');
+}
 
 module.exports = router;

@@ -6,13 +6,7 @@ const { encrypt, decrypt } = require('../services/encryptionService');
 const { clearSession }     = require('../services/sessionCache');
 const { authenticate }     = require('../middleware/authenticate');
 const pw = require('../services/playwrightService');
-const { getInsertPageData } = require('../services/acgmeService');
 const db = require('../db');
-
-async function assertInsertReachableFromCookies(cookies) {
-  const header = pw.cookiesArrayToHeader(cookies);
-  await getInsertPageData(header);
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/auth/register
@@ -132,16 +126,6 @@ router.post('/save-credentials', authenticate, async (req, res, next) => {
     const result = await pw.startLogin(acgmeUsername, acgmePassword);
 
     if (result.success) {
-      try {
-        await assertInsertReachableFromCookies(result.cookies);
-      } catch (e) {
-        return res.status(401).json({
-          error:
-            e.message ||
-            'Case Entry did not open after login. If your hospital uses Duo, approve the prompt on your phone and try Save again.',
-          insertProbeFailed: true,
-        });
-      }
       await pw.storeSessionCookies(req.userId, result.cookies);
       return res.json({ success: true, message: 'ACGME account connected successfully' });
     }
@@ -179,16 +163,6 @@ router.post('/complete-mfa', authenticate, async (req, res, next) => {
     const result = await pw.completeMFA(sessionId, code);
 
     if (result.success) {
-      try {
-        await assertInsertReachableFromCookies(result.cookies);
-      } catch (e) {
-        return res.status(401).json({
-          error:
-            e.message ||
-            'Case Entry did not open after MFA. If your hospital uses Duo, approve the prompt and try again.',
-          insertProbeFailed: true,
-        });
-      }
       await pw.storeSessionCookies(req.userId, result.cookies);
       return res.json({ success: true, message: 'MFA verified. ACGME account connected!' });
     }
@@ -224,16 +198,6 @@ router.post('/verify-acgme', authenticate, async (req, res, next) => {
     const result   = await pw.startLogin(rows[0].acgme_username, password);
 
     if (result.success) {
-      try {
-        await assertInsertReachableFromCookies(result.cookies);
-      } catch (e) {
-        return res.status(401).json({
-          error:
-            e.message ||
-            'Case Entry did not open after re-authentication. If your hospital uses Duo, approve the prompt, then use Reconnect again.',
-          insertProbeFailed: true,
-        });
-      }
       await pw.storeSessionCookies(req.userId, result.cookies);
       return res.json({ success: true, message: 'ACGME re-authenticated successfully' });
     }
