@@ -842,13 +842,14 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
           <div id="s-mfa-section" style="display:none;margin-bottom:16px">
             <div style="background:var(--bg3);border:1px solid var(--blue-b);border-radius:var(--r);padding:14px 16px;margin-bottom:12px">
               <div style="font-size:13px;font-weight:600;color:var(--blue);margin-bottom:6px">Verification Required</div>
-              <div style="font-size:12px;color:var(--text2);line-height:1.6">Check your email or phone for the ACGME verification code and enter it below.</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.6">If ACGME sent a <strong>numeric code</strong> (email/SMS/authenticator), enter it below. If you only use <strong>Duo Push</strong>, approve on your phone first, then tap “I approved Duo on my phone” — do not type the Duo app’s numbers unless that is the code ACGME asked for.</div>
             </div>
             <div class="settings-field">
-              <label class="settings-label">Verification Code</label>
-              <input class="settings-input" id="s-mfa-code" type="text" placeholder="Enter 6-digit code" autocomplete="one-time-code" inputmode="numeric" maxlength="10">
+              <label class="settings-label">Verification Code (if you have one)</label>
+              <input class="settings-input" id="s-mfa-code" type="text" placeholder="6-digit code, or leave empty for Duo Push" autocomplete="one-time-code" inputmode="numeric" maxlength="10">
             </div>
-            <button class="btn-main settings-save-btn" onclick="completeMfaLogin()" style="margin-bottom:8px">Verify Code</button>
+            <button class="btn-main settings-save-btn" onclick="completeMfaLogin(false)" style="margin-bottom:8px">Verify Code</button>
+            <button type="button" class="btn-signout settings-save-btn" onclick="completeMfaLogin(true)" style="margin-bottom:8px">I approved Duo on my phone</button>
           </div>
         </div>
 
@@ -2268,6 +2269,7 @@ async function saveAcgmeCredentials(){
       if(data.mfaRequired && data.sessionId){
         // MFA needed — show the OTP input
         _pendingMfaSessionId = data.sessionId;
+        try{ sessionStorage.setItem('cf5-mfa-session-id', data.sessionId); }catch(_){}
         statusEl.textContent = '';
         document.getElementById('s-mfa-section').style.display = 'block';
         document.getElementById('s-mfa-code').focus();
@@ -2291,30 +2293,44 @@ async function saveAcgmeCredentials(){
   }
 }
 
-async function completeMfaLogin(){
+async function completeMfaLogin(duoPush){
   const code = document.getElementById('s-mfa-code').value.trim();
   const statusEl = document.getElementById('s-cred-status');
-  if(!code){ statusEl.textContent='Enter the verification code.'; statusEl.className='settings-cred-status err'; return; }
-  if(!_pendingMfaSessionId){ statusEl.textContent='No pending MFA session. Please start over.'; statusEl.className='settings-cred-status err'; return; }
+  const sessionId = _pendingMfaSessionId || (function(){ try{ return sessionStorage.getItem('cf5-mfa-session-id'); }catch(_){ return null; } })();
+  if(!sessionId){ statusEl.textContent='No pending MFA session. Open the form, Save Credentials again, then continue.'; statusEl.className='settings-cred-status err'; return; }
+  if(!duoPush && !code){ statusEl.textContent='Enter the verification code, or tap “I approved Duo on my phone”.'; statusEl.className='settings-cred-status err'; return; }
   try{
-    statusEl.textContent = 'Verifying code…';
+    statusEl.textContent = duoPush ? 'Waiting for ACGME (up to 3 min)…' : 'Verifying code…';
     statusEl.className = 'settings-cred-status';
-    const mfaBtn = document.querySelector('#s-mfa-section .btn-main');
-    if(mfaBtn){ mfaBtn.classList.add('busy'); mfaBtn.textContent = 'Verifying…'; }
+    const mfaBtns = document.querySelectorAll('#s-mfa-section .settings-save-btn');
+    mfaBtns.forEach(function(b){ b.classList.add('busy'); b.disabled = true; });
     const token = localStorage.getItem('cf5-token');
+    const body = duoPush
+      ? { sessionId: sessionId, mode: 'duo_push' }
+      : { sessionId: sessionId, code: code };
     const resp = await fetch(`${ACGME_BACKEND_URL}/api/auth/complete-mfa`,{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-      body:JSON.stringify({sessionId:_pendingMfaSessionId, code}),
+      body:JSON.stringify(body),
     });
     const data = await resp.json();
-    if(!resp.ok) throw new Error(data.error||'MFA verification failed');
+    if(!resp.ok){
+      const msg = data.error || 'MFA verification failed';
+      if(resp.status === 503 || data.mfaSessionLost){
+        throw new Error(msg + '\n\nTip: Railway must run exactly one replica for this backend while you sign in. Then save credentials again.');
+      }
+      throw new Error(msg);
+    }
     localStorage.setItem('cf5-vault', JSON.stringify({saved:true}));
     _pendingMfaSessionId = null;
+    try{ sessionStorage.removeItem('cf5-mfa-session-id'); }catch(_){}
+    mfaBtns.forEach(function(b){ b.classList.remove('busy'); b.disabled = false; });
     _finishAcgmeConnect();
   } catch(e){
-    const mfaBtn = document.querySelector('#s-mfa-section .btn-main');
-    if(mfaBtn){ mfaBtn.classList.remove('busy'); mfaBtn.textContent = 'Verify Code'; }
+    const mfaBtns = document.querySelectorAll('#s-mfa-section .settings-save-btn');
+    mfaBtns.forEach(function(b){ b.classList.remove('busy'); b.disabled = false; });
+    const mainBtn = document.querySelector('#s-mfa-section .btn-main');
+    if(mainBtn) mainBtn.textContent = 'Verify Code';
     document.getElementById('s-cred-status').textContent = e.message;
     document.getElementById('s-cred-status').className = 'settings-cred-status err';
   }
@@ -2327,6 +2343,7 @@ function _finishAcgmeConnect(){
   document.getElementById('s-cred-status').textContent = '';
   document.getElementById('s-mfa-section').style.display = 'none';
   _pendingMfaSessionId = null;
+  try{ sessionStorage.removeItem('cf5-mfa-session-id'); }catch(_){}
   document.getElementById('s-acgme-form').classList.remove('open');
   loadSettingsUI();
   toast('ACGME account connected ✓','ok');
