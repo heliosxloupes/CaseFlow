@@ -13,6 +13,8 @@ const { authenticate } = require('./middleware/authenticate');
 const { migrate } = require('./db/migrate');
 
 const app = express();
+// Railway (and other reverse proxies) send X-Forwarded-*; required for express-rate-limit and accurate req.ip
+app.set('trust proxy', true);
 
 app.use(cors({ origin: '*' }));
 app.use(express.json());
