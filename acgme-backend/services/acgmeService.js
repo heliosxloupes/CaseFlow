@@ -522,9 +522,87 @@ function specialtyIdFromInsertHidden(hidden) {
 }
 
 /**
+ * ADS Insert SelectedCodes tuple from GetCodes Payload row (matches browser / HAR).
+ * Example: P,4780,1118932,1,1 for CodeId 4780, TypeToCodeId 1118932, Quantity 1.
+ */
+function buildAdsSelectedCodesTupleFromPayloadRow(row) {
+  if (!row || row.CodeId == null || row.TypeToCodeId == null) return '';
+  const q = row.Quantity != null ? Number(row.Quantity) : 1;
+  return `P,${row.CodeId},${row.TypeToCodeId},${q},1`;
+}
+
+/** First Payload row whose CodeValue matches CPT (MVP when multiple Area/Type rows exist). */
+function pickFirstPayloadRowForCpt(payload, cptWant) {
+  if (!Array.isArray(payload) || !payload.length) return null;
+  const want = String(cptWant || '').trim();
+  const wantDigits = want.replace(/\D/g, '');
+  for (const r of payload) {
+    const cv = String(r.CodeValue != null ? r.CodeValue : '').trim();
+    const cd = cv.replace(/\D/g, '');
+    if (cv === want || (wantDigits && cd === wantDigits)) return r;
+  }
+  return null;
+}
+
+/**
+ * GET /ads/CaseLogs/Code/GetCodes — same contract as desktop Insert search (HAR).
+ * Retries once with desktop Referer if Mobile returns 404 (session may match either surface).
+ */
+async function fetchCodeSearchGetCodes(sessionCookie, { specialtyId, codeDesc, activeAsOfDate }) {
+  const qs = new URLSearchParams({
+    specialtyId: String(specialtyId),
+    codeDesc: String(codeDesc),
+    areaId: '',
+    typeId: '',
+    defCategoryId: '',
+    activeAsOfDate: String(activeAsOfDate || ''),
+    classId: '',
+    _: String(Date.now()),
+  });
+  const url = `${BASE_URL}/ads/CaseLogs/Code/GetCodes?${qs.toString()}`;
+
+  async function getWithReferer(refererPath) {
+    return fetchT(url, {
+      headers: {
+        Cookie: sessionCookie,
+        'User-Agent': UA,
+        Accept: 'application/json, text/javascript, */*; q=0.01',
+        'X-Requested-With': 'XMLHttpRequest',
+        Referer: `${BASE_URL}${refererPath}`,
+        Origin: BASE_URL,
+      },
+    }, 20000);
+  }
+
+  let res = await getWithReferer('/ads/CaseLogs/CaseEntryMobile/Insert');
+  if (res.status === 404) {
+    console.warn('[ACGME] GetCodes 404 with Mobile Insert Referer; retrying with CaseEntry/Insert');
+    res = await getWithReferer('/ads/CaseLogs/CaseEntry/Insert');
+  }
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '');
+    throw new Error(`Lookup failed: ${res.status}${errBody ? ` ${errBody.slice(0, 160)}` : ''}`);
+  }
+  return res.json();
+}
+
+/**
+ * Prefer Success + Payload[] tuple; fall back to legacy tree walk for older JSON shapes.
+ */
+function resolveSelectedCodesFromGetCodesJson(data, cptWant) {
+  if (data && data.Success === false) return '';
+  const row = pickFirstPayloadRowForCpt(data && data.Payload, cptWant);
+  if (row) {
+    const tuple = buildAdsSelectedCodesTupleFromPayloadRow(row);
+    if (tuple) return tuple;
+  }
+  return pickSelectedCodesFromGetCodesResponseLegacy(data, cptWant);
+}
+
+/**
  * Walk GetCodes JSON (including ASP.NET { d: [...] } / double-encoded d) and find SelectedCodes for CPT.
  */
-function pickSelectedCodesFromGetCodesResponse(data, cptWant) {
+function pickSelectedCodesFromGetCodesResponseLegacy(data, cptWant) {
   const want = String(cptWant || '').trim();
   if (!want) return '';
   const wantDigits = want.replace(/\D/g, '');
@@ -609,15 +687,14 @@ async function resolveSelectedCodesIfNeeded(sessionCookie, hidden, caseData) {
   if (looksLikeAdsSelectedCodesTuple(raw)) return caseData;
 
   const specialtyId = specialtyIdFromInsertHidden(hidden);
-  const params = {
-    specialtyId,
-    searchTerm: raw,
-    activeAsOfDate: caseData.procedureDate || '',
-  };
 
   let data;
   try {
-    data = await getLookupData(sessionCookie, 'codes', params);
+    data = await fetchCodeSearchGetCodes(sessionCookie, {
+      specialtyId,
+      codeDesc: raw,
+      activeAsOfDate: caseData.procedureDate || '',
+    });
   } catch (e) {
     throw new Error(
       `Could not look up procedure code "${raw}" in ACGME (${e.message || e}). ` +
@@ -633,7 +710,14 @@ async function resolveSelectedCodesIfNeeded(sessionCookie, hidden, caseData) {
     }
   }
 
-  const resolved = pickSelectedCodesFromGetCodesResponse(data, raw);
+  if (data && data.Success === false) {
+    const msg = (data.Message && String(data.Message).trim()) || 'Success=false';
+    throw new Error(
+      `ACGME GetCodes rejected the request: ${msg}. Check procedure date and specialty.`
+    );
+  }
+
+  const resolved = resolveSelectedCodesFromGetCodesJson(data, raw);
   if (!resolved) {
     throw new Error(
       `ACGME has no matching procedure row for code "${raw}" (specialty ${specialtyId}). ` +
@@ -913,11 +997,23 @@ async function getUserProfile(sessionCookie) {
 }
 
 async function getLookupData(sessionCookie, type, params = {}) {
+  if (type === 'codes') {
+    const specialtyId =
+      params.specialtyId || params.specialtyid || specialtyIdFromInsertHidden({}) || '158';
+    const codeDesc =
+      params.codeDesc || params.codedesc || params.searchTerm || params.searchterm || '';
+    const activeAsOfDate = params.activeAsOfDate || params.activeasofdate || '';
+    return fetchCodeSearchGetCodes(sessionCookie, {
+      specialtyId: String(specialtyId),
+      codeDesc: String(codeDesc),
+      activeAsOfDate: String(activeAsOfDate),
+    });
+  }
+
   const endpoints = {
     cptCodes:  '/ads/CaseLogs/CaseEntryMobile/GetCptTypeToAreaInfosBySpecialtyActiveDate',
     types:     '/ads/CaseLogs/CaseEntryMobile/GetTypesBySpecialtyIdOrRRClassId',
     roles:     '/ads/CaseLogs/CaseEntryMobile/GetResidentRoles',
-    codes:     '/ads/CaseLogs/CaseEntryMobile/GetCodes',
     caseCount: '/ads/CaseLogs/CaseEntryMobile/GetProcedureCaseCount',
   };
   const endpoint = endpoints[type];
@@ -1029,4 +1125,14 @@ function looksLikeAcgmeSubmitSuccess(html) {
   );
 }
 
-module.exports = { loginToACGME, getInsertPageData, submitCase, getLookupData, getUserProfile };
+module.exports = {
+  loginToACGME,
+  getInsertPageData,
+  submitCase,
+  getLookupData,
+  getUserProfile,
+  // test / tooling: pure helpers for GetCodes Payload → SelectedCodes tuple
+  buildAdsSelectedCodesTupleFromPayloadRow,
+  pickFirstPayloadRowForCpt,
+  resolveSelectedCodesFromGetCodesJson,
+};

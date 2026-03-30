@@ -27,7 +27,8 @@ router.get('/types', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/lookups/codes?specialtyId=158&searchTerm=breast
+// GET /api/lookups/codes?specialtyId=158&codeDesc=19325&activeAsOfDate=3%2F30%2F2026
+// (searchTerm is accepted as alias for codeDesc for older clients)
 router.get('/codes', async (req, res, next) => {
   try {
     const cookie = await getLookupSession(req.userId);
