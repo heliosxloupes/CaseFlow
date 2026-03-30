@@ -2435,7 +2435,7 @@ void main(){
     this._u={};
     ['uCanvas','uTime','uSpeed','uRot','uColorCount','uScale','uFrequency','uWarpStrength','uPointer','uMouseInfluence','uParallax','uNoise'].forEach(n=>{this._u[n]=gl.getUniformLocation(this._pgm,n);});
     this._uCol=Array.from({length:ColorBendsRenderer._MAX},(_,i)=>gl.getUniformLocation(this._pgm,`uColors[${i}]`));
-    gl.clearColor(1.0,0.0,0.0,1); /* DEBUG: red to test visibility */
+    gl.clearColor(69/255,63/255,90/255,1);
   }
   _resize(){const dpr=Math.min(window.devicePixelRatio||1,2);const w=this._c.clientWidth||window.innerWidth||1;const h=this._c.clientHeight||window.innerHeight||1;this._canvas.width=w*dpr;this._canvas.height=h*dpr;if(this._gl)this._gl.viewport(0,0,this._canvas.width,this._canvas.height);}
   _loop(){
