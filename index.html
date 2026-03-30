@@ -2151,6 +2151,7 @@ async function resubmitCase(){
       pt:editingCase.pt,
       yr:editingCase.yr,
       notes:editingCase.notes||'',
+      caseId:editingCase.cid||editingCase.caseId||'',
     });
   } catch(e){
     newStatus='pending';

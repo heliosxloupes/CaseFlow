@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const fetch = require('node-fetch');
 const { URLSearchParams } = require('url');
 const AbortController = require('abort-controller');
@@ -485,13 +486,14 @@ async function getInsertPageData(sessionCookie) {
   return { token, hidden: scrapeHiddenFields(html), cookieHeader };
 }
 
-async function submitCase(sessionCookie, caseData) {
-  const { token, hidden, cookieHeader: mergedCookie } = await getInsertPageData(sessionCookie);
-  const cookie = mergedCookie || sessionCookie;
-
-  const payload = new URLSearchParams({
-    __RequestVerificationToken: token,
+/**
+ * Build POST body: server hidden fields first, then antiforgery token, then explicit case
+ * fields (so programmatic values override any duplicate names from hidden).
+ */
+function buildInsertFormPayload(token, hidden, caseData) {
+  return new URLSearchParams({
     ...hidden,
+    __RequestVerificationToken: token,
     ProcedureDate:   caseData.procedureDate,
     ProcedureYear:   caseData.procedureYear,
     ResidentRoles:   caseData.residentRoleId,
@@ -506,6 +508,33 @@ async function submitCase(sessionCookie, caseData) {
     MobileViewMode:  '0',
     SearchTerm:      'False',
   });
+}
+
+function logSubmitErrorResponse(status, html) {
+  const len = (html || '').length;
+  const hash = html
+    ? crypto.createHash('sha256').update(html, 'utf8').digest('hex').slice(0, 16)
+    : 'none';
+  const hint = extractAcgmeSubmitErrorHint(html || '');
+  console.warn(
+    `[ACGME] submit POST ${status} len=${len} bodySha256prefix=${hash} extractedHint=${hint ? hint.slice(0, 220).replace(/\s+/g, ' ') : '(none)'}`
+  );
+  const snippet = (html || '').replace(/\s+/g, ' ').slice(0, 4000);
+  console.warn('[ACGME] submit body snippet (4k):', snippet);
+  if (process.env.ACGME_DEBUG_SUBMIT === '1' && html) {
+    console.warn('[ACGME] DEBUG full response body:', html);
+  }
+}
+
+async function submitCaseOnce(sessionCookie, caseData) {
+  const { token, hidden, cookieHeader: mergedCookie } = await getInsertPageData(sessionCookie);
+  const cookie = mergedCookie || sessionCookie;
+
+  if (process.env.ACGME_DEBUG_SUBMIT === '1') {
+    console.warn('[ACGME] DEBUG Insert hidden field names:', Object.keys(hidden || {}));
+  }
+
+  const payload = buildInsertFormPayload(token, hidden, caseData);
 
   const res = await fetchT(`${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`, {
     method: 'POST',
@@ -565,19 +594,41 @@ async function submitCase(sessionCookie, caseData) {
   }
 
   if (res.status >= 400) {
+    logSubmitErrorResponse(res.status, html);
     const hint = extractAcgmeSubmitErrorHint(html);
-    console.warn(
-      `[ACGME] submit POST ${res.status} body snippet:`,
-      (html || '').slice(0, 600).replace(/\s+/g, ' ')
-    );
     throw new Error(
       hint
-        ? `ACGME returned ${res.status}: ${hint}`
-        : `ACGME server returned ${res.status} (no details in body). Check procedure/codes and try again.`
+        ? `ACGME server error (${res.status}): ${hint}`
+        : `ACGME server error (${res.status}) — no parseable message in HTML. See Railway logs for body snippet. Check procedure/codes/IDs.`
     );
   }
 
   throw new Error(`Unexpected submission response: ${res.status}`);
+}
+
+/**
+ * POST case to ACGME Insert. On HTTP 500, retry once with a fresh Insert GET (new token/hidden).
+ */
+async function submitCase(sessionCookie, caseData) {
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await submitCaseOnce(sessionCookie, caseData);
+    } catch (err) {
+      lastErr = err;
+      const msg = String(err.message || '');
+      const is500 =
+        /\b500\b/.test(msg) ||
+        /server error \(500\)/i.test(msg) ||
+        /returned 500/i.test(msg);
+      if (attempt === 0 && is500) {
+        console.warn('[ACGME] submitCase: retrying once after 500 with fresh Insert GET');
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
 }
 
 // ── User Profile (sites + attendings) ─────────────────────────────────────────
@@ -684,31 +735,66 @@ function scrapeHiddenFields(html) {
   return fields;
 }
 
-/** Best-effort parse of ASP.NET / IIS error HTML from ACGME POST responses */
+/** Skip default ADS product title — not a real error message */
+function isGenericAdsTitleOrBoilerplate(s) {
+  if (!s || typeof s !== 'string') return true;
+  const t = s.trim().toLowerCase();
+  if (t.length < 4) return true;
+  if (/^acgme\s*[-–]\s*accreditation data system/i.test(t)) return true;
+  if (/accreditation data system\s*\(ads\)/i.test(t) && t.length < 120) return true;
+  if (t === 'acgme' || t === 'ads' || t === 'case log') return true;
+  return false;
+}
+
+/**
+ * Best-effort parse of ACGME POST error HTML (ASP.NET, Bootstrap/ADS shells).
+ * Order: validation + alerts first; generic `<title>` last (often just "ACGME - ADS").
+ */
 function extractAcgmeSubmitErrorHint(html) {
   if (!html || typeof html !== 'string') return '';
   const t = html
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ');
-  const tryPatterns = [
+
+  const patterns = [
     /<div[^>]*class="[^"]*validation-summary-errors[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     /<ul[^>]*class="[^"]*validation-summary-errors[^"]*"[^>]*>([\s\S]*?)<\/ul>/i,
+    /<div[^>]*class="[^"]*alert[^"]*danger[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*alert-danger[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*panel[^"]*(?:danger|error)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*(?:has-error|error)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<[^>]+role="alert"[^>]*>([\s\S]*?)<\/[^>]+>/i,
+    /<p[^>]*class="[^"]*text-danger[^"]*"[^>]*>([\s\S]*?)<\/p>/i,
     /<span[^>]*class="[^"]*field-validation-error[^"]*"[^>]*>([^<]+)/i,
     /<h1[^>]*>([^<]{5,400})<\/h1>/i,
     /<h2[^>]*>([^<]{5,400})<\/h2>/i,
-    /<title[^>]*>([^<]{5,300})<\/title>/i,
+    /<h3[^>]*>([^<]{5,400})<\/h3>/i,
     /Exception Message:\s*([^<\n]{10,400})/i,
     /System\.[\w.]+\s*:\s*([^<\n]{15,400})/i,
   ];
-  for (const re of tryPatterns) {
+
+  for (const re of patterns) {
     const m = t.match(re);
-    if (m && m[1]) {
-      const s = m[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-      if (s.length > 8 && !/^case log$/i.test(s)) return s.slice(0, 500);
+    if (!m || !m[1]) continue;
+    let s = m[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (s.length < 8 || /^case log$/i.test(s)) continue;
+    if (isGenericAdsTitleOrBoilerplate(s)) continue;
+    return s.slice(0, 500);
+  }
+
+  const tm = t.match(/<title[^>]*>([^<]{5,300})<\/title>/i);
+  if (tm && tm[1]) {
+    const s = tm[1].replace(/<[^>]+>/g, ' ').trim();
+    if (s.length >= 8 && !isGenericAdsTitleOrBoilerplate(s)) return s.slice(0, 500);
+  }
+
+  const plain = t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (plain.length > 40 && plain.length < 4000) {
+    const slice = plain.slice(0, 600);
+    if (!isGenericAdsTitleOrBoilerplate(slice) && !/^[\s\-—]*acgme[\s\-—]*accreditation/i.test(slice)) {
+      return slice;
     }
   }
-  const plain = t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  if (plain.length > 20 && plain.length < 2000) return plain.slice(0, 400);
   return '';
 }
 
