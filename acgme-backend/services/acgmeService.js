@@ -320,53 +320,128 @@ function extractRequestVerificationToken(html) {
   return null;
 }
 
-async function getInsertPageData(sessionCookie) {
-  const insertUrl = `${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`;
-  const res = await fetchT(insertUrl, {
-    headers: {
-      Cookie: sessionCookie,
-      'User-Agent': UA,
-      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
-      Referer: `${BASE_URL}/ads/`,
-      'Upgrade-Insecure-Requests': '1',
-      'Sec-Fetch-Mode': 'navigate',
-      'Sec-Fetch-Site': 'same-origin',
-      'Sec-Fetch-Dest': 'document',
-      'Sec-Fetch-User': '?1',
-    },
-    redirect: 'manual',
-  }, 15000);
+function looksLikeLoginHtml(html) {
+  return /sign\s*in|log\s*on|b2clogin|oauth2\/v2\.0\/authorize/i.test(html);
+}
 
-  // Don't follow cross-site auth redirects — treat as dead session (cookie not accepted)
-  if (res.status === 301 || res.status === 302 || res.status === 303 || res.status === 307 || res.status === 308) {
-    const loc = res.headers.get('location') || '';
-    const authish = /b2clogin|login|microsoftonline|oauth|signin|authorize/i.test(loc);
+/** Merge existing Cookie header with Set-Cookie lines from a response (name=value only). */
+function mergeCookieHeaderWithSetCookies(cookieHeader, setCookieArray) {
+  if (!setCookieArray || !setCookieArray.length) return cookieHeader || '';
+  const existing = cookieHeader
+    ? cookieHeader.split(';').map(s => s.trim()).filter(s => s.includes('='))
+    : [];
+  return mergeCookies([existing], setCookieArray);
+}
+
+function resolveRedirectUrl(location, currentUrl) {
+  if (!location) return '';
+  const trimmed = location.trim();
+  if (trimmed.startsWith('http')) return trimmed;
+  return new URL(trimmed, currentUrl).href;
+}
+
+/**
+ * GET Case Entry Insert with same-origin redirect handling.
+ * ACGME often responds 302 → /ads/ with Set-Cookie before the app session is bound; node-fetch
+ * with redirect:manual used to treat that as failure. Follow apps.acgme.org hops and merge cookies.
+ */
+async function fetchInsertHtmlWithRedirects(initialCookie) {
+  const insertUrl = `${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`;
+  let url = insertUrl;
+  let cookieHdr = initialCookie || '';
+  let referer = `${BASE_URL}/ads/`;
+
+  const baseHeaders = {
+    'User-Agent': UA,
+    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Upgrade-Insecure-Requests': '1',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'same-origin',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-User': '?1',
+  };
+
+  for (let hop = 0; hop < 12; hop++) {
+    const res = await fetchT(
+      url,
+      {
+        headers: {
+          ...baseHeaders,
+          Cookie: cookieHdr,
+          Referer: referer,
+        },
+        redirect: 'manual',
+      },
+      20000
+    );
+
+    const sc = res.headers.raw()['set-cookie'] || [];
+    if (sc.length) {
+      cookieHdr = mergeCookieHeaderWithSetCookies(cookieHdr, sc);
+    }
+
+    if (res.status === 301 || res.status === 302 || res.status === 303 || res.status === 307 || res.status === 308) {
+      const loc = res.headers.get('location') || '';
+      const abs = resolveRedirectUrl(loc, url);
+      if (!abs) {
+        throw new Error(`ACGME Insert redirect with empty Location (hop ${hop})`);
+      }
+      if (/b2clogin|microsoftonline|oauth|signin|authorize|login\.microsoft/i.test(abs)) {
+        throw new Error(
+          'ACGME session expired or not authenticated — open Settings and reconnect your ACGME account.'
+        );
+      }
+      if (!abs.includes('apps.acgme.org')) {
+        throw new Error(`ACGME Insert returned cross-origin redirect to ${abs.slice(0, 160)}`);
+      }
+      referer = url;
+      url = abs;
+      continue;
+    }
+
+    if (!res.ok) {
+      throw new Error(`Failed to load ACGME Insert page: ${res.status}`);
+    }
+
+    const html = await res.text();
+    if (extractRequestVerificationToken(html)) {
+      return { html, cookieHeader: cookieHdr };
+    }
+    if (looksLikeLoginHtml(html)) {
+      throw new Error(
+        'ACGME session expired or not authenticated — open Settings and reconnect your ACGME account.'
+      );
+    }
+    // e.g. 200 on /ads/ shell — retry Insert with cookies we just collected
+    if (!url.includes('CaseEntryMobile/Insert')) {
+      referer = url;
+      url = insertUrl;
+      continue;
+    }
+
     throw new Error(
-      authish
-        ? 'ACGME session expired or not authenticated — open Settings and reconnect your ACGME account.'
-        : `ACGME Insert returned redirect ${res.status} to ${loc.slice(0, 160)}`
+      'Could not find __RequestVerificationToken on Insert page (ACGME page layout may have changed).'
     );
   }
 
-  if (!res.ok) throw new Error(`Failed to load ACGME Insert page: ${res.status}`);
+  throw new Error('Too many redirects loading ACGME Insert page');
+}
 
-  const html  = await res.text();
+async function getInsertPageData(sessionCookie) {
+  const { html, cookieHeader } = await fetchInsertHtmlWithRedirects(sessionCookie);
   const token = extractRequestVerificationToken(html);
   if (!token) {
-    const looksLikeLogin = /sign\s*in|log\s*in|b2clogin|oauth2/i.test(html);
     throw new Error(
-      looksLikeLogin
-        ? 'ACGME session expired or not authenticated — open Settings and reconnect your ACGME account.'
-        : 'Could not find __RequestVerificationToken on Insert page (ACGME page layout may have changed).'
+      'Could not find __RequestVerificationToken on Insert page (ACGME page layout may have changed).'
     );
   }
-
-  return { token, hidden: scrapeHiddenFields(html) };
+  return { token, hidden: scrapeHiddenFields(html), cookieHeader };
 }
 
 async function submitCase(sessionCookie, caseData) {
-  const { token, hidden } = await getInsertPageData(sessionCookie);
+  const { token, hidden, cookieHeader: mergedCookie } = await getInsertPageData(sessionCookie);
+  const cookie = mergedCookie || sessionCookie;
 
   const payload = new URLSearchParams({
     __RequestVerificationToken: token,
@@ -390,7 +465,7 @@ async function submitCase(sessionCookie, caseData) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Cookie': sessionCookie,
+      'Cookie': cookie,
       'User-Agent': UA,
       'Referer': `${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`,
       'Origin': BASE_URL,
@@ -460,35 +535,7 @@ function parseSelectOptions(html, selectName) {
  * Same GET as getInsertPageData (manual redirect) so profile matches submit auth.
  */
 async function getUserProfile(sessionCookie) {
-  const insertUrl = `${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`;
-  const res = await fetchT(insertUrl, {
-    headers: {
-      Cookie: sessionCookie,
-      'User-Agent': UA,
-      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
-      Referer: `${BASE_URL}/ads/`,
-      'Upgrade-Insecure-Requests': '1',
-      'Sec-Fetch-Mode': 'navigate',
-      'Sec-Fetch-Site': 'same-origin',
-      'Sec-Fetch-Dest': 'document',
-      'Sec-Fetch-User': '?1',
-    },
-    redirect: 'manual',
-  }, 15000);
-
-  if (res.status === 301 || res.status === 302 || res.status === 303 || res.status === 307 || res.status === 308) {
-    const loc = res.headers.get('location') || '';
-    const authish = /b2clogin|login|microsoftonline|oauth|signin|authorize/i.test(loc);
-    throw new Error(
-      authish
-        ? 'ACGME session expired or not authenticated — open Settings and reconnect your ACGME account.'
-        : `ACGME Insert returned redirect ${res.status} to ${loc.slice(0, 160)}`
-    );
-  }
-
-  if (!res.ok) throw new Error(`Failed to load ACGME Insert page: ${res.status}`);
-  const html = await res.text();
+  const { html } = await fetchInsertHtmlWithRedirects(sessionCookie);
 
   let sites = parseSelectOptions(html, 'Institutions');
   if (!sites.length) sites = parseSelectOptions(html, 'Institution');

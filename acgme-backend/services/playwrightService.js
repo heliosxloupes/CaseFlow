@@ -100,12 +100,13 @@ function cookiesArrayToHeader(cookies) {
 
 /**
  * Same bar as submit: session must load Case Entry Insert (CSRF + hidden fields).
+ * Returns merged Cookie header string after redirect/cookie negotiation, or false.
  */
 async function testCookieHeaderValid(cookieHeader) {
   if (!cookieHeader) return false;
   const tryOnce = async () => {
-    await getInsertPageData(cookieHeader);
-    return true;
+    const data = await getInsertPageData(cookieHeader);
+    return data.cookieHeader || cookieHeader;
   };
   try {
     return await tryOnce();
@@ -136,8 +137,11 @@ async function getValidCookieHeader(userId) {
   // 1. In-memory cache (25-min TTL)
   const cached = getSession(userId);
   if (cached) {
-    const ok = await testCookieHeaderValid(cached);
-    if (ok) return cached;
+    const merged = await testCookieHeaderValid(cached);
+    if (merged) {
+      setSession(userId, merged);
+      return merged;
+    }
     clearSession(userId);
     console.log(`[PW] Cleared stale in-memory ACGME cookie cache for user ${userId}`);
   }
@@ -146,12 +150,11 @@ async function getValidCookieHeader(userId) {
   const cookies = await loadStoredCookies(userId);
   if (!cookies || cookies.length === 0) return null;
 
-  // 3. Test if they still work
-  const valid = await testCookiesValid(cookies);
-  if (valid) {
-    const header = cookiesArrayToHeader(cookies);
-    setSession(userId, header);
-    return header;
+  // 3. Test if they still work (Insert probe may merge Set-Cookie from /ads/ redirect)
+  const merged = await testCookiesValid(cookies);
+  if (merged) {
+    setSession(userId, merged);
+    return merged;
   }
 
   console.log(`[PW] Stored cookies for user ${userId} are no longer valid`);
