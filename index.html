@@ -2475,6 +2475,17 @@ function acgmeProfileMapsReady(){
   } catch(_){ return false; }
 }
 
+/** ADS expects numeric IDs; sending hospital/people names causes opaque HTTP 500s */
+function assertNumericAcgmeId(val, fieldLabel){
+  const s = String(val==null?'':val).trim();
+  if(!/^\d+$/.test(s)){
+    throw new Error(
+      'ACGME needs a numeric '+fieldLabel+' ID from your program (not just a name). Re-select '+fieldLabel+' on the case summary, or open Settings → ACGME to reload sites/attendings, then try again.'
+    );
+  }
+  return s;
+}
+
 async function callSubmitAcgme(casePayload){
   const token=localStorage.getItem('cf5-token');
   if(!token) throw new Error('Not logged in');
@@ -2492,15 +2503,21 @@ async function callSubmitAcgme(casePayload){
   if(!procs.length) throw new Error('No procedures to submit');
 
   for(const proc of procs){
-    const roleId = resolveProfileId('cf5-roles', casePayload.role) || ROLE_IDS[casePayload.role] || '';
-    const ptId   = resolveProfileId('cf5-patient-types', casePayload.pt) || PATIENT_IDS[casePayload.pt] || '';
+    const roleIdRaw = resolveProfileId('cf5-roles', casePayload.role) || ROLE_IDS[casePayload.role] || '';
+    const ptIdRaw   = resolveProfileId('cf5-patient-types', casePayload.pt) || PATIENT_IDS[casePayload.pt] || '';
+    const siteIdRaw = resolveProfileId('cf5-sites',      casePayload.site) || '';
+    const attIdRaw  = resolveProfileId('cf5-attendings', casePayload.att) || '';
+    const roleId    = assertNumericAcgmeId(roleIdRaw, 'role');
+    const ptId      = assertNumericAcgmeId(ptIdRaw, 'patient type');
+    const institutionId = assertNumericAcgmeId(siteIdRaw, 'site');
+    const attendingId   = assertNumericAcgmeId(attIdRaw, 'attending');
     const body={
       procedureDate:   formatAcgmeDate(casePayload.date),
       procedureYear:   String(casePayload.yr||'4').replace('Year ',''),
-      residentRoleId:  roleId || String(casePayload.role||''),
-      institutionId:   resolveProfileId('cf5-sites',      casePayload.site) || String(casePayload.site||''),
-      attendingId:     resolveProfileId('cf5-attendings', casePayload.att) || String(casePayload.att||''),
-      patientTypeId:   ptId || String(casePayload.pt||''),
+      residentRoleId:  roleId,
+      institutionId:   institutionId,
+      attendingId:     attendingId,
+      patientTypeId:   ptId,
       selectedCodes:   proc.c,
       codeDescription: proc.d,
       comments:        casePayload.notes||'',
