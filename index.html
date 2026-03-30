@@ -79,10 +79,9 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .sm-icon-h{transform:translate(-50%,-50%)}
 .sm-icon-v{transform:translate(-50%,-50%) rotate(90deg)}
 .sm-toggle-text{font-size:12px;letter-spacing:.07em;opacity:.7}
-/* Menu sits after .pane in DOM — if z-index ≥ pane, fixed layers sit ON TOP of history/voice UI and eat touches on iOS even with pointer-events:none. */
 .sm-backdrop{
   position:fixed;top:56px;left:0;right:0;bottom:0;
-  background:rgba(0,0,0,.55);z-index:100;
+  background:rgba(0,0,0,.55);z-index:179;
   opacity:0;pointer-events:none!important;
   backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
   visibility:hidden;
@@ -94,22 +93,17 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
   width:min(78vw,360px);height:calc(100% - 56px);
   will-change:transform;
 }
-.sm-prelayer-1{background:#0a1322;z-index:101}
-.sm-prelayer-2{background:#1a3560;z-index:102}
+.sm-prelayer-1{background:#0a1322;z-index:180}
+.sm-prelayer-2{background:#1a3560;z-index:181}
 .sm-panel-wrap{
   position:fixed;top:56px;left:0;
   width:min(78vw,360px);height:calc(100% - 56px);
   background:#0b1628;
   border-right:1px solid rgba(79,142,247,0.12);
-  z-index:103;will-change:transform;
+  z-index:182;will-change:transform;
   display:flex;flex-direction:column;overflow:hidden;
   box-shadow:4px 0 40px rgba(0,0,0,.6);
 }
-/* Open menu: must sit above .pane to dim content */
-body.sm-menu-open .sm-backdrop{z-index:300}
-body.sm-menu-open .sm-prelayer-1{z-index:301}
-body.sm-menu-open .sm-prelayer-2{z-index:302}
-body.sm-menu-open .sm-panel-wrap{z-index:303}
 .sm-panel-logo-row{
   padding:28px 28px 20px;border-bottom:1px solid rgba(255,255,255,.05);
 }
@@ -154,7 +148,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 }
 .sm-footer-note{font-size:11px;color:var(--text3);line-height:1.6}
 #pg-app{height:100%;display:flex;flex-direction:column}
-.pane{display:none;width:100%;position:relative;z-index:220;min-height:0}
+.pane{display:none;width:100%}
 .pane.on{display:block;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .voice-screen{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
