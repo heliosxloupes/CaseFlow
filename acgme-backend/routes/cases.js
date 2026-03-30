@@ -23,7 +23,7 @@ function isRetryableAcgmeSessionError(err) {
  *   institutionId:   "29262",    ← from /api/lookups (hidden fields on Insert page)
  *   attendingId:     "633696",   ← from /api/lookups
  *   patientTypeId:   "474",      ← from /api/lookups
- *   selectedCodes:   "30410" or "P,4780,1118932,1,1"  ← bare CPT is resolved server-side via GetCodes; tuples pass through
+ *   selectedCodes:   "30410" or "P,4780,1118932,1,1;"  ← bare CPT is resolved server-side via GetCodes; tuples pass through
  *   codeDescription: "Breast augmentation",
  *   comments:        ""
  * }

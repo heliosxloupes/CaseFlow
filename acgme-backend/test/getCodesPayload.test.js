@@ -18,8 +18,8 @@ const sampleRow = {
 
 assert.strictEqual(
   buildAdsSelectedCodesTupleFromPayloadRow(sampleRow),
-  'P,4780,1118932,1,1',
-  'tuple from Payload row'
+  'P,4780,1118932,1,1;',
+  'tuple from Payload row (HAR ends with semicolon)'
 );
 
 const payloadMulti = [
@@ -35,7 +35,7 @@ const harJson = {
 };
 assert.strictEqual(
   resolveSelectedCodesFromGetCodesJson(harJson, '19325'),
-  'P,4780,1118932,1,1',
+  'P,4780,1118932,1,1;',
   'full resolve from GetCodes JSON'
 );
 

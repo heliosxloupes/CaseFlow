@@ -499,14 +499,14 @@ function sanitizeCaseIdForAds(raw) {
 }
 
 /**
- * ADS Insert expects SelectedCodes as an internal tuple (e.g. "P,4780,1118932,1,1"), not a bare CPT.
+ * ADS Insert expects SelectedCodes as an internal tuple (e.g. "P,4780,1118932,1,1;"), not a bare CPT.
  * CaseFlow sends CPT from the local index — resolve via GetCodes before POST.
  */
 function looksLikeAdsSelectedCodesTuple(s) {
-  const t = String(s || '').trim();
+  const t = String(s || '').trim().replace(/;+$/, '');
   if (!t.includes(',')) return false;
   const parts = t.split(',');
-  // Typical ADS tuple: "P,4780,1118932,1,1" — several segments; often starts with a short letter prefix
+  // Typical ADS tuple: "P,4780,1118932,1,1;" — several segments; often starts with a short letter prefix
   if (parts.length >= 4) return true;
   if (parts[0].length <= 4 && /^[A-Za-z]/.test(parts[0])) return true;
   return false;
@@ -525,12 +525,22 @@ function specialtyIdFromInsertHidden(hidden) {
 
 /**
  * ADS Insert SelectedCodes tuple from GetCodes Payload row (matches browser / HAR).
- * Example: P,4780,1118932,1,1 for CodeId 4780, TypeToCodeId 1118932, Quantity 1.
+ * Example: P,4780,1118932,1,1; for CodeId 4780, TypeToCodeId 1118932, Quantity 1.
  */
 function buildAdsSelectedCodesTupleFromPayloadRow(row) {
   if (!row || row.CodeId == null || row.TypeToCodeId == null) return '';
   const q = row.Quantity != null ? Number(row.Quantity) : 1;
-  return `P,${row.CodeId},${row.TypeToCodeId},${q},1`;
+  // HAR: SelectedCodes ends with `;` (e.g. P,4780,1118932,1,1;) — ADS model expects this delimiter.
+  return `P,${row.CodeId},${row.TypeToCodeId},${q},1;`;
+}
+
+/** Ensure tuple ends with `;` (legacy / manual paste may omit it). */
+function normalizeSelectedCodesForAdsInsert(codes) {
+  const c = String(codes || '').trim();
+  if (!c) return c;
+  const body = c.replace(/;+$/, '');
+  if (!looksLikeAdsSelectedCodesTuple(body)) return c;
+  return `${body};`;
 }
 
 /** First Payload row whose CodeValue matches CPT (MVP when multiple Area/Type rows exist). */
@@ -773,7 +783,12 @@ async function resolveSelectedCodesIfNeeded(sessionCookie, hidden, caseData) {
     `[ACGME] Resolved CPT "${raw}" → SelectedCodes tuple (len=${resolved.length}b)`
   );
   const out = { ...caseData, selectedCodes: resolved };
-  if (payloadRow) out._adsPayloadRow = payloadRow;
+  if (payloadRow) {
+    out._adsPayloadRow = payloadRow;
+    out._adsCodeValueForInsert = String(payloadRow.CodeValue || '').trim();
+  } else {
+    out._adsCodeValueForInsert = raw;
+  }
   return out;
 }
 
@@ -782,9 +797,14 @@ async function resolveSelectedCodesIfNeeded(sessionCookie, hidden, caseData) {
  * fields (so programmatic values override any duplicate names from hidden).
  */
 function buildInsertFormPayload(token, hidden, caseData) {
-  const codes = caseData.selectedCodes || '';
-  // Insert HTML sets HoldSelectedCodes + SelectedCodes together in the UI; leaving Hold* as bare CPT
-  // while posting a resolved tuple (or vice versa) can trigger ADS 500s.
+  const codes = normalizeSelectedCodesForAdsInsert(caseData.selectedCodes || '');
+  // Successful browser HAR: HoldSelectedCodes=False, SelectedCodes=P,codeId,typeToCodeId,q,1;
+  // CodeDescription=CPT digits (e.g. 19325), not long prose — see after succesful submission2.har
+  const tupleLike = looksLikeAdsSelectedCodesTuple(codes);
+  const codeDesc =
+    caseData._adsCodeValueForInsert != null && String(caseData._adsCodeValueForInsert).trim() !== ''
+      ? String(caseData._adsCodeValueForInsert).trim()
+      : (caseData.codeDescription || '');
   return new URLSearchParams({
     ...hidden,
     __RequestVerificationToken: token,
@@ -794,9 +814,9 @@ function buildInsertFormPayload(token, hidden, caseData) {
     Institutions:    caseData.institutionId,
     Attendings:      caseData.attendingId,
     PatientTypes:    caseData.patientTypeId,
-    HoldSelectedCodes: codes,
+    HoldSelectedCodes: tupleLike ? 'False' : codes,
     SelectedCodes:     codes,
-    CodeDescription: caseData.codeDescription || '',
+    CodeDescription: codeDesc,
     Comments:        caseData.comments || '',
     CaseId:          sanitizeCaseIdForAds(caseData.caseId),
     // Do not force IsMobileApp / MobileViewMode — desktop Insert uses hidden defaults; Mobile=True on desktop 500s.
