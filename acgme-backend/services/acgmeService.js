@@ -446,8 +446,9 @@ function parseSelectOptions(html, selectName) {
     const attrs = m[1];
     let label = m[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     label = label.replace(/&nbsp;/gi, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-    const vm = attrs.match(/\bvalue\s*=\s*(["'])([^"']*)\1/i);
-    const id = vm ? vm[2].trim() : '';
+    let vm = attrs.match(/\bvalue\s*=\s*(["'])([^"']*)\1/i);
+    if (!vm) vm = attrs.match(/\bvalue\s*=\s*([^\s>]+)/i);
+    const id = vm ? (vm[2] != null ? vm[2] : vm[1]).trim() : '';
     if (!id) continue;
     results.push({ id, label: label || id });
   }
@@ -491,12 +492,16 @@ async function getUserProfile(sessionCookie) {
 
   let sites = parseSelectOptions(html, 'Institutions');
   if (!sites.length) sites = parseSelectOptions(html, 'Institution');
+  if (!sites.length) sites = parseSelectOptions(html, 'institutions');
   let attendings = parseSelectOptions(html, 'Attendings');
   if (!attendings.length) attendings = parseSelectOptions(html, 'Attending');
+  if (!attendings.length) attendings = parseSelectOptions(html, 'attendings');
   let roles = parseSelectOptions(html, 'ResidentRoles');
   if (!roles.length) roles = parseSelectOptions(html, 'ResidentRole');
+  if (!roles.length) roles = parseSelectOptions(html, 'residentRoles');
   let patientTypes = parseSelectOptions(html, 'PatientTypes');
   if (!patientTypes.length) patientTypes = parseSelectOptions(html, 'PatientType');
+  if (!patientTypes.length) patientTypes = parseSelectOptions(html, 'patientTypes');
 
   console.log(
     `[profile] sites: ${sites.length}, attendings: ${attendings.length}, roles: ${roles.length}, patientTypes: ${patientTypes.length}`

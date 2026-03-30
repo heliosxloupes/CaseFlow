@@ -103,12 +103,21 @@ function cookiesArrayToHeader(cookies) {
  */
 async function testCookieHeaderValid(cookieHeader) {
   if (!cookieHeader) return false;
-  try {
+  const tryOnce = async () => {
     await getInsertPageData(cookieHeader);
     return true;
+  };
+  try {
+    return await tryOnce();
   } catch (e) {
-    console.log('[PW] Insert-page session probe failed:', e.message);
-    return false;
+    console.log('[PW] Insert-page session probe failed (will retry once):', e.message);
+    await new Promise(r => setTimeout(r, 600));
+    try {
+      return await tryOnce();
+    } catch (e2) {
+      console.log('[PW] Insert-page session probe failed:', e2.message);
+      return false;
+    }
   }
 }
 
