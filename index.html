@@ -1734,7 +1734,10 @@ async function submitCase(){
   labelEl.textContent='Submitting to ACGME…';
   duoEl.classList.remove('on');
   overlay.classList.add('on');
-  const duoTimer=setTimeout(()=>{labelEl.textContent='Waiting for Duo approval…';duoEl.classList.add('on');},8000);
+  // Don’t auto-show “Duo” after a fixed delay — that misleads when the failure is session/auth (not Duo).
+  const waitHintTimer=setTimeout(()=>{
+    if(overlay.classList.contains('on')) labelEl.textContent='Still contacting ACGME… If your hospital uses Duo, you may get a push to approve.';
+  },15000);
 
   const payload={
     date:caseData.date||isoToday(),
@@ -1765,7 +1768,7 @@ async function submitCase(){
     console.warn('ACGME submit error:',e);
   }
 
-  clearTimeout(duoTimer);
+  clearTimeout(waitHintTimer);
   duoEl.classList.remove('on');
   labelEl.textContent='Submitting to ACGME…';
   const localId='cf-'+Date.now();
@@ -2108,7 +2111,9 @@ async function resubmitCase(){
   labelEl2.textContent='Submitting to ACGME…';
   duoEl2.classList.remove('on');
   overlay.classList.add('on');
-  const duoTimer2=setTimeout(()=>{labelEl2.textContent='Waiting for Duo approval…';duoEl2.classList.add('on');},8000);
+  const waitHintTimer2=setTimeout(()=>{
+    if(overlay.classList.contains('on')) labelEl2.textContent='Still contacting ACGME… If your hospital uses Duo, you may get a push to approve.';
+  },15000);
 
   let newStatus='submitted';
   try{
@@ -2131,7 +2136,7 @@ async function resubmitCase(){
     console.warn('ACGME resubmit error:',e);
   }
 
-  clearTimeout(duoTimer2);
+  clearTimeout(waitHintTimer2);
   duoEl2.classList.remove('on');
   labelEl2.textContent='Submitting to ACGME…';
   const idx=cases.findIndex(c=>c.id===editingCase.id);
