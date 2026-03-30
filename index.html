@@ -1122,6 +1122,8 @@ function makeRec(onResult,onEnd){
 }
 // CONVERSATION
 let caseData={description:'',procedures:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:''};
+/** Matches ADS Case ID input (bootstrap-maxlength on apps.acgme.org). */
+const CASE_ID_MAX_LEN=25;
 let pendingQs=[],currentQ=-1;
 const QUESTIONS=[
   {key:'procedures',isEmpty:()=>caseData.procedures.length===0,question:"I couldn't identify the procedure. What was performed? Search by name or CPT code.",type:'cpt-search'},
@@ -1746,7 +1748,7 @@ const SUMMARY_FIELDS = [
   {key:'attending', label:'Attending', type:'combo', combo:'att', get:()=>caseData.attending, set:v=>{caseData.attending=v}},
   {key:'patient',   label:'Patient',   type:'chips', get:()=>caseData.patientType,set:v=>{caseData.patientType=v},options:['Adult','Pediatric']},
   {key:'year',      label:'Year',      type:'chips', get:()=>caseData.caseYear,  set:v=>{caseData.caseYear=v},  options:['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6']},
-  {key:'caseId',    label:'Case ID',   type:'caseid', get:()=>caseData.caseId,    set:v=>{caseData.caseId=v},    placeholder:'MRN, ref # — sent to ACGME Case ID'},
+  {key:'caseId',    label:'Case ID',   type:'caseid', get:()=>caseData.caseId,    set:v=>{caseData.caseId=v},    placeholder:'MRN or ref (max 25, same as ADS). Digits may show as #… in ADS.'},
 ];
 let summaryEditKey = null;
 
@@ -1817,7 +1819,7 @@ function renderCaseIdSummaryBlock(){
     '<button type="button" class="sum-caseid-edit" onclick="event.stopPropagation();var el=document.getElementById(\'sum-caseid-inp\');if(el){el.focus();try{el.select();}catch(_){}}" aria-label="Edit Case ID">'+
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="display:block"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'+
     '</button></div>'+
-    '<input type="text" id="sum-caseid-inp" class="sum-caseid-input" maxlength="20" placeholder="'+escAttr(ph)+'" value="'+escAttr(val)+'" '+
+    '<input type="text" id="sum-caseid-inp" class="sum-caseid-input" maxlength="'+CASE_ID_MAX_LEN+'" placeholder="'+escAttr(ph)+'" value="'+escAttr(val)+'" '+
     'oninput="saveSummaryText(\'caseId\',this.value)" onclick="event.stopPropagation()">'+
     '</div>';
 }
@@ -1891,7 +1893,7 @@ function saveSummaryDate(val){
 }
 function saveSummaryText(key, val){
   const f = SUMMARY_FIELDS.find(f=>f.key===key);
-  const v=key==='caseId'?String(val).slice(0,20):val;
+  const v=key==='caseId'?String(val).slice(0,CASE_ID_MAX_LEN):val;
   if(f) f.set(v);
   // Don't re-render (would steal focus); user closes by tapping elsewhere
 }
@@ -1938,7 +1940,7 @@ function restoreOrbFromSubmitOverlay(){
 /** Ensures the visible Case ID input value is in caseData before submit (avoids stale state if input diverged). */
 function syncCaseIdFromSummaryInput(){
   const el=document.getElementById('sum-caseid-inp');
-  if(el&&typeof el.value==='string') caseData.caseId=el.value.slice(0,20);
+  if(el&&typeof el.value==='string') caseData.caseId=el.value.slice(0,CASE_ID_MAX_LEN);
 }
 async function submitCase(){
   // If no ACGME credentials, send user to Settings to set them up first

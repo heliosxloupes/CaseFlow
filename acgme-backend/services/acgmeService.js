@@ -14,6 +14,9 @@ const B2C_BASE    = `https://${B2C_TENANT}/acgmeras.onmicrosoft.com/${B2C_POLICY
 // Must match Playwright browser UA — ACGME ASP.NET binds sessions to the UA string
 const UA          = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
+/** ADS Insert Case ID field uses bootstrap-maxlength (25) on the resident form — keep POST length aligned. */
+const ADS_CASE_ID_MAX_LEN = 25;
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Merge arrays of Set-Cookie strings; later entries override earlier by name */
@@ -491,28 +494,62 @@ async function getInsertPageData(sessionCookie) {
   if (residentsSel) {
     hidden.Residents = residentsSel;
   }
-  return { token, hidden, cookieHeader };
+  return { token, hidden, cookieHeader, insertHtml: html };
 }
 
 /**
- * ADS Insert `CaseId` — trimmed and capped at 20 characters (same limit as the app).
+ * First visible <input> or <textarea> whose name looks like the Case ID field (e.g. CaseId, caseEntry.CaseId).
+ */
+function extractCaseIdFieldNameFromInsertHtml(html) {
+  if (!html || typeof html !== 'string') return '';
+  const tagRe = /<(input|textarea)\b([^>]*)>/gi;
+  let m;
+  while ((m = tagRe.exec(html)) !== null) {
+    const tag = m[1].toLowerCase();
+    const attrs = m[2];
+    if (tag === 'input' && /type\s*=\s*["']hidden["']/i.test(attrs)) continue;
+    const nameM = attrs.match(/\bname\s*=\s*["']([^"']+)["']/i);
+    if (!nameM) continue;
+    const name = nameM[1];
+    const compact = name.replace(/[\s._-]/g, '');
+    if (/caseid/i.test(compact)) return name;
+  }
+  return '';
+}
+
+/**
+ * ADS often treats all-numeric CaseId as an internal server id (edits only). Those values can be cleared on Insert.
+ * For digit-only refs we prefix (default "#") so the field binds as text. Override with ACGME_CASE_ID_DIGIT_PREFIX:
+ *   unset → prefix "#"; empty string "" → no prefix; any other string → first character used as prefix (e.g. "R" → R12345).
  */
 function caseIdForAdsInsertForm(raw) {
-  const s = String(raw || '').trim();
+  let s = String(raw || '').trim().slice(0, ADS_CASE_ID_MAX_LEN);
   if (!s) return '';
-  return s.slice(0, 20);
+  if (!/^\d+$/.test(s)) return s;
+  const env = process.env.ACGME_CASE_ID_DIGIT_PREFIX;
+  if (env === '') return s;
+  const prefixChar = env != null && String(env).length > 0 ? String(env).trim().charAt(0) : '#';
+  return `${prefixChar}${s}`.slice(0, ADS_CASE_ID_MAX_LEN);
 }
 
 /**
  * ADS `Comments` — clinical / free text from CaseFlow (`comments` or `notes`).
- * The Case ID reference is sent separately via `CaseId` (see caseIdForAdsInsertForm).
+ * Also prepends "Case ID: …" when a ref is present so it is never lost if ADS clears the Case ID field.
  */
 function mergeLocalCaseIdIntoComments(caseData) {
-  const c =
+  const base0 =
     caseData.comments != null && String(caseData.comments).trim() !== ''
-      ? caseData.comments
-      : (caseData.notes != null ? caseData.notes : '');
-  return String(c);
+      ? String(caseData.comments)
+      : caseData.notes != null
+        ? String(caseData.notes)
+        : '';
+  const raw = String(caseData.caseId || '').trim();
+  if (!raw) return base0;
+  const prefix = `Case ID: ${raw}`;
+  const t = base0.trim();
+  if (!t) return prefix;
+  if (t.includes(prefix) || /^case\s*id\s*:/i.test(t)) return base0;
+  return `${prefix}\n\n${base0}`;
 }
 
 /**
@@ -813,7 +850,17 @@ async function resolveSelectedCodesIfNeeded(sessionCookie, hidden, caseData) {
  * Build POST body: server hidden fields first, then antiforgery token, then explicit case
  * fields (so programmatic values override any duplicate names from hidden).
  */
-function buildInsertFormPayload(token, hidden, caseData) {
+
+/** Remove hidden inputs named like CaseId so our posted value is not overridden by an empty scraped duplicate. */
+function stripHiddenCaseIdKeys(hidden) {
+  const out = { ...hidden };
+  for (const k of Object.keys(out)) {
+    if (/(\.|^)caseid$/i.test(k.trim())) delete out[k];
+  }
+  return out;
+}
+
+function buildInsertFormPayload(token, hidden, caseData, insertHtml) {
   const codes = normalizeSelectedCodesForAdsInsert(caseData.selectedCodes || '');
   // Successful browser HAR: HoldSelectedCodes=False, SelectedCodes=P,codeId,typeToCodeId,q,1;
   // CodeDescription=CPT digits (e.g. 19325), not long prose — see after succesful submission2.har
@@ -826,8 +873,11 @@ function buildInsertFormPayload(token, hidden, caseData) {
     caseData.residentsId != null && String(caseData.residentsId).trim() !== ''
       ? String(caseData.residentsId).trim()
       : (hidden.Residents || '');
-  return new URLSearchParams({
-    ...hidden,
+  const caseIdFieldName = extractCaseIdFieldNameFromInsertHtml(insertHtml || '') || 'CaseId';
+  const cid = caseIdForAdsInsertForm(caseData.caseId);
+  const hiddenClean = stripHiddenCaseIdKeys(hidden);
+  const body = {
+    ...hiddenClean,
     __RequestVerificationToken: token,
     Residents:       residentsVal,
     ProcedureDate:   caseData.procedureDate,
@@ -840,10 +890,12 @@ function buildInsertFormPayload(token, hidden, caseData) {
     SelectedCodes:     codes,
     CodeDescription: codeDesc,
     Comments:        mergeLocalCaseIdIntoComments(caseData),
-    CaseId:          caseIdForAdsInsertForm(caseData.caseId),
-    // Do not force IsMobileApp / MobileViewMode — desktop Insert uses hidden defaults; Mobile=True on desktop 500s.
     SearchTerm:      'False',
-  });
+  };
+  if (cid) {
+    body[caseIdFieldName] = cid;
+  }
+  return new URLSearchParams(body);
 }
 
 /**
@@ -875,11 +927,8 @@ function logSubmitPayloadDiagnostics(payload, hidden, caseData) {
       );
       const cid = String(caseData.caseId || '').trim();
       if (cid) {
-        console.warn(
-          '[ACGME] CaseId field: %s (%s)',
-          /^\d+$/.test(cid) ? 'numeric (edit key)' : 'text (resident Case ID)',
-          `${cid.length}b`
-        );
+        const posted = caseIdForAdsInsertForm(caseData.caseId);
+        console.warn('[ACGME] CaseId raw %sb → posted as key matching Insert form (%sb)', `${cid.length}`, `${String(posted).length}`);
       }
       const scLen = String(caseData.selectedCodes || '').length;
       const scRaw = String(caseData.selectedCodes || '').trim();
@@ -912,7 +961,7 @@ function logSubmitErrorResponse(status, html) {
 }
 
 async function submitCaseOnce(sessionCookie, caseData) {
-  const { token, hidden, cookieHeader: mergedCookie } = await getInsertPageData(sessionCookie);
+  const { token, hidden, cookieHeader: mergedCookie, insertHtml } = await getInsertPageData(sessionCookie);
   const cookie = mergedCookie || sessionCookie;
 
   if (process.env.ACGME_DEBUG_SUBMIT === '1') {
@@ -939,7 +988,7 @@ async function submitCaseOnce(sessionCookie, caseData) {
     }
   }
 
-  const payload = buildInsertFormPayload(token, hidden, caseDataForInsert);
+  const payload = buildInsertFormPayload(token, hidden, caseDataForInsert, insertHtml);
 
   const res = await fetchT(ACGME_INSERT_URL, {
     method: 'POST',
