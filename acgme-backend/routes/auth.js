@@ -14,21 +14,6 @@ async function assertInsertReachableFromCookies(cookies) {
   await getInsertPageData(header);
 }
 
-/** Records that an MFA browser session was started (survives only in-memory Map on one server process). */
-async function registerMfaSession(sessionId, userId) {
-  await db.query('DELETE FROM acgme_mfa_pending WHERE expires_at < NOW()').catch(() => {});
-  await db.query(
-    `INSERT INTO acgme_mfa_pending (session_id, user_id, expires_at)
-     VALUES ($1, $2, NOW() + INTERVAL '15 minutes')
-     ON CONFLICT (session_id) DO UPDATE SET expires_at = EXCLUDED.expires_at, user_id = EXCLUDED.user_id`,
-    [sessionId, userId]
-  );
-}
-
-async function clearMfaSession(sessionId) {
-  await db.query('DELETE FROM acgme_mfa_pending WHERE session_id = $1', [sessionId]).catch(() => {});
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/auth/register
 // Body: { name, email, password }
@@ -162,8 +147,6 @@ router.post('/save-credentials', authenticate, async (req, res, next) => {
     }
 
     if (result.mfaRequired) {
-      await registerMfaSession(result.sessionId, req.userId);
-      console.log(`[auth] MFA pending sessionId=${result.sessionId} user=${req.userId} pid=${process.pid}`);
       return res.json({
         success: false,
         mfaRequired: true,
@@ -188,40 +171,12 @@ router.post('/save-credentials', authenticate, async (req, res, next) => {
  */
 router.post('/complete-mfa', authenticate, async (req, res, next) => {
   try {
-    const { sessionId, code, mode } = req.body || {};
-    if (!sessionId) {
-      return res.status(400).json({ error: 'sessionId required' });
-    }
-    const duoPush = mode === 'duo_push';
-    if (!duoPush && (!code || String(code).trim() === '')) {
-      return res.status(400).json({
-        error:
-          'Enter the verification code, or use “I approved Duo on my phone” if you do not have a numeric code.',
-      });
+    const { sessionId, code } = req.body;
+    if (!sessionId || !code) {
+      return res.status(400).json({ error: 'sessionId and code required' });
     }
 
-    let result;
-    try {
-      result = await pw.completeMFA(sessionId, duoPush ? '' : String(code).trim(), {
-        mode: duoPush ? 'duo_push' : 'otp',
-      });
-    } catch (err) {
-      if (err.message && err.message.includes('MFA session not found')) {
-        const { rows } = await db.query(
-          `SELECT 1 FROM acgme_mfa_pending WHERE session_id = $1 AND user_id = $2 AND expires_at > NOW()`,
-          [sessionId, req.userId]
-        );
-        if (rows.length) {
-          await clearMfaSession(sessionId);
-          return res.status(503).json({
-            error:
-              'Sign-in started on a different server or the server restarted before you finished. In Railway, set this backend to exactly 1 replica (not multiple instances), save credentials again, then complete MFA within 15 minutes.',
-            mfaSessionLost: true,
-          });
-        }
-      }
-      throw err;
-    }
+    const result = await pw.completeMFA(sessionId, code);
 
     if (result.success) {
       try {
@@ -235,7 +190,6 @@ router.post('/complete-mfa', authenticate, async (req, res, next) => {
         });
       }
       await pw.storeSessionCookies(req.userId, result.cookies);
-      await clearMfaSession(sessionId);
       return res.json({ success: true, message: 'MFA verified. ACGME account connected!' });
     }
 
@@ -285,7 +239,6 @@ router.post('/verify-acgme', authenticate, async (req, res, next) => {
     }
 
     if (result.mfaRequired) {
-      await registerMfaSession(result.sessionId, req.userId);
       return res.json({
         success: false,
         mfaRequired: true,
@@ -305,7 +258,6 @@ router.post('/verify-acgme', authenticate, async (req, res, next) => {
  */
 router.delete('/disconnect-acgme', authenticate, async (req, res, next) => {
   try {
-    await db.query('DELETE FROM acgme_mfa_pending WHERE user_id = $1', [req.userId]).catch(() => {});
     await db.query('DELETE FROM user_acgme_credentials WHERE user_id = $1', [req.userId]);
     clearSession(req.userId);
     res.json({ success: true });

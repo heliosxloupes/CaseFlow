@@ -31,15 +31,6 @@ const schema = `
 
   CREATE INDEX IF NOT EXISTS idx_case_submissions_user_id ON case_submissions(user_id);
   CREATE INDEX IF NOT EXISTS idx_case_submissions_status  ON case_submissions(status);
-
-  CREATE TABLE IF NOT EXISTS acgme_mfa_pending (
-    session_id VARCHAR(64) PRIMARY KEY,
-    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT NOW(),
-    expires_at TIMESTAMP NOT NULL
-  );
-  CREATE INDEX IF NOT EXISTS idx_acgme_mfa_pending_user ON acgme_mfa_pending(user_id);
-  CREATE INDEX IF NOT EXISTS idx_acgme_mfa_pending_exp ON acgme_mfa_pending(expires_at);
 `;
 
 // ALTER statements for columns added after initial deploy

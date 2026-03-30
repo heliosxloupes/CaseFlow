@@ -245,12 +245,12 @@ async function startLogin(username, password) {
         if (s) {
           await s.browser.close().catch(() => {});
           pendingMfaSessions.delete(sessionId);
-          console.log(`[PW] MFA session ${sessionId} expired after 15 min`);
+          console.log(`[PW] MFA session ${sessionId} expired after 5 min`);
         }
-      }, 15 * 60 * 1000);
+      }, 5 * 60 * 1000);
 
       pendingMfaSessions.set(sessionId, { browser, context, page, timer });
-      console.log(`[PW] MFA required, sessionId=${sessionId} pid=${process.pid} pending=${pendingMfaSessions.size}`);
+      console.log(`[PW] MFA required, sessionId=${sessionId}`);
       return { success: false, mfaRequired: true, sessionId };
     }
 
@@ -272,11 +272,10 @@ async function startLogin(username, password) {
  * Complete an MFA challenge.
  *
  * @param {string} sessionId  returned from startLogin()
- * @param {string} code       OTP, or ignored when options.mode === 'duo_push'
- * @param {object} options    { mode?: 'otp' | 'duo_push' } — duo_push waits for redirect after Duo approve
+ * @param {string} code       the OTP/verification code from the user
  * @returns { success: true, cookies }
  */
-async function completeMFA(sessionId, code, options = {}) {
+async function completeMFA(sessionId, code) {
   const session = pendingMfaSessions.get(sessionId);
   if (!session) {
     throw new Error('MFA session not found or expired. Please start the ACGME connection again.');
@@ -285,26 +284,19 @@ async function completeMFA(sessionId, code, options = {}) {
   const { browser, context, page, timer } = session;
   clearTimeout(timer);
 
-  const mode = options.mode === 'duo_push' ? 'duo_push' : 'otp';
-
   try {
-    if (mode === 'duo_push') {
-      console.log(`[PW] Duo push mode — waiting for ACGME (user approves on phone) session=${sessionId} pid=${process.pid}`);
-      await page.waitForURL(`${ACGME_ORIGIN}/ads/**`, { timeout: 180000 });
-    } else {
-      console.log(`[PW] Entering MFA code for session ${sessionId} pid=${process.pid}...`);
+    console.log(`[PW] Entering MFA code for session ${sessionId}...`);
 
-      // Fill in the OTP — ACGME B2C uses #verificationCode
-      await page.waitForSelector('#verificationCode', { state: 'visible', timeout: 10000 }).catch(() => {});
-      const otpInput = page.locator('#verificationCode, input[name="otpCode"], input[type="tel"]').first();
-      await otpInput.fill(code);
+    // Fill in the OTP — ACGME B2C uses #verificationCode
+    await page.waitForSelector('#verificationCode', { state: 'visible', timeout: 10000 }).catch(() => {});
+    const otpInput = page.locator('#verificationCode, input[name="otpCode"], input[type="tel"]').first();
+    await otpInput.fill(code);
 
-      // Submit — B2C "Verify Code" button
-      await page.locator('#verifyCode, button:has-text("Verify Code"), button:has-text("Verify")').first().click();
+    // Submit — B2C "Verify Code" button
+    await page.locator('#verifyCode, button:has-text("Verify Code"), button:has-text("Verify")').first().click();
 
-      // Wait for ACGME to load
-      await page.waitForURL(`${ACGME_ORIGIN}/ads/**`, { timeout: 35000 });
-    }
+    // Wait for ACGME to load
+    await page.waitForURL(`${ACGME_ORIGIN}/ads/**`, { timeout: 35000 });
 
     const cookies = await context.cookies([ACGME_ORIGIN]);
     await browser.close();
