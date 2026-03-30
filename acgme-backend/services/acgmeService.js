@@ -320,9 +320,27 @@ function extractRequestVerificationToken(html) {
 }
 
 async function getInsertPageData(sessionCookie) {
-  const res = await fetchT(`${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`, {
-    headers: { 'Cookie': sessionCookie, 'User-Agent': UA, 'Accept': 'text/html' },
+  const insertUrl = `${BASE_URL}/ads/CaseLogs/CaseEntryMobile/Insert`;
+  const res = await fetchT(insertUrl, {
+    headers: {
+      Cookie: sessionCookie,
+      'User-Agent': UA,
+      Accept: 'text/html,application/xhtml+xml',
+      Referer: `${BASE_URL}/ads/`,
+    },
+    redirect: 'manual',
   }, 15000);
+
+  // Don’t follow cross-site auth redirects — treat as dead session (cookie not accepted)
+  if (res.status === 301 || res.status === 302 || res.status === 303 || res.status === 307 || res.status === 308) {
+    const loc = res.headers.get('location') || '';
+    const authish = /b2clogin|login|microsoftonline|oauth|signin|authorize/i.test(loc);
+    throw new Error(
+      authish
+        ? 'ACGME session expired or not authenticated — open Settings and reconnect your ACGME account.'
+        : `ACGME Insert returned redirect ${res.status} to ${loc.slice(0, 160)}`
+    );
+  }
 
   if (!res.ok) throw new Error(`Failed to load ACGME Insert page: ${res.status}`);
 

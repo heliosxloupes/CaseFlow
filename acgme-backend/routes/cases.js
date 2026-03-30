@@ -3,7 +3,15 @@ const router = express.Router();
 const { submitCase } = require('../services/acgmeService');
 const { decrypt } = require('../services/encryptionService');
 const pw = require('../services/playwrightService');
+const sessionCache = require('../services/sessionCache');
 const db = require('../db');
+
+/** One retry after clearing in-memory ACGME cookie cache + forcing refresh (handles flaky / racey sessions). */
+function isRetryableAcgmeSessionError(err) {
+  if (!err || err.mfaRequired) return false;
+  const msg = String(err.message || '');
+  return /session expired|not authenticated|Insert returned redirect|Could not find __RequestVerificationToken|Failed to load ACGME Insert page/i.test(msg);
+}
 
 /**
  * POST /api/cases/submit
@@ -36,14 +44,32 @@ router.post('/submit', async (req, res, next) => {
       return res.status(400).json({ error: `Missing required fields: ${missing.join(', ')}` });
     }
 
-    const cookie = await getOrRefreshSession(req.userId);
-
-    const result = await submitCase(cookie, {
+    const casePayload = {
       procedureDate, procedureYear, residentRoleId,
       institutionId, attendingId, patientTypeId,
       selectedCodes, codeDescription, comments,
       caseId,
-    });
+    };
+
+    let result;
+    let lastErr;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        if (attempt > 0) {
+          sessionCache.clearSession(req.userId);
+          console.log(`[cases/submit] Retry ${attempt} after session error; cleared cookie cache for user ${req.userId}`);
+        }
+        const cookie = await getOrRefreshSession(req.userId);
+        result = await submitCase(cookie, casePayload);
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (err.mfaRequired) throw err;
+        if (attempt === 0 && isRetryableAcgmeSessionError(err)) continue;
+        throw err;
+      }
+    }
+    if (!result) throw lastErr || new Error('Submit failed');
 
     await db.query(
       `INSERT INTO case_submissions (user_id, procedure_date, procedure_year, selected_codes, code_description, status, submitted_at)
