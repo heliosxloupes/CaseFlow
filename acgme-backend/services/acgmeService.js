@@ -325,20 +325,20 @@ async function getInsertPageData(sessionCookie) {
   const res = await fetchT(insertUrl, {
     headers: {
       Cookie: sessionCookie,
-      ‘User-Agent’: UA,
-      Accept: ‘text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8’,
-      ‘Accept-Language’: ‘en-US,en;q=0.9’,
+      'User-Agent': UA,
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
       Referer: `${BASE_URL}/ads/`,
-      ‘Upgrade-Insecure-Requests’: ‘1’,
-      ‘Sec-Fetch-Mode’: ‘navigate’,
-      ‘Sec-Fetch-Site’: ‘same-origin’,
-      ‘Sec-Fetch-Dest’: ‘document’,
-      ‘Sec-Fetch-User’: ‘?1’,
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'same-origin',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-User': '?1',
     },
-    redirect: ‘manual’,
+    redirect: 'manual',
   }, 15000);
 
-  // Don’t follow cross-site auth redirects — treat as dead session (cookie not accepted)
+  // Don't follow cross-site auth redirects — treat as dead session (cookie not accepted)
   if (res.status === 301 || res.status === 302 || res.status === 303 || res.status === 307 || res.status === 308) {
     const loc = res.headers.get('location') || '';
     const authish = /b2clogin|login|microsoftonline|oauth|signin|authorize/i.test(loc);
