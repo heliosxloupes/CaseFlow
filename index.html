@@ -364,9 +364,9 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .state-label:empty{height:0;margin:0;}
 /* ── Login — ColorBends full-screen ─────────────────────────────── */
 #pg-login{
-  /* no CSS background — ColorBends canvas IS the background */
+  /* position:relative so it sits above pg-app in normal flow */
   align-items:center;justify-content:flex-end;
-  padding:0;position:absolute;inset:0;overflow:hidden;
+  padding:0;position:relative;min-height:100vh;min-height:100dvh;overflow:hidden;
 }
 .login-colorbends-bg{
   position:absolute;inset:0;
