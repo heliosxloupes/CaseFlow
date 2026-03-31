@@ -128,110 +128,121 @@ module.exports = async function handler(req, res) {
     }
     step('On case log page');
 
-    // ── Submit each procedure as a separate case entry ────────────────────
+    // ── Submit ALL procedures as ONE case entry ───────────────────────────
+    // ACGME accepts multiple CPT codes per case via SelectedCodes field.
+    // We click "Add Case" once, add each code, then submit once.
     const results = [];
 
-    for (const proc of caseData.procs) {
-      step(`Submitting procedure ${proc.c}: ${proc.d}`);
+    step('Opening Add Case form');
+    await page.click(
+      'button:has-text("Add"), button:has-text("New Case"), button:has-text("+ Case"), [aria-label*="add"], [aria-label*="new case"]',
+      { timeout: 10000 }
+    );
+    await page.waitForLoadState('networkidle', { timeout: 10000 });
 
-      // Click "Add Case" / "New Case" / "+" button
-      await page.click(
-        'button:has-text("Add"), button:has-text("New Case"), button:has-text("+ Case"), [aria-label*="add"], [aria-label*="new case"]',
-        { timeout: 10000 }
-      );
-      await page.waitForLoadState('networkidle', { timeout: 10000 });
-
-      // ── Date ──────────────────────────────────────────────────────────
-      const dateInput = page.locator('input[type="date"], input[name*="date"], input[id*="date"], input[placeholder*="date" i]').first();
-      if (await dateInput.isVisible()) {
-        await dateInput.fill(caseData.date || new Date().toISOString().slice(0, 10));
-      }
-
-      // ── CPT / Procedure code ──────────────────────────────────────────
-      // Try typing in a procedure search field
-      const procInput = page.locator('input[placeholder*="procedure" i], input[placeholder*="search" i], input[name*="procedure"], input[id*="procedure"]').first();
-      if (await procInput.isVisible()) {
-        await procInput.fill(proc.c); // type the CPT code
-        await page.waitForTimeout(1000); // wait for autocomplete
-        // Select first suggestion
-        const suggestion = page.locator('[class*="suggestion"], [class*="autocomplete"] li, [role="option"]').first();
-        if (await suggestion.isVisible()) await suggestion.click();
-      }
-
-      // ── Role ──────────────────────────────────────────────────────────
-      const acgmeRole = ROLE_MAP[caseData.role] || caseData.role || 'Surgeon';
-      const roleSelect = page.locator('select[name*="role" i], select[id*="role" i]').first();
-      if (await roleSelect.isVisible()) {
-        await roleSelect.selectOption({ label: acgmeRole });
-      } else {
-        // Maybe chips/radio buttons
-        await page.click(`label:has-text("${acgmeRole}"), [data-value="${acgmeRole}"]`).catch(() => {});
-      }
-
-      // ── Patient type ──────────────────────────────────────────────────
-      const acgmePt = PATIENT_MAP[caseData.pt] || 'Adult';
-      const ptSelect = page.locator('select[name*="patient" i], select[id*="patient" i], select[name*="age" i]').first();
-      if (await ptSelect.isVisible()) {
-        await ptSelect.selectOption({ label: acgmePt }).catch(() => {});
-      } else {
-        await page.click(`label:has-text("${acgmePt}"), [data-value="${acgmePt}"]`).catch(() => {});
-      }
-
-      // ── Attending ─────────────────────────────────────────────────────
-      if (caseData.att) {
-        const attInput = page.locator('input[name*="attend" i], input[id*="attend" i], select[name*="attend" i]').first();
-        if (await attInput.isVisible()) {
-          const tag = await attInput.evaluate(el => el.tagName.toLowerCase());
-          if (tag === 'select') {
-            await attInput.selectOption({ label: caseData.att }).catch(() => {});
-          } else {
-            await attInput.fill(caseData.att);
-          }
-        }
-      }
-
-      // ── Institution / Site ────────────────────────────────────────────
-      if (caseData.site) {
-        const siteSelect = page.locator('select[name*="institution" i], select[name*="site" i], select[name*="hospital" i]').first();
-        if (await siteSelect.isVisible()) {
-          await siteSelect.selectOption({ label: caseData.site }).catch(async () => {
-            // Partial match fallback
-            const opts = await siteSelect.locator('option').allTextContents();
-            const match = opts.find(o => o.toLowerCase().includes(caseData.site.toLowerCase().split(' ')[0]));
-            if (match) await siteSelect.selectOption({ label: match });
-          });
-        }
-      }
-
-      // ── Year of training ──────────────────────────────────────────────
-      if (caseData.yr) {
-        const yrSelect = page.locator('select[name*="year" i], select[name*="pgy" i], select[id*="year" i]').first();
-        if (await yrSelect.isVisible()) {
-          await yrSelect.selectOption({ label: `PGY-${caseData.yr}` }).catch(async () => {
-            await yrSelect.selectOption({ value: String(caseData.yr) }).catch(() => {});
-          });
-        }
-      }
-
-      // ── Notes ─────────────────────────────────────────────────────────
-      if (caseData.notes) {
-        const notesInput = page.locator('textarea[name*="note" i], textarea[id*="note" i], textarea[placeholder*="note" i]').first();
-        if (await notesInput.isVisible()) await notesInput.fill(caseData.notes);
-      }
-
-      // ── Save / Submit the case ────────────────────────────────────────
-      const saveBtn = page.locator(
-        'button[type="submit"]:has-text("Save"), button:has-text("Submit"), button:has-text("Add Case"), button:has-text("Save Case")'
-      ).first();
-      await saveBtn.click({ timeout: 10000 });
-      await page.waitForLoadState('networkidle', { timeout: 15000 });
-
-      // Check for success confirmation
-      const confirmEl = await page.$('[class*="success"], [class*="confirm"], [role="alert"]');
-      const confirmText = confirmEl ? await confirmEl.textContent() : '';
-      results.push({ code: proc.c, desc: proc.d, ok: true, msg: confirmText?.trim() || 'Submitted' });
-      step(`Procedure ${proc.c} submitted`);
+    // ── Date ──────────────────────────────────────────────────────────────
+    const dateInput = page.locator('input[type="date"], input[name*="date"], input[id*="date"], input[placeholder*="date" i]').first();
+    if (await dateInput.isVisible()) {
+      await dateInput.fill(caseData.date || new Date().toISOString().slice(0, 10));
     }
+
+    // ── Role ──────────────────────────────────────────────────────────────
+    const acgmeRole = ROLE_MAP[caseData.role] || caseData.role || 'Surgeon';
+    const roleSelect = page.locator('select[name*="role" i], select[id*="role" i]').first();
+    if (await roleSelect.isVisible()) {
+      await roleSelect.selectOption({ label: acgmeRole });
+    } else {
+      await page.click(`label:has-text("${acgmeRole}"), [data-value="${acgmeRole}"]`).catch(() => {});
+    }
+
+    // ── Patient type ──────────────────────────────────────────────────────
+    const acgmePt = PATIENT_MAP[caseData.pt] || 'Adult';
+    const ptSelect = page.locator('select[name*="patient" i], select[id*="patient" i], select[name*="age" i]').first();
+    if (await ptSelect.isVisible()) {
+      await ptSelect.selectOption({ label: acgmePt }).catch(() => {});
+    } else {
+      await page.click(`label:has-text("${acgmePt}"), [data-value="${acgmePt}"]`).catch(() => {});
+    }
+
+    // ── Attending ─────────────────────────────────────────────────────────
+    if (caseData.att) {
+      const attInput = page.locator('input[name*="attend" i], input[id*="attend" i], select[name*="attend" i]').first();
+      if (await attInput.isVisible()) {
+        const tag = await attInput.evaluate(el => el.tagName.toLowerCase());
+        if (tag === 'select') {
+          await attInput.selectOption({ label: caseData.att }).catch(() => {});
+        } else {
+          await attInput.fill(caseData.att);
+        }
+      }
+    }
+
+    // ── Institution / Site ────────────────────────────────────────────────
+    if (caseData.site) {
+      const siteSelect = page.locator('select[name*="institution" i], select[name*="site" i], select[name*="hospital" i]').first();
+      if (await siteSelect.isVisible()) {
+        await siteSelect.selectOption({ label: caseData.site }).catch(async () => {
+          const opts = await siteSelect.locator('option').allTextContents();
+          const match = opts.find(o => o.toLowerCase().includes(caseData.site.toLowerCase().split(' ')[0]));
+          if (match) await siteSelect.selectOption({ label: match });
+        });
+      }
+    }
+
+    // ── Year of training ──────────────────────────────────────────────────
+    if (caseData.yr) {
+      const yrSelect = page.locator('select[name*="year" i], select[name*="pgy" i], select[id*="year" i]').first();
+      if (await yrSelect.isVisible()) {
+        await yrSelect.selectOption({ label: `PGY-${caseData.yr}` }).catch(async () => {
+          await yrSelect.selectOption({ value: String(caseData.yr) }).catch(() => {});
+        });
+      }
+    }
+
+    // ── Notes ─────────────────────────────────────────────────────────────
+    if (caseData.notes) {
+      const notesInput = page.locator('textarea[name*="note" i], textarea[id*="note" i], textarea[placeholder*="note" i]').first();
+      if (await notesInput.isVisible()) await notesInput.fill(caseData.notes);
+    }
+
+    // ── Add ALL CPT codes (one search + select per code) ──────────────────
+    // HAR confirms ACGME accumulates codes in SelectedCodes field on the same form.
+    for (const proc of caseData.procs) {
+      step(`Adding code ${proc.c}: ${proc.d}`);
+      const codeInput = page.locator(
+        'input[name="CodeDescription"], input[name*="CodeDesc" i], input[placeholder*="code" i], input[placeholder*="search" i], input[name*="procedure"], input[id*="procedure"]'
+      ).first();
+      if (await codeInput.isVisible()) {
+        await codeInput.click();
+        await codeInput.fill(proc.c);
+        await page.waitForTimeout(1200); // wait for ACGME GetCodes AJAX
+        const suggestion = page.locator(
+          '[class*="suggestion"], [class*="autocomplete"] li, [role="option"], td.cpt-code, td[class*="code-value"]'
+        ).first();
+        if (await suggestion.isVisible()) {
+          await suggestion.click();
+          await page.waitForTimeout(700); // wait for GetSelectedCodePartial response
+        }
+      }
+      step(`Code ${proc.c} added`);
+    }
+
+    // ── Submit once with all codes ────────────────────────────────────────
+    step('Submitting case with all codes');
+    const saveBtn = page.locator(
+      'button[type="submit"]:has-text("Save"), button:has-text("Submit"), button:has-text("Add Case"), button:has-text("Save Case")'
+    ).first();
+    await saveBtn.click({ timeout: 10000 });
+    await page.waitForLoadState('networkidle', { timeout: 15000 });
+
+    const confirmEl = await page.$('[class*="success"], [class*="confirm"], [role="alert"]');
+    const confirmText = confirmEl ? await confirmEl.textContent() : '';
+    results.push({
+      codes: caseData.procs.map(p => p.c),
+      ok: true,
+      msg: confirmText?.trim() || 'Submitted',
+    });
+    step(`Case submitted with ${caseData.procs.length} code(s)`);
 
     await browser.close();
 
