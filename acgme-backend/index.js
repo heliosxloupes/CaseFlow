@@ -8,6 +8,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const caseRoutes = require('./routes/cases');
 const lookupRoutes = require('./routes/lookups');
+const transcribeRoutes = require('./routes/transcribe');
 const { errorHandler } = require('./middleware/errorHandler');
 const { authenticate } = require('./middleware/authenticate');
 const { migrate } = require('./db/migrate');
@@ -31,6 +32,7 @@ app.use(limiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/cases', authenticate, caseRoutes);
 app.use('/api/lookups', authenticate, lookupRoutes);
+app.use('/api/transcribe', authenticate, transcribeRoutes);
 
 app.get('/health', (req, res) => {
   const dbUrl = process.env.DATABASE_URL || '';

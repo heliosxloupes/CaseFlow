@@ -1,0 +1,83 @@
+const express = require('express');
+const router = express.Router();
+const multer = require('multer');
+const Groq = require('groq-sdk');
+const { toFile } = require('groq-sdk');
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB — Groq limit
+});
+
+// Plastic surgery vocabulary hint seeded into every transcription.
+// Whisper uses this as a prior — dramatically improves accuracy for
+// procedure names, attendings, and hospital names.
+const BASE_PROMPT = [
+  'Plastic surgery resident case log.',
+  'Procedures: rhinoplasty, mastopexy, abdominoplasty, augmentation mammoplasty,',
+  'reduction mammaplasty, blepharoplasty, rhytidectomy, liposuction, brachioplasty,',
+  'tissue expander, TRAM flap, DIEP flap, latissimus dorsi flap, cleft lip, cleft palate,',
+  'carpal tunnel release, brow lift, neck lift, ear reconstruction, skin graft,',
+  'flap reconstruction, free flap, perforator flap.',
+].join(' ');
+
+/**
+ * POST /api/transcribe
+ * Accepts multipart/form-data:
+ *   audio     — audio blob (webm, mp4, m4a, ogg, wav)
+ *   sites     — JSON array of hospital/site names (optional)
+ *   attendings — JSON array of attending names (optional)
+ * Returns: { transcript: string }
+ */
+router.post('/', upload.single('audio'), async (req, res, next) => {
+  try {
+    if (!req.file || !req.file.buffer.length) {
+      return res.status(400).json({ error: 'No audio file received' });
+    }
+
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!groqKey) {
+      return res.status(503).json({ error: 'Transcription not configured (missing GROQ_API_KEY)' });
+    }
+
+    // Parse optional context arrays for vocabulary seeding
+    let sites = [];
+    let attendings = [];
+    try { sites = JSON.parse(req.body.sites || '[]'); } catch (_) {}
+    try { attendings = JSON.parse(req.body.attendings || '[]'); } catch (_) {}
+
+    const promptParts = [BASE_PROMPT];
+    if (sites.length) promptParts.push(`Hospitals: ${sites.slice(0, 10).join(', ')}.`);
+    if (attendings.length) promptParts.push(`Attendings: ${attendings.slice(0, 10).join(', ')}.`);
+    const prompt = promptParts.join(' ');
+
+    // Determine file extension from MIME type for Groq's file-type detection
+    const mime = req.file.mimetype || 'audio/webm';
+    const ext = mime.includes('mp4') || mime.includes('m4a') ? 'm4a'
+              : mime.includes('ogg') ? 'ogg'
+              : mime.includes('wav') ? 'wav'
+              : 'webm';
+
+    const groq = new Groq({ apiKey: groqKey });
+    const audioFile = await toFile(req.file.buffer, `recording.${ext}`, { type: mime });
+
+    const result = await groq.audio.transcriptions.create({
+      file: audioFile,
+      model: 'whisper-large-v3-turbo',
+      prompt,
+      language: 'en',
+      response_format: 'text',
+    });
+
+    // groq returns a plain string when response_format is 'text'
+    const transcript = typeof result === 'string' ? result.trim() : (result.text || '').trim();
+
+    console.log(`[transcribe] user=${req.userId} len=${req.file.size}b → "${transcript.slice(0, 120)}"`);
+    res.json({ transcript });
+  } catch (err) {
+    console.error('[transcribe] error:', err.message);
+    next(err);
+  }
+});
+
+module.exports = router;

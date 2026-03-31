@@ -1085,6 +1085,62 @@ function stopMic(){if(micStream){micStream.getTracks().forEach(t=>t.stop());micS
 let savedMicStream=null; // reused across voice sessions to avoid extra permission prompts
 let recObj=null,recOn=false,txFinal='',txInt='';
 let fuRec=null,fuOn=false,fuFinal='',fuInt='';
+// MediaRecorder instances for Groq Whisper transcription (run alongside Web Speech API)
+let mainMediaRec=null,mainAudioChunks=[];
+let addMoreMediaRec=null,addMoreAudioChunks=[];
+
+/**
+ * Start a MediaRecorder on the given stream, storing chunks in the provided array.
+ * Returns the MediaRecorder instance or null if unavailable.
+ */
+function startMediaRecorder(stream, chunks){
+  if(!stream||typeof MediaRecorder==='undefined') return null;
+  try{
+    const mr=new MediaRecorder(stream);
+    mr.ondataavailable=e=>{if(e.data&&e.data.size>0)chunks.push(e.data);};
+    mr.start();
+    return mr;
+  }catch(e){console.warn('MediaRecorder init failed:',e);return null;}
+}
+
+/**
+ * Stop a MediaRecorder and POST the audio to Railway Groq Whisper.
+ * Resolves with the Groq transcript, or fallback if anything fails.
+ * @param {MediaRecorder|null} mr
+ * @param {Blob[]} chunks
+ * @param {string} fallback  — Web Speech API transcript used if Groq fails
+ */
+function getGroqTranscript(mr, chunks, fallback){
+  return new Promise(resolve=>{
+    if(!mr||!chunks.length){resolve(fallback);return;}
+    const token=localStorage.getItem('cf5-token');
+    if(!token||typeof ACGME_BACKEND_URL==='undefined'||!ACGME_BACKEND_URL){resolve(fallback);return;}
+    const timeout=setTimeout(()=>{console.warn('[Groq] timeout — using Web Speech fallback');resolve(fallback);},12000);
+    mr.onstop=async()=>{
+      clearTimeout(timeout);
+      if(!chunks.length){resolve(fallback);return;}
+      try{
+        const mime=mr.mimeType||'audio/webm';
+        const blob=new Blob(chunks,{type:mime});
+        const fd=new FormData();
+        const ext=mime.includes('mp4')||mime.includes('m4a')?'m4a':mime.includes('ogg')?'ogg':'webm';
+        fd.append('audio',blob,`recording.${ext}`);
+        fd.append('sites',JSON.stringify(getSitesForEdit()));
+        fd.append('attendings',JSON.stringify(getAttendingsForEdit()));
+        const resp=await fetch(`${ACGME_BACKEND_URL}/api/transcribe`,{
+          method:'POST',
+          headers:{'Authorization':`Bearer ${token}`},
+          body:fd,
+        });
+        if(!resp.ok){console.warn('[Groq] HTTP',resp.status,'— using Web Speech fallback');resolve(fallback);return;}
+        const {transcript}=await resp.json();
+        console.log('[Groq] transcript:',transcript?.slice(0,120));
+        resolve(transcript&&transcript.trim()?transcript.trim():fallback);
+      }catch(e){console.warn('[Groq] error:',e,'— using Web Speech fallback');resolve(fallback);}
+    };
+    try{mr.stop();}catch(e){clearTimeout(timeout);resolve(fallback);}
+  });
+}
 function makeRec(onResult,onEnd){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR)return null;
@@ -1157,17 +1213,29 @@ async function startInitialListening(){
       console.warn('getUserMedia failed (visualizer disabled):', e);
     }
   }
-  if(savedMicStream) startMic(savedMicStream); // fire-and-forget, visualizer only
+  if(savedMicStream){
+    startMic(savedMicStream); // fire-and-forget, visualizer only
+    // Start MediaRecorder for Groq transcription
+    mainAudioChunks=[];
+    if(mainMediaRec){try{mainMediaRec.stop();}catch(_){} mainMediaRec=null;}
+    mainMediaRec=startMediaRecorder(savedMicStream,mainAudioChunks);
+  }
 }
 function stopInitialListening(){
   recOn=false;if(recObj){try{recObj.abort();}catch(e){} recObj=null;}
   // Keep mic stream alive — stopMic() only in resetFlow() to avoid iOS audio session cooldown
-  const text=(txFinal+' '+txInt).trim();
+  const wsText=(txFinal+' '+txInt).trim();
   AudioFX.confirmStop();
-  if(!text){orbState='idle';document.getElementById('orb-hint').classList.remove('hide');showBubble('');setStateLabel('');return}
+  if(!wsText){
+    if(mainMediaRec){try{mainMediaRec.stop();}catch(_){} mainMediaRec=null;mainAudioChunks=[];}
+    orbState='idle';document.getElementById('orb-hint').classList.remove('hide');showBubble('');setStateLabel('');return;
+  }
   orbState='thinking';showBubble('Finding your CPT codes…');setStateLabel('');
   AudioFX.startThink();
-  processDescription(text);
+  // Get Groq transcript (falls back to Web Speech text if Groq fails)
+  const recSnap=mainMediaRec,chunksSnap=mainAudioChunks;
+  mainMediaRec=null;mainAudioChunks=[];
+  getGroqTranscript(recSnap,chunksSnap,wsText).then(transcript=>processDescription(transcript));
 }
 async function processDescription(text){
   caseData.description=text;caseData.date=isoToday();buildIndex();
@@ -1638,7 +1706,13 @@ async function startAddMoreVoice(){
     try{ savedMicStream = await navigator.mediaDevices.getUserMedia({audio:true}); }
     catch(e){ console.warn('Visualizer skipped:', e); }
   }
-  if(savedMicStream) startMic(savedMicStream); // fire-and-forget
+  if(savedMicStream){
+    startMic(savedMicStream); // fire-and-forget
+    // Start MediaRecorder for Groq transcription
+    addMoreAudioChunks=[];
+    if(addMoreMediaRec){try{addMoreMediaRec.stop();}catch(_){} addMoreMediaRec=null;}
+    addMoreMediaRec=startMediaRecorder(savedMicStream,addMoreAudioChunks);
+  }
 }
 
 
@@ -1647,10 +1721,13 @@ async function stopAddMoreVoice(){
   if(addMoreRec){try{addMoreRec.abort();}catch(e){} addMoreRec=null;}
   // Keep mic stream alive for potential re-use; only torn down in resetFlow()
 
-  const text = (addMoreFinal+' '+addMoreInt).trim();
+  const wsText = (addMoreFinal+' '+addMoreInt).trim();
   addMoreFinal=''; addMoreInt='';
+  const recSnap=addMoreMediaRec,chunksSnap=addMoreAudioChunks;
+  addMoreMediaRec=null;addMoreAudioChunks=[];
 
-  if(!text){
+  if(!wsText){
+    if(recSnap){try{recSnap.stop();}catch(_){}}
     orbState='idle';
     document.getElementById('q-bubble').classList.remove('show');
     document.getElementById('q-bubble').textContent='';
@@ -1660,12 +1737,15 @@ async function stopAddMoreVoice(){
     return;
   }
 
-  // Show thinking state while API runs
+  // Show thinking state while Groq + API run
   orbState='thinking';
   showBubble('Finding codes…');
   document.getElementById('q-bubble').classList.add('show');
   document.getElementById('orb-hint').classList.add('hide');
   setStateLabel('');
+
+  // Upgrade to Groq transcript; fall back to Web Speech if unavailable
+  const text = await getGroqTranscript(recSnap, chunksSnap, wsText);
 
   let extracted = null;
   try {
