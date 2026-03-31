@@ -13,12 +13,11 @@ const upload = multer({
 // Whisper uses this as a prior — dramatically improves accuracy for
 // procedure names, attendings, and hospital names.
 const BASE_PROMPT = [
-  'Plastic surgery resident case log.',
+  'Plastic surgery case log.',
   'Procedures: rhinoplasty, mastopexy, abdominoplasty, augmentation mammoplasty,',
   'reduction mammaplasty, blepharoplasty, rhytidectomy, liposuction, brachioplasty,',
-  'tissue expander, TRAM flap, DIEP flap, latissimus dorsi flap, cleft lip, cleft palate,',
-  'carpal tunnel release, brow lift, neck lift, ear reconstruction, skin graft,',
-  'flap reconstruction, free flap, perforator flap.',
+  'tissue expander, TRAM flap, DIEP flap, cleft lip, cleft palate,',
+  'carpal tunnel release, brow lift, neck lift, skin graft, free flap.',
 ].join(' ');
 
 /**
@@ -46,10 +45,11 @@ router.post('/', upload.single('audio'), async (req, res, next) => {
     try { sites = JSON.parse(req.body.sites || '[]'); } catch (_) {}
     try { attendings = JSON.parse(req.body.attendings || '[]'); } catch (_) {}
 
+    // Build prompt under Groq's 896-char hard limit
     const promptParts = [BASE_PROMPT];
-    if (sites.length) promptParts.push(`Hospitals: ${sites.slice(0, 10).join(', ')}.`);
-    if (attendings.length) promptParts.push(`Attendings: ${attendings.slice(0, 10).join(', ')}.`);
-    const prompt = promptParts.join(' ');
+    if (sites.length) promptParts.push(`Hospitals: ${sites.slice(0, 5).join(', ')}.`);
+    if (attendings.length) promptParts.push(`Attendings: ${attendings.slice(0, 8).join(', ')}.`);
+    const prompt = promptParts.join(' ').slice(0, 890);
 
     // Determine file extension from MIME type for Groq's file-type detection
     const mime = req.file.mimetype || 'audio/webm';
