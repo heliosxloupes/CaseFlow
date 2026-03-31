@@ -753,27 +753,31 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 /* Case edit modal */
 .case-edit-modal{position:fixed;inset:0;z-index:8500;background:rgb(7,9,15);display:flex;flex-direction:column;opacity:0;pointer-events:none!important;transition:opacity .22s;transform:translateY(20px);overflow:hidden;width:100vw;max-width:100vw}
 .case-edit-modal.on{opacity:1;pointer-events:all!important;transform:translateY(0);transition:opacity .22s,transform .22s}
-.case-edit-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--line);flex-shrink:0;box-sizing:border-box;width:100%}
+.case-edit-header{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 14px;border-bottom:1px solid var(--line);flex-shrink:0;box-sizing:border-box;width:100%}
 .case-edit-title{font-size:16px;font-weight:700;color:var(--text)}
 .case-edit-close{background:var(--bg2);border:1px solid var(--line2);color:var(--text2);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;line-height:1;flex-shrink:0}
-.case-edit-scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:20px;width:100%;box-sizing:border-box}
-.case-edit-footer{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:10px;flex-shrink:0;box-sizing:border-box;width:100%}
-.ce-field{margin-bottom:20px;width:100%;box-sizing:border-box}
+.case-edit-scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:18px 18px 28px;width:100%;box-sizing:border-box}
+.case-edit-footer{padding:14px 18px calc(16px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);display:flex;gap:10px;flex-shrink:0;box-sizing:border-box;width:100%;background:linear-gradient(180deg,rgba(9,12,18,.82) 0%,rgba(9,12,18,.96) 100%)}
+.ce-field{margin-bottom:18px;width:100%;box-sizing:border-box}
 .ce-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px}
 .ce-chips{display:flex;flex-wrap:wrap;gap:7px}
 .ce-chip{background:var(--bg2);border:1px solid var(--line2);border-radius:20px;padding:7px 13px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .15s;font-family:'Sora',sans-serif;font-weight:500;white-space:nowrap}
 .ce-chip.active{background:var(--blue-d);border-color:var(--blue);color:var(--blue)}
-.ce-proc-row{display:flex;align-items:flex-start;gap:8px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:6px;box-sizing:border-box;width:100%;min-width:0}
+.ce-proc-row{display:flex;align-items:flex-start;gap:10px;background:linear-gradient(180deg,rgba(21,27,38,.92) 0%,rgba(17,22,32,.98) 100%);border:1px solid rgba(123,146,185,.16);border-radius:14px;padding:12px 13px;margin-bottom:8px;box-sizing:border-box;width:100%;min-width:0}
 .ce-proc-code{font-size:11px;font-weight:700;color:var(--blue);flex-shrink:0;padding-top:2px}
 .ce-proc-info{flex:1;min-width:0;overflow:hidden}
 .ce-proc-desc{font-size:12px;color:var(--text);line-height:1.4;word-break:break-word;overflow-wrap:anywhere}
 .ce-proc-area{font-size:10px;color:var(--text3);margin-top:2px;word-break:break-word}
-.ce-proc-del{color:var(--text3);cursor:pointer;font-size:16px;padding:0 2px;flex-shrink:0;line-height:1;transition:color .15s}
+.ce-proc-del{color:var(--text3);cursor:pointer;font-size:16px;padding:2px;flex-shrink:0;line-height:1;transition:color .15s}
 .ce-proc-del:active{color:#f87171}
-.ce-add-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;box-sizing:border-box;background:transparent;border:1px dashed var(--line2);border-radius:8px;padding:10px;font-size:13px;color:var(--text3);cursor:pointer;font-family:'Sora',sans-serif;transition:border-color .15s,color .15s;margin-top:4px}
-.ce-add-btn:active{border-color:var(--blue);color:var(--blue)}
+.ce-empty-procs{font-size:13px;color:var(--text3);padding:8px 0 4px;line-height:1.5}
+.ce-add-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;box-sizing:border-box;background:rgba(10,14,22,.55);border:1px dashed rgba(132,152,196,.24);border-radius:14px;padding:12px 14px;font-size:13px;color:#c7d4ea;cursor:pointer;font-family:'Sora',sans-serif;transition:border-color .15s,color .15s,background .15s;margin-top:6px}
+.ce-add-btn:active{border-color:var(--blue);color:var(--blue);background:rgba(21,31,49,.72)}
+.ce-add-meta{font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5;padding-left:2px}
 .ce-date-input{width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;transition:border-color .18s}
 .ce-date-input:focus{border-color:var(--blue)}
+.ce-text-input{width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--line2);border-radius:12px;padding:12px 14px;color:var(--text);font-family:'Sora',sans-serif;font-size:15px;outline:none;transition:border-color .18s}
+.ce-text-input:focus{border-color:var(--blue)}
 .ce-combo{position:relative;width:100%;box-sizing:border-box}
 .ce-sel-input{width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:12px 14px;color:var(--text);font-family:'Sora',sans-serif;font-size:16px;outline:none;transition:border-color .18s;-webkit-appearance:none;appearance:none}
 .ce-sel-input:focus{border-color:var(--blue)}
@@ -788,10 +792,10 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .ce-combo-opt:active{background:var(--bg2)}
 .ce-combo-empty{padding:12px 14px;font-size:12px;color:var(--text3);line-height:1.45}
 .ce-combo-hint{font-size:11px;color:var(--text3);margin-top:8px;line-height:1.45}
-.btn-del-case{flex:1;padding:13px;background:transparent;border:1px solid rgba(248,113,113,.3);border-radius:var(--r);color:#f87171;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;box-sizing:border-box}
+.btn-del-case{flex:1;padding:13px;background:transparent;border:1px solid rgba(248,113,113,.3);border-radius:var(--r);color:#f87171;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;box-sizing:border-box;min-width:0}
 .btn-del-case:active{background:rgba(248,113,113,.1)}
 /* Search modal */
-.search-modal{position:fixed;inset:0;z-index:8000;background:rgba(7,9,15,.96);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:18vh;opacity:0;pointer-events:none!important;transition:opacity .2s;padding-left:20px;padding-right:20px}
+.search-modal{position:fixed;inset:0;z-index:8800;background:rgba(7,9,15,.96);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:18vh;opacity:0;pointer-events:none!important;transition:opacity .2s;padding-left:20px;padding-right:20px}
 .search-modal.on{opacity:1;pointer-events:all!important}
 .search-modal-inner{width:100%;max-width:420px;display:flex;flex-direction:column;gap:0}
 .search-modal-close{position:absolute;top:20px;right:20px;background:var(--bg2);border:1px solid var(--line2);color:var(--text2);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;line-height:1;transition:background .15s}
@@ -901,6 +905,19 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
   .new-case-btn{padding:5px 11px;font-size:11px;gap:4px}
   .new-case-btn svg{width:11px;height:11px}
   .sm-nav-beta{padding:3px 8px;font-size:8px}
+  .case-edit-header{padding:16px 14px 12px}
+  .case-edit-title{font-size:15px}
+  .case-edit-close{width:34px;height:34px}
+  .case-edit-scroll{padding:16px 14px 22px}
+  .case-edit-footer{padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px));gap:8px}
+  .ce-field{margin-bottom:16px}
+  .ce-label{font-size:10px;margin-bottom:7px}
+  .ce-chip{padding:8px 13px;font-size:11px}
+  .ce-date-input,.ce-sel-input,.ce-text-input{font-size:15px;padding:12px 13px}
+  .ce-proc-row{padding:11px 11px 10px}
+  .ce-proc-desc{font-size:11px;line-height:1.38}
+  .ce-proc-area{font-size:9px}
+  .btn-del-case,.case-edit-footer .btn-go{padding:12px 10px;font-size:13px}
 }
 /* Collapse hidden flow elements so the orb is truly centered on initial load */
 .question-bubble:not(.show),
@@ -2830,6 +2847,9 @@ function openCaseEdit(id){
       return;
     }
     editingCase=JSON.parse(JSON.stringify(c)); // deep copy
+    editingCase.caseId=(editingCase.caseId||editingCase.cid||'').slice(0,CASE_ID_MAX_LEN);
+    editingCase.cid=editingCase.caseId;
+    if(!Array.isArray(editingCase.procs)) editingCase.procs=[];
     renderCaseEditModal();
     document.getElementById('case-edit-modal').classList.add('on');
     if(typeof ACGME_BACKEND_URL !== 'undefined' && ACGME_BACKEND_URL && localStorage.getItem('cf5-token')){
@@ -2849,6 +2869,14 @@ function openCaseEdit(id){
 function closeCaseEdit(){
   document.getElementById('case-edit-modal').classList.remove('on');
   editingCase=null;
+}
+function setEditCaseId(val){
+  if(!editingCase)return;
+  const next=String(val||'').slice(0,CASE_ID_MAX_LEN);
+  editingCase.caseId=next;
+  editingCase.cid=next;
+  const inp=document.getElementById('ce-caseid');
+  if(inp && inp.value!==next) inp.value=next;
 }
 function getSitesForEdit(){
   try{
@@ -2926,6 +2954,7 @@ function ceComboInputSync(which, val){
 function renderCaseEditModal(){
   if(!editingCase)return;
   const c=editingCase;
+  const caseIdVal=(c.caseId||c.cid||'').slice(0,CASE_ID_MAX_LEN);
   const siteHint=hasProfileCache('cf5-sites')
     ? 'Options from your ACGME program (saved on this device).'
     : 'Using defaults — connect ACGME in Settings to load your program list.';
@@ -2938,12 +2967,17 @@ function renderCaseEditModal(){
       <input type="date" class="ce-date-input" id="ce-date" value="${c.date||''}" onchange="editingCase.date=this.value">
     </div>
     <div class="ce-field">
+      <div class="ce-label">Case ID</div>
+      <input type="text" class="ce-text-input" id="ce-caseid" maxlength="${CASE_ID_MAX_LEN}" placeholder="Optional case identifier" value="${escAttr(caseIdVal)}" oninput="setEditCaseId(this.value)">
+    </div>
+    <div class="ce-field">
       <div class="ce-label">Procedures</div>
       <div id="ce-procs">${renderCeProcs()}</div>
-      <button class="ce-add-btn" onclick="openSearchForEdit()">
+      <button type="button" class="ce-add-btn" onclick="openSearchForEdit()">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add procedure
       </button>
+      <div class="ce-add-meta">Search by CPT or keyword to append another procedure to this case.</div>
     </div>
     <div class="ce-field">
       <div class="ce-label">Role</div>
@@ -2981,12 +3015,12 @@ function renderCaseEditModal(){
   },0);
 }
 function renderCeProcs(){
-  if(!editingCase?.procs?.length)return'<div style="font-size:13px;color:var(--text3);padding:4px 0">No procedures added</div>';
+  if(!editingCase?.procs?.length)return'<div class="ce-empty-procs">No procedures added yet. Use Add procedure to search and append another CPT code.</div>';
   return editingCase.procs.map((p,i)=>`
     <div class="ce-proc-row">
       <div class="ce-proc-code">${p.c}</div>
       <div class="ce-proc-info"><div class="ce-proc-desc">${p.d}</div><div class="ce-proc-area">${p.a||''}</div></div>
-      <div class="ce-proc-del" onclick="ceProcDel(${i})">&#x2715;</div>
+      <div class="ce-proc-del" onclick="ceProcDel(${i})" aria-label="Remove procedure">&#x2715;</div>
     </div>`).join('');
 }
 function ceProcDel(i){
@@ -3021,7 +3055,7 @@ function addMoreCode(code,desc,area){
     if(!editingCase.procs.find(p=>p.c===code)){
       editingCase.procs.push({c:code,d:desc,a:area});
       document.getElementById('ce-procs').innerHTML=renderCeProcs();
-      toast('Procedure added','ok');
+      toast('Procedure added to case','ok');
     } else {toast('Already added','');}
     return;
   }
