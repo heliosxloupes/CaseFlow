@@ -794,25 +794,19 @@ function pickSelectedCodesFromGetCodesResponseLegacy(data, cptWant) {
 }
 
 /**
- * If selectedCodes is a raw CPT / short code, call GetCodes and replace with ADS tuple.
+ * Resolve a single bare CPT to ADS tuple via GetCodes.
  */
-async function resolveSelectedCodesIfNeeded(sessionCookie, hidden, caseData) {
-  const raw = String(caseData.selectedCodes || '').trim();
-  if (!raw) return caseData;
-  if (looksLikeAdsSelectedCodesTuple(raw)) return caseData;
-
-  const specialtyId = specialtyIdFromInsertHidden(hidden);
-
+async function resolveOneCpt(sessionCookie, specialtyId, cpt, procedureDate) {
   let data;
   try {
     data = await fetchCodeSearchGetCodes(sessionCookie, {
       specialtyId,
-      codeDesc: raw,
-      activeAsOfDate: caseData.procedureDate || '',
+      codeDesc: cpt,
+      activeAsOfDate: procedureDate || '',
     });
   } catch (e) {
     throw new Error(
-      `Could not look up procedure code "${raw}" in ACGME (${e.message || e}). ` +
+      `Could not look up procedure code "${cpt}" in ACGME (${e.message || e}). ` +
         'Confirm your case date and that this CPT is valid for your program in ADS.'
     );
   }
@@ -827,29 +821,58 @@ async function resolveSelectedCodesIfNeeded(sessionCookie, hidden, caseData) {
 
   if (data && data.Success === false) {
     const msg = (data.Message && String(data.Message).trim()) || 'Success=false';
-    throw new Error(
-      `ACGME GetCodes rejected the request: ${msg}. Check procedure date and specialty.`
-    );
+    throw new Error(`ACGME GetCodes rejected the request: ${msg}. Check procedure date and specialty.`);
   }
 
-  const { tuple: resolved, payloadRow } = resolveTupleAndPayloadRowFromGetCodesJson(data, raw);
+  const { tuple: resolved, payloadRow } = resolveTupleAndPayloadRowFromGetCodesJson(data, cpt);
   if (!resolved) {
     throw new Error(
-      `ACGME has no matching procedure row for code "${raw}" (specialty ${specialtyId}). ` +
+      `ACGME has no matching procedure row for code "${cpt}" (specialty ${specialtyId}). ` +
         'Try another code or enter the case manually in ADS once, then compare Network → GetCodes in DevTools. ' +
         'If your program uses a non-default specialty, set ACGME_SPECIALTY_ID on the Railway service.'
     );
   }
 
-  console.warn(
-    `[ACGME] Resolved CPT "${raw}" → SelectedCodes tuple (len=${resolved.length}b)`
-  );
-  const out = { ...caseData, selectedCodes: resolved };
-  if (payloadRow) {
-    out._adsPayloadRow = payloadRow;
-    out._adsCodeValueForInsert = String(payloadRow.CodeValue || '').trim();
-  } else {
-    out._adsCodeValueForInsert = raw;
+  console.warn(`[ACGME] Resolved CPT "${cpt}" → SelectedCodes tuple (len=${resolved.length}b)`);
+  return { tuple: resolved, payloadRow, codeValue: payloadRow ? String(payloadRow.CodeValue || '').trim() : cpt };
+}
+
+/**
+ * If selectedCodes is a raw CPT or comma-separated CPTs, resolve each via GetCodes and replace
+ * with concatenated ADS tuples (e.g. "P,4780,1118932,1,1;P,9440,100733,1,1;").
+ */
+async function resolveSelectedCodesIfNeeded(sessionCookie, hidden, caseData) {
+  const raw = String(caseData.selectedCodes || '').trim();
+  if (!raw) return caseData;
+  if (looksLikeAdsSelectedCodesTuple(raw)) return caseData;
+
+  const specialtyId = specialtyIdFromInsertHidden(hidden);
+
+  // Split by comma to support multi-code submissions (e.g. "30410,19325")
+  const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+
+  const tuples = [];
+  const payloadRows = [];
+  let lastCodeValue = '';
+
+  for (const cpt of parts) {
+    const { tuple, payloadRow, codeValue } = await resolveOneCpt(
+      sessionCookie, specialtyId, cpt, caseData.procedureDate
+    );
+    tuples.push(tuple);
+    if (payloadRow) payloadRows.push(payloadRow);
+    lastCodeValue = codeValue;
+  }
+
+  const out = {
+    ...caseData,
+    selectedCodes: tuples.join(''),   // "P,a,b,1,1;P,c,d,1,1;"
+    _adsCodeValueForInsert: lastCodeValue,
+  };
+  if (payloadRows.length === 1) {
+    out._adsPayloadRow = payloadRows[0];
+  } else if (payloadRows.length > 1) {
+    out._adsPayloadRows = payloadRows;
   }
   return out;
 }
@@ -1002,10 +1025,20 @@ async function submitCaseOnce(sessionCookie, caseData) {
 
   const caseDataForInsert = { ...caseDataResolved };
   const payloadRow = caseDataForInsert._adsPayloadRow;
+  const payloadRows = caseDataForInsert._adsPayloadRows;
   delete caseDataForInsert._adsPayloadRow;
+  delete caseDataForInsert._adsPayloadRows;
 
   let cookieForSubmit = cookie;
-  if (payloadRow) {
+  if (payloadRows && payloadRows.length > 1) {
+    // Multi-code: call GetSelectedCodePartial for each resolved row in sequence
+    for (const row of payloadRows) {
+      cookieForSubmit = await postGetSelectedCodePartial(cookieForSubmit, row);
+    }
+    if (process.env.ACGME_DEBUG_SUBMIT === '1') {
+      console.warn(`[ACGME] DEBUG GetSelectedCodePartial completed for ${payloadRows.length} codes`);
+    }
+  } else if (payloadRow) {
     cookieForSubmit = await postGetSelectedCodePartial(cookie, payloadRow);
     if (process.env.ACGME_DEBUG_SUBMIT === '1') {
       console.warn('[ACGME] DEBUG GetSelectedCodePartial completed before Insert');

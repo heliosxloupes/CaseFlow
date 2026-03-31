@@ -2783,48 +2783,46 @@ async function callSubmitAcgme(casePayload){
     throw new Error('Could not load role and patient-type IDs from ACGME. Open Settings → ACGME, reconnect, wait a few seconds, then try again.');
   }
 
-  // Submit one request per procedure
+  // Submit all procedures as ONE case entry (ACGME accepts multiple codes via comma-joined CPTs)
   const procs = casePayload.procs || [];
   if(!procs.length) throw new Error('No procedures to submit');
 
-  for(const proc of procs){
-    const roleIdRaw = resolveProfileId('cf5-roles', casePayload.role) || ROLE_IDS[casePayload.role] || '';
-    const ptIdRaw   = resolveProfileId('cf5-patient-types', casePayload.pt) || PATIENT_IDS[casePayload.pt] || '';
-    const siteIdRaw = resolveProfileId('cf5-sites',      casePayload.site) || '';
-    const attIdRaw  = resolveProfileId('cf5-attendings', casePayload.att) || '';
-    const roleId    = assertNumericAcgmeId(roleIdRaw, 'role');
-    const ptId      = assertNumericAcgmeId(ptIdRaw, 'patient type');
-    const institutionId = assertNumericAcgmeId(siteIdRaw, 'site');
-    const attendingId   = assertNumericAcgmeId(attIdRaw, 'attending');
-    const body={
-      procedureDate:   formatAcgmeDate(casePayload.date),
-      procedureYear:   String(casePayload.yr||'4').replace('Year ',''),
-      residentRoleId:  roleId,
-      institutionId:   institutionId,
-      attendingId:     attendingId,
-      patientTypeId:   ptId,
-      selectedCodes:   proc.c,
-      codeDescription: proc.d,
-      comments:        casePayload.notes||'',
-      caseId:          casePayload.caseId||'',
-      residentsId:     localStorage.getItem('cf5-residents-id') || '',
-    };
+  const roleIdRaw = resolveProfileId('cf5-roles', casePayload.role) || ROLE_IDS[casePayload.role] || '';
+  const ptIdRaw   = resolveProfileId('cf5-patient-types', casePayload.pt) || PATIENT_IDS[casePayload.pt] || '';
+  const siteIdRaw = resolveProfileId('cf5-sites',      casePayload.site) || '';
+  const attIdRaw  = resolveProfileId('cf5-attendings', casePayload.att) || '';
+  const roleId    = assertNumericAcgmeId(roleIdRaw, 'role');
+  const ptId      = assertNumericAcgmeId(ptIdRaw, 'patient type');
+  const institutionId = assertNumericAcgmeId(siteIdRaw, 'site');
+  const attendingId   = assertNumericAcgmeId(attIdRaw, 'attending');
+  const body={
+    procedureDate:   formatAcgmeDate(casePayload.date),
+    procedureYear:   String(casePayload.yr||'4').replace('Year ',''),
+    residentRoleId:  roleId,
+    institutionId:   institutionId,
+    attendingId:     attendingId,
+    patientTypeId:   ptId,
+    selectedCodes:   procs.map(p=>p.c).join(','),
+    codeDescription: procs.map(p=>p.d).join(', '),
+    comments:        casePayload.notes||'',
+    caseId:          casePayload.caseId||'',
+    residentsId:     localStorage.getItem('cf5-residents-id') || '',
+  };
 
-    const resp=await fetch(`${ACGME_BACKEND_URL}/api/cases/submit`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-      body:JSON.stringify(body),
-    });
-    const data=await resp.json();
-    if(!resp.ok){
-      // If MFA is required, prompt user to reconnect in Settings
-      if(data.mfaRequired){
-        const err=new Error('ACGME session expired — verification required. Go to Settings → ACGME Auto-Submit → Edit to reconnect.');
-        err.mfaRequired=true;
-        throw err;
-      }
-      throw new Error(data.error||'Submission failed');
+  const resp=await fetch(`${ACGME_BACKEND_URL}/api/cases/submit`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+    body:JSON.stringify(body),
+  });
+  const data=await resp.json();
+  if(!resp.ok){
+    // If MFA is required, prompt user to reconnect in Settings
+    if(data.mfaRequired){
+      const err=new Error('ACGME session expired — verification required. Go to Settings → ACGME Auto-Submit → Edit to reconnect.');
+      err.mfaRequired=true;
+      throw err;
     }
+    throw new Error(data.error||'Submission failed');
   }
 }
 
