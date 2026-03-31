@@ -429,8 +429,8 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .hist-date-clear{font-size:12px;color:var(--text3);cursor:pointer;padding:4px 6px;flex-shrink:0;transition:color .15s}
 .hist-date-clear:active{color:#f87171}
 .hist-count{padding:10px 20px 2px;max-width:600px;margin:0 auto;font-size:12px;color:var(--text3)}
-.hist-wrap{position:relative;z-index:2;padding:8px 20px 100px;max-width:600px;margin:0 auto}
-.hist-item{background:var(--bg1);border:1px solid var(--line);border-radius:var(--rl);padding:16px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;cursor:pointer;transition:border-color .15s,background .15s;position:relative;z-index:1;touch-action:manipulation;-webkit-user-select:none;user-select:none;pointer-events:auto!important}
+.hist-wrap{position:relative;z-index:2;padding:8px 20px 100px;max-width:600px;margin:0 auto;touch-action:pan-y}
+.hist-item{background:var(--bg1);border:1px solid var(--line);border-radius:var(--rl);padding:16px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;cursor:pointer;transition:border-color .15s,background .15s;position:relative;z-index:1;touch-action:pan-y;-webkit-user-select:none;user-select:none;pointer-events:auto!important}
 .hist-item:active{background:var(--bg2);border-color:var(--blue-b)}
 .hprocs{font-size:14px;font-weight:500;margin-bottom:5px;line-height:1.4}
 .hmeta{font-size:12px;color:var(--text2);line-height:1.75}
@@ -4032,16 +4032,58 @@ function initPointerBindings(){
   const histList=document.getElementById('hist-list');
   if(histList&&!histList.dataset.histDelegate){
     histList.dataset.histDelegate='1';
-    const handler=(e)=>{
+    const histTapState={row:null,id:'',x:0,y:0,moved:false,pointerId:null,startTs:0};
+    const resetHistTap=()=>{
+      histTapState.row=null;
+      histTapState.id='';
+      histTapState.x=0;
+      histTapState.y=0;
+      histTapState.moved=false;
+      histTapState.pointerId=null;
+      histTapState.startTs=0;
+    };
+    histList.addEventListener('pointerdown',(e)=>{
+      const row=e.target.closest?.('.hist-item');
+      if(!row||!histList.contains(row)) return;
+      histTapState.row=row;
+      histTapState.id=row.getAttribute('data-case-id')||'';
+      histTapState.x=e.clientX;
+      histTapState.y=e.clientY;
+      histTapState.moved=false;
+      histTapState.pointerId=e.pointerId;
+      histTapState.startTs=Date.now();
+    },{passive:true,capture:true});
+    histList.addEventListener('pointermove',(e)=>{
+      if(histTapState.pointerId!==e.pointerId||!histTapState.row) return;
+      const dx=Math.abs(e.clientX-histTapState.x);
+      const dy=Math.abs(e.clientY-histTapState.y);
+      if(dx>10||dy>10) histTapState.moved=true;
+    },{passive:true,capture:true});
+    histList.addEventListener('pointercancel',resetHistTap,{passive:true,capture:true});
+    histList.addEventListener('pointerleave',(e)=>{
+      if(histTapState.pointerId===e.pointerId) resetHistTap();
+    },{passive:true,capture:true});
+    histList.addEventListener('pointerup',(e)=>{
+      if(histTapState.pointerId!==e.pointerId||!histTapState.row) return;
+      const row=e.target.closest?.('.hist-item');
+      const elapsed=Date.now()-histTapState.startTs;
+      const shouldOpen=
+        !histTapState.moved &&
+        elapsed<450 &&
+        row===histTapState.row &&
+        histTapState.id;
+      const id=histTapState.id;
+      resetHistTap();
+      if(shouldOpen) openCaseEdit(id);
+    },{passive:true,capture:true});
+    histList.addEventListener('click',(e)=>{
+      if(e.pointerType) return;
       const row=e.target.closest?.('.hist-item');
       if(!row||!histList.contains(row))return;
       const id=row.getAttribute('data-case-id');
       if(id==null||id==='')return;
-       openCaseEdit(id);
-    };
-    histList.addEventListener('pointerup', handler, {passive:true, capture:true});
-    histList.addEventListener('touchend', handler, {passive:true, capture:true});
-    histList.addEventListener('click', handler, {capture:true});
+      openCaseEdit(id);
+    },{capture:true});
   }
   const chip=document.getElementById('hdr-chip-cases');
   if(chip&&!chip.dataset.chipBound){
