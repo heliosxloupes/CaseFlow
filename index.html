@@ -1098,7 +1098,7 @@ function startMediaRecorder(stream, chunks){
   try{
     const mr=new MediaRecorder(stream);
     mr.ondataavailable=e=>{if(e.data&&e.data.size>0)chunks.push(e.data);};
-    mr.start();
+    mr.start(1000); // 1s timeslice — chunks accumulate so array is non-empty before stop()
     return mr;
   }catch(e){console.warn('MediaRecorder init failed:',e);return null;}
 }
