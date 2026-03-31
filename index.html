@@ -873,10 +873,10 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
 .login-ui::-webkit-scrollbar{display:none}
 .login-shell{
   width:100%;
-  background:linear-gradient(180deg,rgba(10,14,21,.76) 0%,rgba(9,13,20,.9) 100%);
+  background:linear-gradient(180deg,rgba(12,17,26,.38) 0%,rgba(9,13,20,.54) 100%);
   border:1px solid rgba(255,255,255,.08);
   border-radius:28px;
-  box-shadow:0 28px 80px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.05);
+  box-shadow:none;
   backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);
   padding:24px 20px 18px;
 }
@@ -884,23 +884,9 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
 .login-logo-wrap{
   text-align:center;padding:4px 8px 24px;
 }
-.login-logo-badge{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:8px 12px;margin-bottom:18px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.08);
-  background:rgba(255,255,255,.04);
-  color:rgba(215,229,255,.6);
-  font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
-}
-.login-logo-badge::before{
-  content:"";width:7px;height:7px;border-radius:50%;
-  background:linear-gradient(135deg,#63d6ff 0%,#8db7ff 100%);
-  box-shadow:0 0 14px rgba(99,214,255,.28);
-}
 .login-logo-name{
   font-size:42px;font-weight:700;letter-spacing:-2.6px;
-  color:#fff;text-shadow:0 4px 32px rgba(0,0,0,.42);
+  color:#fff;text-shadow:none;
 }
 .login-logo-name em{
   font-style:normal;
@@ -1054,7 +1040,6 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
     <div class="login-shell">
     <!-- Brand -->
     <div class="login-logo-wrap">
-      <div class="login-logo-badge">Plastic Surgery Workflow</div>
       <div class="login-logo-name">Case<em>Flow</em></div>
       <div class="login-logo-tag">ACGME Case Logging</div>
       <div class="login-hero-copy">A calmer way to review, capture, and submit operative cases without leaving your flow.</div>
