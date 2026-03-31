@@ -892,18 +892,6 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
         <button class="btn-main settings-setup-btn" id="s-setup-btn" onclick="toggleAcgmeForm()">Set Up ACGME Auto-Submit</button>
       </div>
 
-      <div class="settings-section">
-        <div class="settings-section-title">Program</div>
-        <div class="settings-field">
-          <label class="settings-label">Specialty</label>
-          <div class="settings-value">Plastic Surgery — Integrated</div>
-        </div>
-        <div class="settings-field">
-          <label class="settings-label">Program</label>
-          <div class="settings-value">Larkin Community Hospital</div>
-        </div>
-      </div>
-
       <div class="settings-section settings-danger-zone">
         <div class="settings-section-title">Account</div>
         <button class="btn-signout" onclick="doLogout()">Sign Out</button>
@@ -1145,6 +1133,7 @@ async function startInitialListening(){
   if(!recObj)recObj=makeRec(e=>{txInt='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)txFinal+=' '+e.results[i][0].transcript;else txInt+=e.results[i][0].transcript}showBubble((txFinal+' '+txInt).trim()||'Listening…')},()=>{if(recOn){try{recObj.start();}catch(e){console.warn('rec restart:',e)}}});
   if(!recObj){showBubble('Speech recognition not supported in this browser — try Chrome on Android or Safari on iOS.');document.getElementById('q-bubble').classList.add('show');return}
   txFinal='';txInt='';recOn=true;
+  AudioFX.startListen();
   // Start recognition synchronously while still in gesture context
   try{recObj.start();}catch(e){console.error('recObj.start error:',e);showBubble('Mic start error: '+e.message);document.getElementById('q-bubble').classList.add('show');return;}
   orbState='listening';document.getElementById('orb-hint').classList.add('hide');
@@ -1174,8 +1163,10 @@ function stopInitialListening(){
   recOn=false;if(recObj){try{recObj.abort();}catch(e){} recObj=null;}
   // Keep mic stream alive — stopMic() only in resetFlow() to avoid iOS audio session cooldown
   const text=(txFinal+' '+txInt).trim();
+  AudioFX.confirmStop();
   if(!text){orbState='idle';document.getElementById('orb-hint').classList.remove('hide');showBubble('');setStateLabel('');return}
   orbState='thinking';showBubble('Finding your CPT codes…');setStateLabel('');
+  AudioFX.startThink();
   processDescription(text);
 }
 async function processDescription(text){
@@ -1219,6 +1210,7 @@ function localExtract(text){
   return{role,patientType:pt,caseYear:4,suggestedCodes:matched.map(e=>({code:e.c,desc:e.d,area:e.a}))};
 }
 function nextQuestion(){
+  AudioFX.stopThink();
   currentQ++;if(currentQ>=pendingQs.length){showSummary();return}
   const q=pendingQs[currentQ];hideAnswerUI();
   // Hide orb during follow-up questions — not needed, takes up space
@@ -1259,6 +1251,7 @@ function addCptFromSearch(code,desc,area){
 }
 function toggleFollowUpRec(){fuOn?stopFuRec():startFuRec()}
 function startFuRec(){
+  AudioFX.startListen();
   fuFinal='';fuInt='';
   if(!fuRec)fuRec=makeRec(e=>{fuInt='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)fuFinal+=' '+e.results[i][0].transcript;else fuInt+=e.results[i][0].transcript}const d=(fuFinal+' '+fuInt).trim();const vtx=document.getElementById('a-voice-tx');vtx.textContent=d||'Listening…';vtx.classList.toggle('has-text',!!d);document.getElementById('a-text-input').value=d},()=>{if(fuOn){try{fuRec.start();}catch(e){console.warn('fu restart:',e)}}});
   if(!fuRec)return;fuOn=true;fuRec.start();
@@ -1266,6 +1259,7 @@ function startFuRec(){
   document.getElementById('a-voice-tx').textContent='Listening…';
 }
 function stopFuRec(){
+  AudioFX.confirmStop();
   fuOn=false;if(fuRec){try{fuRec.abort();}catch(e){} fuRec=null;}document.getElementById('mic-small').classList.remove('rec');
   const val=(fuFinal+' '+fuInt).trim();
   if(val){document.getElementById('a-voice-tx').textContent=val;document.getElementById('a-voice-tx').classList.add('has-text');document.getElementById('a-text-input').value=val;setTimeout(()=>submitTextAnswer(),350)}
@@ -1355,7 +1349,7 @@ function flowComboTrySubmit(which){
   flowComboPick(which, exact||v);
 }
 function showTextAndVoice(){document.getElementById('a-text-wrap').classList.add('show');document.getElementById('a-voice-row').classList.add('show');setTimeout(()=>document.getElementById('a-text-input').focus(),200)}
-function chipPick(val,el){document.querySelectorAll('.chip-opt').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');setTimeout(()=>answerQuestion(val),220)}
+function chipPick(val,el){AudioFX.selectChip();document.querySelectorAll('.chip-opt').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');setTimeout(()=>answerQuestion(val),220)}
 // Detect if returned codes are similar enough to need user selection
 // Similar = same ACGME area, or codes within same numeric family (within 20 of each other)
 function areSimilar(procs){
@@ -1487,6 +1481,7 @@ function confirmCptSelection(){
 let addMoreRec = null, addMoreRecOn = false, addMoreFinal = '', addMoreInt = '';
 
 function showAddMoreScreen(){
+  AudioFX.stopThink();
   orbState='idle';
   stopVisualizer();
   document.getElementById('orb-hint').classList.remove('hide');
@@ -3368,6 +3363,72 @@ void main(){
   destroy(){cancelAnimationFrame(this._raf);window.removeEventListener('resize',this._onResize);if(this._canvas.parentNode)this._canvas.parentNode.removeChild(this._canvas);const ext=this._gl&&this._gl.getExtension('WEBGL_lose_context');if(ext)ext.loseContext();}
 }
 
+// ─── Audio Feedback ──────────────────────────────────────────────────────────
+const AudioFX = (() => {
+  let ctx = null;
+  let thinkTimer = null;
+  let thinkPhase = 0;
+
+  function getCtx() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function tone(freq, dur, vol = 0.12, type = 'sine', delay = 0) {
+    try {
+      const ac = getCtx();
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.connect(gain); gain.connect(ac.destination);
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ac.currentTime + delay);
+      gain.gain.setValueAtTime(0, ac.currentTime + delay);
+      gain.gain.linearRampToValueAtTime(vol, ac.currentTime + delay + 0.012);
+      gain.gain.linearRampToValueAtTime(0, ac.currentTime + delay + dur);
+      osc.start(ac.currentTime + delay);
+      osc.stop(ac.currentTime + delay + dur + 0.02);
+    } catch(e) {}
+  }
+
+  // Soft ascending chime — mic open
+  function startListen() {
+    tone(523, 0.14, 0.11, 'sine', 0);      // C5
+    tone(659, 0.18, 0.09, 'sine', 0.09);   // E5
+  }
+
+  // Descending confirm tone — mic closed / submitted
+  function confirmStop() {
+    tone(659, 0.12, 0.09, 'sine', 0);      // E5
+    tone(523, 0.22, 0.07, 'sine', 0.08);   // C5
+  }
+
+  // Quick bright tick — chip/answer selected
+  function selectChip() {
+    tone(880, 0.07, 0.07, 'sine', 0);
+    tone(1109, 0.12, 0.05, 'sine', 0.055);
+  }
+
+  // Ambient breathing pulse — thinking/processing (ChatGPT style)
+  function startThink() {
+    stopThink();
+    thinkPhase = 0;
+    const freqs = [196, 220, 196, 175];
+    function pulse() {
+      tone(freqs[thinkPhase % freqs.length], 0.55, 0.035, 'sine', 0);
+      thinkPhase++;
+      thinkTimer = setTimeout(pulse, 820);
+    }
+    thinkTimer = setTimeout(pulse, 200);
+  }
+
+  function stopThink() {
+    if (thinkTimer) { clearTimeout(thinkTimer); thinkTimer = null; }
+  }
+
+  return { startListen, confirmStop, selectChip, startThink, stopThink };
+})();
+
 // ─── Staggered Menu ──────────────────────────────────────────────────────────
 const SM = (() => {
   let isOpen = false;
@@ -3451,7 +3512,8 @@ const SM = (() => {
 
   function close() {
     if (!isOpen) return;
-    document.body.classList.remove('sm-menu-open');
+    // NOTE: sm-menu-open stays on body until onComplete so the panel keeps z-index:303
+    // during its exit animation — prevents pane content bleeding through.
     stopMenuPointerCapture();
     busy = true; isOpen = false;
     if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
@@ -3459,6 +3521,7 @@ const SM = (() => {
     gsap.to([...layers, panel], {
       xPercent: -100, duration: 0.3, ease: 'power3.in', overwrite: 'auto',
       onComplete: () => {
+        document.body.classList.remove('sm-menu-open');
         gsap.set(labelEls, { yPercent: 140, rotate: 8 });
         gsap.set(numEls, { opacity: 0 });
         sealMenuFully();
