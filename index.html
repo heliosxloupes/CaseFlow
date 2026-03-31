@@ -692,6 +692,8 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .mile-rank-main{min-width:0}
 .mile-rank-title{font-size:17px;font-weight:700;line-height:1.35}
 .mile-rank-sub{margin-top:6px;font-size:12px;color:rgba(214,221,233,.42);line-height:1.55}
+.mile-rank-track{margin-top:12px;height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+.mile-rank-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#ff7b85 0%, #f3bf3c 100%);box-shadow:0 0 18px rgba(255,123,133,.16)}
 .mile-rank-gap{
   font-size:13px;font-weight:700;padding:11px 18px;border-radius:999px;background:rgba(255,111,121,.10);
   border:1px solid rgba(195,90,102,.36);color:#f8c0c6;white-space:nowrap
@@ -3840,6 +3842,7 @@ function renderMilestonesPane(){
                   <div class="mile-rank-main">
                     <div class="mile-rank-title">${escHtml(row.categoryName)}</div>
                     <div class="mile-rank-sub">${row.completed} of ${row.minimumRequired} required · ${row.completionPct.toFixed(0)}% complete</div>
+                    <div class="mile-rank-track"><div class="mile-rank-fill" style="width:${Math.max(0, Math.min(100, Number(row.completionPct||0)))}%"></div></div>
                   </div>
                   <div class="mile-rank-gap">Need ${row.remaining}</div>
                 </div>
