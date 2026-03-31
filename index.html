@@ -50,15 +50,15 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 #pg-app{background:linear-gradient(180deg,#09101a 0%,#07090f 46%,#06070d 100%);position:relative;isolation:isolate;z-index:1;touch-action:manipulation;overflow:hidden}
 .app-iridescence-bg{
   position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden;
-  opacity:.18;
+  opacity:.15;
   -webkit-mask-image:radial-gradient(circle at 50% 48%, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 15%, rgba(0,0,0,.72) 33%, rgba(0,0,0,1) 56%);
   mask-image:radial-gradient(circle at 50% 48%, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 15%, rgba(0,0,0,.72) 33%, rgba(0,0,0,1) 56%);
 }
 .app-iridescence-bg::after{
   content:"";position:absolute;inset:0;
   background:
-    radial-gradient(circle at 50% 18%, rgba(79,142,247,.05) 0%, rgba(79,142,247,0) 20%),
-    linear-gradient(180deg, rgba(4,7,12,.08) 0%, rgba(4,7,12,.24) 100%);
+    radial-gradient(circle at 50% 18%, rgba(79,142,247,.04) 0%, rgba(79,142,247,0) 20%),
+    linear-gradient(180deg, rgba(4,7,12,.12) 0%, rgba(4,7,12,.32) 100%);
   pointer-events:none;
 }
 #pg-app::before{
@@ -198,7 +198,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .pane{display:none;width:100%;position:relative;z-index:220;min-height:0}
 .pane.on{display:block;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 /* Inactive panes must not intercept taps (WebKit can still hit-test display:none edge cases) */
-#pn-log:not(.on),#pn-history:not(.on),#pn-settings:not(.on){pointer-events:none!important}
+#pn-log:not(.on),#pn-history:not(.on),#pn-milestones:not(.on),#pn-settings:not(.on){pointer-events:none!important}
 .voice-screen{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   min-height:100%;
@@ -504,6 +504,181 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .settings-danger-zone{}
 .btn-signout{width:100%;padding:13px;background:transparent;border:1px solid var(--line2);border-radius:var(--r);color:var(--text2);font-family:'Sora',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:border-color .15s,color .15s}
 .btn-signout:active{border-color:#f87171;color:#f87171}
+/* Milestones */
+.mile-wrap{padding:20px 20px 110px;max-width:640px;margin:0 auto;position:relative;z-index:2}
+.mile-shell{display:flex;flex-direction:column;gap:16px}
+.mile-intro{
+  position:relative;overflow:hidden;padding:24px 22px 22px;border-radius:28px;
+  background:
+    radial-gradient(circle at 84% 18%, rgba(155,140,255,.14) 0%, rgba(155,140,255,0) 22%),
+    radial-gradient(circle at 18% 0%, rgba(99,214,255,.12) 0%, rgba(99,214,255,0) 28%),
+    linear-gradient(180deg, rgba(14,19,29,.88) 0%, rgba(10,14,21,.94) 100%);
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 28px 70px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.mile-kicker{font-size:10px;font-weight:700;color:rgba(141,183,255,.78);letter-spacing:.2em;text-transform:uppercase;margin-bottom:12px}
+.mile-title{font-size:30px;font-weight:700;line-height:1.02;letter-spacing:-.04em;max-width:12ch}
+.mile-title em{font-style:normal;background:linear-gradient(135deg,var(--blue-soft) 0%,var(--violet-soft) 58%,var(--cyan-soft) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.mile-copy{margin-top:14px;font-size:14px;color:rgba(232,237,244,.72);line-height:1.75;max-width:44ch}
+.mile-callout{
+  margin-top:18px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+}
+.mile-callout-item{
+  padding:13px 14px;border-radius:18px;border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.03)
+}
+.mile-callout-label{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:7px}
+.mile-callout-value{font-size:13px;color:rgba(232,237,244,.86);line-height:1.55}
+.mile-actions{display:flex;gap:10px;align-items:center;margin-top:20px}
+.mile-generate-btn{
+  flex:1;min-height:50px;border:none;border-radius:16px;cursor:pointer;
+  background:linear-gradient(135deg, rgba(90,152,255,.96) 0%, rgba(79,142,247,.92) 48%, rgba(99,214,255,.86) 100%);
+  color:white;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;letter-spacing:-.01em;
+  box-shadow:0 16px 34px rgba(79,142,247,.22), inset 0 1px 0 rgba(255,255,255,.14);
+  transition:transform .14s ease, opacity .18s ease, box-shadow .18s ease;
+}
+.mile-generate-btn:active{transform:scale(.986)}
+.mile-generate-btn.busy{opacity:.8;pointer-events:none}
+.mile-generate-btn.secondary{
+  flex:0 0 auto;padding:0 18px;
+  background:linear-gradient(180deg,rgba(20,27,39,.94) 0%,rgba(14,20,31,.96) 100%);
+  border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)
+}
+.mile-freshness{font-size:11px;color:var(--text3);line-height:1.55;max-width:180px}
+.mile-error{
+  padding:14px 15px;border-radius:18px;border:1px solid rgba(248,113,113,.14);
+  background:rgba(248,113,113,.06);color:rgba(255,232,232,.84);font-size:12px;line-height:1.65
+}
+.mile-loading{
+  position:relative;overflow:hidden;padding:22px;border-radius:26px;
+  background:linear-gradient(180deg,rgba(13,18,28,.9) 0%,rgba(10,14,21,.95) 100%);
+  border:1px solid rgba(255,255,255,.08);box-shadow:0 28px 64px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.03)
+}
+.mile-loading-ribbon{
+  height:56px;border-radius:18px;position:relative;overflow:hidden;margin-bottom:18px;
+  background:linear-gradient(90deg, rgba(79,142,247,0) 0%, rgba(79,142,247,.14) 18%, rgba(141,183,255,.44) 50%, rgba(79,142,247,.14) 82%, rgba(79,142,247,0) 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+}
+.mile-loading-ribbon::before{
+  content:"";position:absolute;inset:0;
+  background:
+    linear-gradient(180deg, rgba(6,11,18,.16) 0%, rgba(6,11,18,.42) 100%),
+    radial-gradient(circle at 15% 50%, rgba(99,214,255,.42) 0%, rgba(99,214,255,0) 18%),
+    radial-gradient(circle at 85% 50%, rgba(155,140,255,.28) 0%, rgba(155,140,255,0) 16%);
+}
+.mile-loading-ribbon::after{
+  content:"";position:absolute;inset:0 auto 0 -42%;width:42%;
+  background:linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(191,219,255,.18) 26%, rgba(255,255,255,.45) 50%, rgba(191,219,255,.12) 74%, rgba(255,255,255,0) 100%);
+  animation:submitLoad 1.5s ease-in-out infinite;
+}
+.mile-stage-list{display:grid;gap:10px}
+.mile-stage{
+  display:flex;align-items:center;gap:12px;padding:14px 15px;border-radius:18px;
+  background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);
+  transition:border-color .22s ease, background .22s ease, transform .22s ease, opacity .22s ease;
+  opacity:.56;
+}
+.mile-stage.active{opacity:1;border-color:rgba(99,214,255,.16);background:rgba(79,142,247,.07);transform:translateY(-1px)}
+.mile-stage.done{opacity:.9;border-color:rgba(52,211,153,.16);background:rgba(52,211,153,.06)}
+.mile-stage-dot{
+  width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);position:relative;flex-shrink:0
+}
+.mile-stage.active .mile-stage-dot{border-color:rgba(99,214,255,.38);box-shadow:0 0 0 8px rgba(79,142,247,.08)}
+.mile-stage.active .mile-stage-dot::before{
+  content:"";position:absolute;inset:2px;border-radius:50%;
+  background:linear-gradient(135deg,var(--blue-soft) 0%, var(--cyan-soft) 100%);
+  animation:cfPulseDot .85s ease-in-out infinite;
+}
+.mile-stage.done .mile-stage-dot{border-color:rgba(52,211,153,.32);background:rgba(52,211,153,.12)}
+.mile-stage.done .mile-stage-dot::before{content:"";position:absolute;inset:2px;border-radius:50%;background:rgba(141,243,202,.92)}
+.mile-stage-copy{display:flex;flex-direction:column;gap:4px}
+.mile-stage-title{font-size:13px;font-weight:600;color:rgba(232,237,244,.9)}
+.mile-stage-sub{font-size:11px;color:var(--text3);line-height:1.55}
+.mile-dashboard{display:flex;flex-direction:column;gap:16px}
+.mile-summary{
+  padding:22px;border-radius:24px;border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,rgba(14,19,29,.9) 0%,rgba(11,15,22,.95) 100%);
+  box-shadow:0 26px 60px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04)
+}
+.mile-summary-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.mile-summary-title{font-size:22px;font-weight:700;letter-spacing:-.04em;line-height:1.05}
+.mile-summary-meta{margin-top:8px;font-size:12px;color:var(--text2);line-height:1.7}
+.mile-refresh-note{font-size:11px;color:var(--text3);text-align:right;line-height:1.55;max-width:120px}
+.mile-metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}
+.mile-metric{
+  padding:13px 14px;border-radius:18px;background:rgba(255,255,255,.028);
+  border:1px solid rgba(255,255,255,.06)
+}
+.mile-metric-label{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3)}
+.mile-metric-value{margin-top:8px;font-size:22px;font-weight:700;letter-spacing:-.04em}
+.mile-metric-sub{margin-top:4px;font-size:11px;color:var(--text3)}
+.mile-section{
+  padding:20px;border-radius:24px;border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,rgba(13,18,28,.88) 0%,rgba(10,14,21,.94) 100%);
+}
+.mile-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}
+.mile-section-title{font-size:18px;font-weight:700;letter-spacing:-.03em}
+.mile-section-sub{font-size:12px;color:var(--text3);line-height:1.6;max-width:30ch}
+.mile-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mile-select{
+  appearance:none;background:rgba(255,255,255,.04);color:var(--text);border:1px solid rgba(255,255,255,.08);
+  border-radius:999px;padding:11px 38px 11px 14px;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;
+  background-image:linear-gradient(45deg, transparent 50%, rgba(232,237,244,.7) 50%),linear-gradient(135deg, rgba(232,237,244,.7) 50%, transparent 50%);
+  background-position:calc(100% - 17px) calc(50% - 2px), calc(100% - 12px) calc(50% - 2px);
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+}
+.mile-pills{display:flex;gap:8px;flex-wrap:wrap}
+.mile-pill{
+  border:none;border-radius:999px;padding:10px 14px;background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);color:var(--text2);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer
+}
+.mile-pill.active{background:rgba(79,142,247,.12);border-color:rgba(79,142,247,.26);color:var(--blue-soft)}
+.mile-rank-list{display:grid;gap:10px}
+.mile-rank-item{
+  display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;
+  padding:14px 15px;border-radius:18px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06)
+}
+.mile-rank-index{font-size:12px;font-weight:700;color:rgba(141,183,255,.7);letter-spacing:.12em;text-transform:uppercase}
+.mile-rank-main{min-width:0}
+.mile-rank-title{font-size:14px;font-weight:600;line-height:1.45}
+.mile-rank-sub{margin-top:3px;font-size:11px;color:var(--text3)}
+.mile-rank-gap{font-size:12px;font-weight:700;padding:8px 10px;border-radius:999px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.14);color:#f5b1b1;white-space:nowrap}
+.mile-cat-list{display:grid;gap:12px}
+.mile-cat{
+  padding:15px 16px;border-radius:20px;background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.06)
+}
+.mile-cat-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.mile-cat-title{font-size:14px;font-weight:600;line-height:1.5}
+.mile-cat-section{margin-top:4px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3)}
+.mile-status{
+  font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:8px 10px;border-radius:999px;white-space:nowrap
+}
+.mile-status.complete{background:rgba(52,211,153,.10);border:1px solid rgba(52,211,153,.18);color:#8df3ca}
+.mile-status.in-progress{background:rgba(79,142,247,.10);border:1px solid rgba(79,142,247,.18);color:#a6c8ff}
+.mile-status.at-risk{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.14);color:#f3b0b0}
+.mile-bar{margin-top:14px;height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.06);position:relative}
+.mile-bar::before{
+  content:"";position:absolute;inset:0 auto 0 0;width:var(--pct,0%);
+  background:linear-gradient(90deg, rgba(79,142,247,.86) 0%, rgba(141,183,255,.94) 58%, rgba(99,214,255,.9) 100%);
+  border-radius:inherit;box-shadow:0 0 18px rgba(79,142,247,.22)
+}
+.mile-bar.complete::before{background:linear-gradient(90deg, rgba(52,211,153,.86) 0%, rgba(141,243,202,.95) 100%);box-shadow:0 0 18px rgba(52,211,153,.18)}
+.mile-bar.at-risk::before{background:linear-gradient(90deg, rgba(248,113,113,.86) 0%, rgba(251,191,36,.88) 100%);box-shadow:0 0 18px rgba(248,113,113,.15)}
+.mile-cat-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;font-size:12px;color:var(--text2)}
+.mile-cat-meta b{font-weight:700;color:var(--text)}
+.mile-empty-note{padding:16px;border-radius:18px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.08);font-size:12px;color:var(--text3);line-height:1.7;text-align:center}
+@media (max-width:640px){
+  .mile-title{font-size:26px}
+  .mile-callout{grid-template-columns:1fr}
+  .mile-actions{flex-direction:column;align-items:stretch}
+  .mile-freshness{max-width:none}
+  .mile-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mile-summary-top,.mile-section-head{flex-direction:column;align-items:flex-start}
+  .mile-refresh-note{text-align:left;max-width:none}
+  .mile-rank-item{grid-template-columns:1fr;gap:8px}
+  .mile-rank-gap{justify-self:flex-start}
+}
 /* Case edit modal */
 .case-edit-modal{position:fixed;inset:0;z-index:8500;background:rgb(7,9,15);display:flex;flex-direction:column;opacity:0;pointer-events:none!important;transition:opacity .22s;transform:translateY(20px);overflow:hidden;width:100vw;max-width:100vw}
 .case-edit-modal.on{opacity:1;pointer-events:all!important;transform:translateY(0);transition:opacity .22s,transform .22s}
@@ -1035,6 +1210,12 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
     <div class="hist-wrap" id="hist-list"></div>
   </div>
 
+  <div class="pane" id="pn-milestones">
+    <div class="mile-wrap">
+      <div class="mile-shell" id="mile-shell"></div>
+    </div>
+  </div>
+
   <div class="pane" id="pn-settings">
     <div class="settings-wrap">
 
@@ -1137,9 +1318,15 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
           <span class="sm-nav-label">History</span>
         </button>
       </li>
+      <li class="sm-nav-item" id="sm-item-milestones">
+        <button class="sm-nav-btn" onclick="smNavigate('milestones')" type="button">
+          <span class="sm-nav-num">03</span>
+          <span class="sm-nav-label">Milestones</span>
+        </button>
+      </li>
       <li class="sm-nav-item" id="sm-item-settings">
         <button class="sm-nav-btn" onclick="smNavigate('settings')" type="button">
-          <span class="sm-nav-num">03</span>
+          <span class="sm-nav-num">04</span>
           <span class="sm-nav-label">Settings</span>
         </button>
       </li>
@@ -2258,12 +2445,20 @@ let appIridescenceRenderer=null,submitThreadsRenderer=null;
 function ensureBackgroundRenderers(){
   const appBg=document.getElementById('app-iridescence-bg');
   if(appBg&&!appIridescenceRenderer){
-    appIridescenceRenderer=new IridescenceRenderer(appBg,{
-      color:'#6f8eff',
-      amplitude:0.12,
+    const aurora = new AuroraRenderer(appBg,{
+      colorStops:['#4F8EF7','#8DB7FF','#9B8CFF'],
+      amplitude:0.55,
+      blend:0.38,
       speed:0.2,
-      mouseReact:false,
     });
+    appIridescenceRenderer = aurora.failed
+      ? new IridescenceRenderer(appBg,{
+          color:'#6f8eff',
+          amplitude:0.1,
+          speed:0.2,
+          mouseReact:false,
+        })
+      : aurora;
   }
   const submitBg=document.getElementById('submit-threads');
   if(submitBg&&!submitThreadsRenderer){
@@ -3365,6 +3560,349 @@ async function launchApp(name,email){
   }
 }
 
+const milestonesState = {
+  data: null,
+  loading: false,
+  latestChecked: false,
+  sort: 'deficiency',
+  filter: 'incomplete',
+  stage: 0,
+  error: '',
+  stageTimers: [],
+};
+
+function clearMilestoneStageTimers(){
+  milestonesState.stageTimers.forEach(t=>clearTimeout(t));
+  milestonesState.stageTimers = [];
+}
+
+function milestoneStatusLabel(status){
+  if(status==='at-risk') return 'At Risk';
+  if(status==='in-progress') return 'In Progress';
+  return 'Complete';
+}
+
+function formatMilestoneStamp(iso){
+  if(!iso) return 'Just now';
+  try{
+    return new Date(iso).toLocaleString('en-US',{
+      month:'short',
+      day:'numeric',
+      hour:'numeric',
+      minute:'2-digit'
+    });
+  }catch(_){ return String(iso); }
+}
+
+function milestoneViewCategories(){
+  const data = milestonesState.data;
+  if(!data?.categories) return [];
+  let rows = data.categories.slice();
+  if(milestonesState.filter==='complete') rows = rows.filter(r=>r.status==='complete');
+  else if(milestonesState.filter==='incomplete') rows = rows.filter(r=>r.status!=='complete');
+  else if(milestonesState.filter==='at-risk') rows = rows.filter(r=>r.status==='at-risk');
+
+  rows.sort((a,b)=>{
+    if(milestonesState.sort==='alphabetical'){
+      return a.categoryName.localeCompare(b.categoryName);
+    }
+    if(milestonesState.sort==='completion'){
+      return (a.completionPct-b.completionPct) || (b.remaining-a.remaining) || a.categoryName.localeCompare(b.categoryName);
+    }
+    return (b.remaining-a.remaining) || (a.completionPct-b.completionPct) || a.categoryName.localeCompare(b.categoryName);
+  });
+  return rows;
+}
+
+function renderMilestonesPane(){
+  const shell=document.getElementById('mile-shell');
+  if(!shell) return;
+
+  const data=milestonesState.data;
+  const filtered=milestoneViewCategories();
+  const mostDeficient=data?.categories
+    ? data.categories
+      .filter(row=>row.remaining>0)
+      .slice()
+      .sort((a,b)=>(b.remaining-a.remaining) || (a.completionPct-b.completionPct))
+      .slice(0,4)
+    : [];
+
+  const introHtml = !data ? `
+    <section class="mile-intro">
+      <div class="mile-kicker">Milestones</div>
+      <div class="mile-title">See exactly where your <em>case minimums</em> are lagging.</div>
+      <div class="mile-copy">
+        Generate your latest Integrated-Plastic Surgery Minimum report on demand from your active ACGME session. CaseFlow will download the spreadsheet, extract your counts, and turn it into a deficiency-first analytics view.
+      </div>
+      <div class="mile-callout">
+        <div class="mile-callout-item">
+          <div class="mile-callout-label">What gets pulled</div>
+          <div class="mile-callout-value">Your current ACGME minimum report, resident name, category counts, and minimums required.</div>
+        </div>
+        <div class="mile-callout-item">
+          <div class="mile-callout-label">When it runs</div>
+          <div class="mile-callout-value">Only when you tap Generate or Refresh. Nothing runs continuously in the background.</div>
+        </div>
+      </div>
+      <div class="mile-actions">
+        <button class="mile-generate-btn${milestonesState.loading?' busy':''}" onclick="generateMilestonesReportUI()" type="button">
+          ${milestonesState.loading?'Generating report…':'Generate Milestones'}
+        </button>
+        <div class="mile-freshness">${milestonesState.latestChecked?'Fetched on demand from your current ACGME session.':'Checking for your latest saved Milestones snapshot…'}</div>
+      </div>
+      ${milestonesState.error?`<div class="mile-error" style="margin-top:16px">${escHtml(milestonesState.error)}</div>`:''}
+    </section>` : '';
+
+  const loadingStages = milestonesState.loading ? `
+    <section class="mile-loading">
+      <div class="mile-kicker">Generating</div>
+      <div class="mile-loading-ribbon"></div>
+      <div class="mile-stage-list">
+        <div class="mile-stage ${milestonesState.stage===0?'active':''} ${milestonesState.stage>0?'done':''}">
+          <div class="mile-stage-dot"></div>
+          <div class="mile-stage-copy">
+            <div class="mile-stage-title">Retrieving report</div>
+            <div class="mile-stage-sub">Opening your ACGME report input and exporting the latest spreadsheet.</div>
+          </div>
+        </div>
+        <div class="mile-stage ${milestonesState.stage===1?'active':''} ${milestonesState.stage>1?'done':''}">
+          <div class="mile-stage-dot"></div>
+          <div class="mile-stage-copy">
+            <div class="mile-stage-title">Parsing category counts</div>
+            <div class="mile-stage-sub">Normalizing completed cases, minimums required, and remaining gaps.</div>
+          </div>
+        </div>
+        <div class="mile-stage ${milestonesState.stage===2?'active':''}">
+          <div class="mile-stage-dot"></div>
+          <div class="mile-stage-copy">
+            <div class="mile-stage-title">Building insights</div>
+            <div class="mile-stage-sub">Sorting deficiencies first and preparing your comparison view.</div>
+          </div>
+        </div>
+      </div>
+    </section>` : '';
+
+  const summaryHtml = data ? `
+    <section class="mile-summary">
+      <div class="mile-summary-top">
+        <div>
+          <div class="mile-kicker">${escHtml(data.reportTitle || 'Milestones Report')}</div>
+          <div class="mile-summary-title">${escHtml(data.residentName || 'Resident')}<span style="color:rgba(232,237,244,.56)">.</span></div>
+          <div class="mile-summary-meta">
+            ${data.specialtyCode?`Program ${escHtml(data.specialtyCode)} · `:''}
+            ${data.sourceAsOf?`ACGME as of ${escHtml(data.sourceAsOf)} · `:''}
+            Generated ${escHtml(formatMilestoneStamp(data.generatedAt))}
+          </div>
+        </div>
+        <div class="mile-refresh-note">
+          Latest snapshot cached for fast reopen.
+          <div style="margin-top:10px">
+            <button class="mile-generate-btn secondary${milestonesState.loading?' busy':''}" onclick="generateMilestonesReportUI()" type="button">
+              ${milestonesState.loading?'Refreshing…':'Refresh'}
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="mile-metric-grid">
+        <div class="mile-metric">
+          <div class="mile-metric-label">Overall</div>
+          <div class="mile-metric-value">${Number(data.summary?.overallCompletionPct||0).toFixed(0)}%</div>
+          <div class="mile-metric-sub">Across required minimums</div>
+        </div>
+        <div class="mile-metric">
+          <div class="mile-metric-label">Complete</div>
+          <div class="mile-metric-value">${data.summary?.completeCategories||0}</div>
+          <div class="mile-metric-sub">Categories already satisfied</div>
+        </div>
+        <div class="mile-metric">
+          <div class="mile-metric-label">Remaining</div>
+          <div class="mile-metric-value">${data.summary?.totalRemaining||0}</div>
+          <div class="mile-metric-sub">Cases still needed</div>
+        </div>
+        <div class="mile-metric">
+          <div class="mile-metric-label">At Risk</div>
+          <div class="mile-metric-value">${data.summary?.atRiskCategories||0}</div>
+          <div class="mile-metric-sub">Below 50% of minimum</div>
+        </div>
+      </div>
+    </section>` : '';
+
+  const deficientHtml = data ? `
+    <section class="mile-section">
+      <div class="mile-section-head">
+        <div>
+          <div class="mile-section-title">Most Deficient</div>
+          <div class="mile-section-sub">The quickest way to see which logged areas are furthest from minimum expectations.</div>
+        </div>
+      </div>
+      ${
+        mostDeficient.length
+          ? `<div class="mile-rank-list">
+              ${mostDeficient.map((row,idx)=>`
+                <div class="mile-rank-item">
+                  <div class="mile-rank-index">0${idx+1}</div>
+                  <div class="mile-rank-main">
+                    <div class="mile-rank-title">${escHtml(row.categoryName)}</div>
+                    <div class="mile-rank-sub">${row.completed} logged · ${row.minimumRequired} required · ${row.completionPct.toFixed(0)}% complete</div>
+                  </div>
+                  <div class="mile-rank-gap">Need ${row.remaining}</div>
+                </div>
+              `).join('')}
+            </div>`
+          : `<div class="mile-empty-note">You’ve satisfied every minimum category in the current report.</div>`
+      }
+    </section>` : '';
+
+  const dashboardHtml = data ? `
+    <section class="mile-section">
+      <div class="mile-section-head">
+        <div>
+          <div class="mile-section-title">Category Comparison</div>
+          <div class="mile-section-sub">Sort and filter the report to compare weak areas, in-progress categories, and completed requirements.</div>
+        </div>
+        <div class="mile-controls">
+          <select class="mile-select" onchange="setMilestoneSort(this.value)">
+            <option value="deficiency"${milestonesState.sort==='deficiency'?' selected':''}>Deficiency first</option>
+            <option value="completion"${milestonesState.sort==='completion'?' selected':''}>Completion %</option>
+            <option value="alphabetical"${milestonesState.sort==='alphabetical'?' selected':''}>Alphabetical</option>
+          </select>
+          <div class="mile-pills">
+            <button class="mile-pill${milestonesState.filter==='incomplete'?' active':''}" onclick="setMilestoneFilter('incomplete')" type="button">Incomplete</button>
+            <button class="mile-pill${milestonesState.filter==='all'?' active':''}" onclick="setMilestoneFilter('all')" type="button">All</button>
+            <button class="mile-pill${milestonesState.filter==='complete'?' active':''}" onclick="setMilestoneFilter('complete')" type="button">Complete</button>
+            <button class="mile-pill${milestonesState.filter==='at-risk'?' active':''}" onclick="setMilestoneFilter('at-risk')" type="button">At Risk</button>
+          </div>
+        </div>
+      </div>
+      ${
+        filtered.length
+          ? `<div class="mile-cat-list">
+              ${filtered.map(row=>{
+                const statusClass = row.status === 'complete' ? 'complete' : (row.status === 'at-risk' ? 'at-risk' : 'in-progress');
+                const pct = Math.max(0, Math.min(100, Number(row.completionPct||0)));
+                return `
+                  <div class="mile-cat">
+                    <div class="mile-cat-head">
+                      <div>
+                        <div class="mile-cat-title">${escHtml(row.categoryName)}</div>
+                        ${row.section?`<div class="mile-cat-section">${escHtml(row.section)}</div>`:''}
+                      </div>
+                      <div class="mile-status ${statusClass}">${milestoneStatusLabel(row.status)}</div>
+                    </div>
+                    <div class="mile-bar ${statusClass}" style="--pct:${pct}%"></div>
+                    <div class="mile-cat-meta">
+                      <div><b>${row.completed}</b> logged of <b>${row.minimumRequired}</b> required</div>
+                      <div>${row.remaining>0?`${row.remaining} remaining`:'Minimum met'}</div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>`
+          : `<div class="mile-empty-note">No categories match this filter.</div>`
+      }
+      ${milestonesState.error?`<div class="mile-error" style="margin-top:16px">${escHtml(milestonesState.error)}</div>`:''}
+    </section>` : '';
+
+  shell.innerHTML = [introHtml, summaryHtml, loadingStages, deficientHtml, dashboardHtml].filter(Boolean).join('');
+}
+
+function setMilestoneSort(value){
+  milestonesState.sort = value || 'deficiency';
+  renderMilestonesPane();
+}
+
+function setMilestoneFilter(value){
+  milestonesState.filter = value || 'incomplete';
+  renderMilestonesPane();
+}
+
+async function fetchMilestonesLatest(force=false){
+  if(!ACGME_BACKEND_URL) return null;
+  const token=localStorage.getItem('cf5-token');
+  if(!token) return null;
+  if(milestonesState.latestChecked && !force) return milestonesState.data;
+  try{
+    const res = await fetch(`${ACGME_BACKEND_URL}/api/milestones/latest`,{
+      headers:{'Authorization':`Bearer ${token}`}
+    });
+    if(res.status===404){
+      if(!milestonesState.data) milestonesState.error = '';
+      return null;
+    }
+    const payload = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(payload.error || 'Could not load your latest Milestones snapshot.');
+    milestonesState.data = payload;
+    milestonesState.error = '';
+    return payload;
+  }catch(e){
+    if(!milestonesState.data){
+      milestonesState.error = e.message || 'Could not load your latest Milestones snapshot.';
+    }
+    return null;
+  }finally{
+    milestonesState.latestChecked = true;
+    renderMilestonesPane();
+  }
+}
+
+async function loadMilestonesUI(force=false){
+  renderMilestonesPane();
+  if(force) milestonesState.latestChecked = false;
+  await fetchMilestonesLatest(force);
+}
+
+async function generateMilestonesReportUI(){
+  if(milestonesState.loading) return;
+  const token=localStorage.getItem('cf5-token');
+  if(!token){
+    milestonesState.error = 'Sign in again to generate your Milestones report.';
+    renderMilestonesPane();
+    return;
+  }
+  if(!ACGME_BACKEND_URL){
+    milestonesState.error = 'Milestones backend is not configured.';
+    renderMilestonesPane();
+    return;
+  }
+
+  clearMilestoneStageTimers();
+  milestonesState.loading = true;
+  milestonesState.stage = 0;
+  milestonesState.error = '';
+  renderMilestonesPane();
+
+  milestonesState.stageTimers.push(setTimeout(()=>{
+    milestonesState.stage = Math.max(milestonesState.stage,1);
+    renderMilestonesPane();
+  },900));
+  milestonesState.stageTimers.push(setTimeout(()=>{
+    milestonesState.stage = Math.max(milestonesState.stage,2);
+    renderMilestonesPane();
+  },2100));
+
+  try{
+    const res = await fetch(`${ACGME_BACKEND_URL}/api/milestones/generate`,{
+      method:'POST',
+      headers:{'Authorization':`Bearer ${token}`}
+    });
+    const payload = await res.json().catch(()=>({}));
+    if(!res.ok){
+      throw new Error(payload.error || 'Could not generate the Milestones report.');
+    }
+    milestonesState.stage = 2;
+    milestonesState.data = payload;
+    milestonesState.latestChecked = true;
+    milestonesState.error = '';
+  }catch(e){
+    milestonesState.error = e.message || 'Could not generate the Milestones report.';
+  }finally{
+    clearMilestoneStageTimers();
+    milestonesState.loading = false;
+    renderMilestonesPane();
+  }
+}
+
 /** Align local “Connected” state with the server (cf5-vault alone was stale after sign-out / re-login). */
 async function syncAcgmeSettingsFromServer(){
   if(!ACGME_BACKEND_URL) return;
@@ -3473,6 +4011,7 @@ function goTab(n){
   const pane=document.getElementById('pn-'+n);if(pane)pane.classList.add('on');
   if(typeof SM!=='undefined')SM.setActive(n);
   if(n==='history')renderHistory();
+  if(n==='milestones')loadMilestonesUI();
   if(n==='settings')loadSettingsUI();
 }
 /** Header “N cases” chip — switches to History and scrolls to the list */
@@ -3776,6 +4315,149 @@ void main(){
     gl.drawArrays(gl.TRIANGLES,0,3);
   }
   destroy(){cancelAnimationFrame(this._raf);window.removeEventListener('resize',this._onResize);if(this._canvas.parentNode)this._canvas.parentNode.removeChild(this._canvas);const ext=this._gl&&this._gl.getExtension('WEBGL_lose_context');if(ext)ext.loseContext();}
+}
+
+/* ================================================================
+   AuroraRenderer — vanilla WebGL2 port of supplied OGL Aurora
+   ================================================================ */
+class AuroraRenderer{
+  static VERT=`#version 300 es
+in vec2 position;
+void main(){
+  gl_Position=vec4(position,0.0,1.0);
+}`;
+  static FRAG=`#version 300 es
+precision highp float;
+uniform float uTime;
+uniform float uAmplitude;
+uniform vec3 uColorStops[3];
+uniform vec2 uResolution;
+uniform float uBlend;
+out vec4 fragColor;
+vec3 permute(vec3 x){return mod(((x*34.0)+1.0)*x,289.0);}
+float snoise(vec2 v){
+  const vec4 C=vec4(0.211324865405187,0.366025403784439,-0.577350269189626,0.024390243902439);
+  vec2 i=floor(v+dot(v,C.yy));
+  vec2 x0=v-i+dot(i,C.xx);
+  vec2 i1=(x0.x>x0.y)?vec2(1.0,0.0):vec2(0.0,1.0);
+  vec4 x12=x0.xyxy+C.xxzz;
+  x12.xy-=i1;
+  i=mod(i,289.0);
+  vec3 p=permute(permute(i.y+vec3(0.0,i1.y,1.0))+i.x+vec3(0.0,i1.x,1.0));
+  vec3 m=max(0.5-vec3(dot(x0,x0),dot(x12.xy,x12.xy),dot(x12.zw,x12.zw)),0.0);
+  m=m*m; m=m*m;
+  vec3 x=2.0*fract(p*C.www)-1.0;
+  vec3 h=abs(x)-0.5;
+  vec3 ox=floor(x+0.5);
+  vec3 a0=x-ox;
+  m*=1.79284291400159-0.85373472095314*(a0*a0+h*h);
+  vec3 g;
+  g.x=a0.x*x0.x+h.x*x0.y;
+  g.yz=a0.yz*x12.xz+h.yz*x12.yw;
+  return 130.0*dot(m,g);
+}
+struct ColorStop{vec3 color;float position;};
+#define COLOR_RAMP(colors,factor,finalColor) { int index=0; for(int i=0;i<2;i++){ ColorStop currentColor=colors[i]; bool isInBetween=currentColor.position<=factor; index=int(mix(float(index),float(i),float(isInBetween))); } ColorStop currentColor=colors[index]; ColorStop nextColor=colors[index+1]; float range=nextColor.position-currentColor.position; float lerpFactor=(factor-currentColor.position)/range; finalColor=mix(currentColor.color,nextColor.color,lerpFactor); }
+void main(){
+  vec2 uv=gl_FragCoord.xy/uResolution;
+  ColorStop colors[3];
+  colors[0]=ColorStop(uColorStops[0],0.0);
+  colors[1]=ColorStop(uColorStops[1],0.5);
+  colors[2]=ColorStop(uColorStops[2],1.0);
+  vec3 rampColor;
+  COLOR_RAMP(colors,uv.x,rampColor);
+  float height=snoise(vec2(uv.x*2.0+uTime*0.1,uTime*0.25))*0.5*uAmplitude;
+  height=exp(height);
+  height=(uv.y*2.0-height+0.2);
+  float intensity=0.6*height;
+  float midPoint=0.20;
+  float auroraAlpha=smoothstep(midPoint-uBlend*0.5,midPoint+uBlend*0.5,intensity);
+  vec3 auroraColor=intensity*rampColor;
+  fragColor=vec4(auroraColor*auroraAlpha,auroraAlpha);
+}`;
+  constructor(container,opts={}){
+    this.container=container;
+    this.failed=false;
+    this._speed=opts.speed??0.2;
+    this._amplitude=opts.amplitude??0.55;
+    this._blend=opts.blend??0.38;
+    this._colorStops=(opts.colorStops||['#4F8EF7','#8DB7FF','#9B8CFF']).slice(0,3).map(c=>this._rgb(c));
+    this._canvas=document.createElement('canvas');
+    this._canvas.style.cssText='position:absolute;inset:0;width:100%!important;height:100%!important;display:block;';
+    container.appendChild(this._canvas);
+    this._gl=this._canvas.getContext('webgl2',{alpha:true,premultipliedAlpha:true,antialias:true});
+    if(!this._gl){this.failed=true;this.destroy();return;}
+    this._build();
+    if(!this._pgm){this.failed=true;this.destroy();return;}
+    this._resize();
+    this._onResize=this._resize.bind(this);
+    window.addEventListener('resize',this._onResize);
+    this._raf=requestAnimationFrame(this._loop.bind(this));
+  }
+  _rgb(hex){const s=String(hex||'').replace('#','');return[parseInt(s.slice(0,2),16)/255,parseInt(s.slice(2,4),16)/255,parseInt(s.slice(4,6),16)/255];}
+  _compile(type,src){
+    const gl=this._gl;const sh=gl.createShader(type);
+    gl.shaderSource(sh,src);gl.compileShader(sh);
+    if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)){console.error('Aurora shader:',gl.getShaderInfoLog(sh));gl.deleteShader(sh);return null;}
+    return sh;
+  }
+  _build(){
+    const gl=this._gl;
+    const vs=this._compile(gl.VERTEX_SHADER,AuroraRenderer.VERT);
+    const fs=this._compile(gl.FRAGMENT_SHADER,AuroraRenderer.FRAG);
+    if(!vs||!fs)return;
+    this._pgm=gl.createProgram();
+    gl.attachShader(this._pgm,vs);
+    gl.attachShader(this._pgm,fs);
+    gl.linkProgram(this._pgm);
+    if(!gl.getProgramParameter(this._pgm,gl.LINK_STATUS)){console.error('Aurora link:',gl.getProgramInfoLog(this._pgm));return;}
+    gl.useProgram(this._pgm);
+    const posL=gl.getAttribLocation(this._pgm,'position');
+    const pb=gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,pb);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(posL);
+    gl.vertexAttribPointer(posL,2,gl.FLOAT,false,0,0);
+    this._u={
+      uTime:gl.getUniformLocation(this._pgm,'uTime'),
+      uAmplitude:gl.getUniformLocation(this._pgm,'uAmplitude'),
+      uColorStops:gl.getUniformLocation(this._pgm,'uColorStops[0]'),
+      uResolution:gl.getUniformLocation(this._pgm,'uResolution'),
+      uBlend:gl.getUniformLocation(this._pgm,'uBlend'),
+    };
+    gl.clearColor(0,0,0,0);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+  }
+  _resize(){
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    const rect=this.container.getBoundingClientRect();
+    const w=Math.max(1,rect.width||window.innerWidth||1);
+    const h=Math.max(1,rect.height||window.innerHeight||1);
+    this._canvas.width=w*dpr;
+    this._canvas.height=h*dpr;
+    this._gl.viewport(0,0,this._canvas.width,this._canvas.height);
+  }
+  _loop(ts){
+    this._raf=requestAnimationFrame(this._loop.bind(this));
+    if(!this._pgm)return;
+    const gl=this._gl;
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(this._pgm);
+    gl.uniform1f(this._u.uTime,ts*0.001*this._speed);
+    gl.uniform1f(this._u.uAmplitude,this._amplitude);
+    gl.uniform3fv(this._u.uColorStops,new Float32Array(this._colorStops.flat()));
+    gl.uniform2f(this._u.uResolution,this._canvas.width,this._canvas.height);
+    gl.uniform1f(this._u.uBlend,this._blend);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+  }
+  destroy(){
+    cancelAnimationFrame(this._raf);
+    if(this._onResize)window.removeEventListener('resize',this._onResize);
+    if(this._canvas&&this._canvas.parentNode)this._canvas.parentNode.removeChild(this._canvas);
+    const ext=this._gl&&this._gl.getExtension('WEBGL_lose_context');
+    if(ext)ext.loseContext();
+  }
 }
 
 /* ================================================================
@@ -4208,7 +4890,7 @@ const SM = (() => {
 function smToggle()       { SM.toggle(); }
 function smClose()        { SM.close(); }
 function smNavigate(tab)  { SM.navigate(tab); }
-function goHome()         { try{ SM.close(); }catch(_){} resetFlow(); }
+function goHome()         { try{ SM.close(); }catch(_){} goTab('log'); resetFlow(); if(typeof SM!=='undefined')SM.setActive('log'); }
 </script>
 </body>
 </html>

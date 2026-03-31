@@ -4,6 +4,9 @@ function errorHandler(err, req, res, next) {
   if (err.message.includes('Login failed') || err.message.includes('credentials')) {
     return res.status(401).json({ error: err.message });
   }
+  if (err.message.includes('No active ACGME session') || err.message.includes('not authenticated')) {
+    return res.status(401).json({ error: err.message });
+  }
   if (err.message.includes('Missing required')) {
     return res.status(400).json({ error: err.message });
   }

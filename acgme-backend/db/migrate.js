@@ -31,6 +31,16 @@ const schema = `
 
   CREATE INDEX IF NOT EXISTS idx_case_submissions_user_id ON case_submissions(user_id);
   CREATE INDEX IF NOT EXISTS idx_case_submissions_status  ON case_submissions(status);
+
+  CREATE TABLE IF NOT EXISTS user_milestones_cache (
+    id           SERIAL PRIMARY KEY,
+    user_id      INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    report_name  VARCHAR(100) NOT NULL,
+    report_data  JSONB NOT NULL,
+    generated_at TIMESTAMP DEFAULT NOW(),
+    updated_at   TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, report_name)
+  );
 `;
 
 // ALTER statements for columns added after initial deploy
@@ -50,6 +60,16 @@ const alterStatements = [
   `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS notes TEXT`,
   `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS procedures JSONB`,
   `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS local_id VARCHAR(50)`,
+  // v3 — milestones snapshot cache
+  `CREATE TABLE IF NOT EXISTS user_milestones_cache (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      report_name VARCHAR(100) NOT NULL,
+      report_data JSONB NOT NULL,
+      generated_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(user_id, report_name)
+    )`,
 ];
 
 async function migrate() {
