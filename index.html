@@ -1621,9 +1621,8 @@ async function startAddMoreVoice(){
   // Start recognition while still in gesture context (before any await)
   try{ addMoreRec.start(); } catch(e){ console.error('addMoreRec.start error:',e); toast('Mic start error: '+e.message,'err'); addMoreRecOn=false; return; }
 
-  // Update UI
-  document.getElementById('add-more-box').classList.remove('show');
-  document.getElementById('cpt-found-box').classList.remove('show');
+  // Update UI — hide all panels before showing orb (cpt-select-box, cpt-found-box, add-more-box, etc.)
+  hideAll();
   showBubble('Tell me the procedures you performed.');
   document.getElementById('q-bubble').classList.add('show');
   orbState='listening';
