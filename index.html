@@ -888,11 +888,11 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
 .login-ui::-webkit-scrollbar{display:none}
 .login-shell{
   width:100%;
-  background:linear-gradient(180deg,rgba(12,17,26,.24) 0%,rgba(9,13,20,.36) 100%);
-  border:1px solid rgba(255,255,255,.06);
-  border-radius:28px;
+  background:transparent;
+  border:none;
+  border-radius:0;
   box-shadow:none;
-  backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);
+  backdrop-filter:none;-webkit-backdrop-filter:none;
   padding:24px 20px 18px;
 }
 /* logo */
@@ -901,7 +901,7 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
 }
 .login-logo-name{
   font-size:42px;font-weight:700;letter-spacing:-2.6px;
-  color:#fff;text-shadow:none;
+  color:#fff;text-shadow:0 6px 26px rgba(0,0,0,.28);
 }
 .login-logo-name em{
   font-style:normal;
@@ -911,12 +911,14 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
   text-shadow:none;
 }
 .login-logo-tag{
-  font-size:11px;color:rgba(255,255,255,.42);
+  font-size:11px;color:rgba(255,255,255,.66);
   letter-spacing:.18em;text-transform:uppercase;margin-top:8px;
+  text-shadow:0 4px 18px rgba(0,0,0,.22);
 }
 .login-hero-copy{
   margin:14px auto 0;max-width:300px;
-  font-size:14px;line-height:1.65;color:rgba(232,237,244,.68);
+  font-size:14px;line-height:1.65;color:rgba(244,247,252,.82);
+  text-shadow:0 6px 22px rgba(0,0,0,.24);
 }
 /* CTA button row */
 .login-cta-row{
