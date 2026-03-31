@@ -77,8 +77,8 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
     radial-gradient(circle at 82% 78%, rgba(155,140,255,.035) 0%, rgba(155,140,255,0) 20%);
   pointer-events:none;z-index:0;
 }
-.app-bar{display:flex;align-items:center;justify-content:space-between;padding:15px 20px 13px;border-bottom:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(8,12,20,.74) 0%,rgba(8,12,20,.58) 100%);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);position:sticky;top:0;z-index:400}
-.app-logo{font-size:19px;font-weight:700;letter-spacing:-1px}
+.app-bar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 14px;border-bottom:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(8,12,20,.74) 0%,rgba(8,12,20,.58) 100%);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);position:sticky;top:0;z-index:400}
+.app-logo{font-size:20px;font-weight:700;letter-spacing:-1px}
 .app-logo em{font-style:normal;background:linear-gradient(135deg,var(--blue-soft) 0%,var(--violet-soft) 55%,var(--cyan-soft) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .bar-right{display:flex;align-items:center;gap:10px;position:relative;z-index:450;flex-shrink:0}
 .chip{background:linear-gradient(180deg,rgba(20,27,39,.92) 0%,rgba(14,20,31,.92) 100%);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--text2);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
@@ -140,18 +140,7 @@ body.sm-menu-open .sm-backdrop{z-index:300}
 body.sm-menu-open .sm-prelayer-1{z-index:301}
 body.sm-menu-open .sm-prelayer-2{z-index:302}
 body.sm-menu-open .sm-panel-wrap{z-index:303}
-.sm-panel-logo-row{
-  padding:28px 28px 20px;border-bottom:1px solid rgba(255,255,255,.05);
-}
-.sm-panel-logo{
-  font-size:20px;font-weight:700;letter-spacing:-1px;color:var(--text);
-}
-.sm-panel-logo em{
-  font-style:normal;
-  background:linear-gradient(135deg,#5a98ff 0%,#a78bfa 60%,#60a5fa 100%);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-}
-.sm-nav-list{list-style:none;padding:16px 0;flex:1}
+.sm-nav-list{list-style:none;padding:12px 0 0;flex:1}
 .sm-nav-item{overflow:hidden}
 .sm-nav-btn{
   display:flex;align-items:baseline;gap:14px;width:100%;
@@ -170,9 +159,18 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   opacity:0;transition:color .2s;
 }
 .sm-nav-label{
-  display:block;
+  display:inline-flex;align-items:center;gap:10px;
   transform-origin:left bottom;
   transition:color .2s;
+}
+.sm-nav-beta{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:4px 9px;border-radius:999px;
+  font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  color:#f5fbff;
+  background:linear-gradient(135deg,rgba(99,214,255,.26) 0%,rgba(79,142,247,.28) 36%,rgba(155,140,255,.26) 100%);
+  border:1px solid rgba(141,183,255,.18);
+  box-shadow:0 0 18px rgba(99,214,255,.08), inset 0 1px 0 rgba(255,255,255,.08);
 }
 .sm-nav-btn.active .sm-nav-label{
   background:linear-gradient(135deg,#5a98ff 0%,#a78bfa 60%,#60a5fa 100%);
@@ -825,16 +823,17 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
 .err-banner-text{flex:1;font-size:13px;color:rgba(255,255,255,.85);line-height:1.55;word-break:break-word;font-family:'Sora',sans-serif}
 .err-banner-close{flex-shrink:0;font-size:16px;color:rgba(255,255,255,.35);padding:0 4px}
 .toast.err{border-color:rgba(248,113,113,.28);color:var(--red)}
-.new-case-btn{display:flex;align-items:center;gap:5px;background:linear-gradient(180deg,rgba(79,142,247,.16) 0%,rgba(79,142,247,.10) 100%);border:1px solid rgba(99,214,255,.18);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--blue-soft);font-family:'Sora',sans-serif;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s}
+.new-case-btn{display:flex;align-items:center;gap:5px;background:linear-gradient(180deg,rgba(79,142,247,.16) 0%,rgba(79,142,247,.10) 100%);border:1px solid rgba(99,214,255,.18);border-radius:20px;padding:6px 13px;font-size:12px;color:var(--blue-soft);font-family:'Sora',sans-serif;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s}
 @media (max-width:560px){
-  .app-bar{padding:13px 14px 11px}
+  .app-bar{padding:15px 14px 13px}
   .app-bar-left{gap:10px}
-  .app-logo{font-size:17px}
+  .app-logo{font-size:19px}
   .sm-toggle-text{font-size:11px}
   .bar-right{gap:8px}
-  .chip{padding:4px 10px;border-radius:18px;font-size:11px}
-  .new-case-btn{padding:4px 10px;font-size:11px;gap:4px}
+  .chip{padding:5px 11px;border-radius:18px;font-size:11px}
+  .new-case-btn{padding:5px 11px;font-size:11px;gap:4px}
   .new-case-btn svg{width:11px;height:11px}
+  .sm-nav-beta{padding:3px 8px;font-size:8px}
 }
 /* Collapse hidden flow elements so the orb is truly centered on initial load */
 .question-bubble:not(.show),
@@ -1142,7 +1141,7 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
     </div>
     <div class="bar-right">
       <div class="chip chip-cases" id="hdr-chip-cases" title="Open case history" role="button" tabindex="0"><b id="hdr-n">0</b> cases</div>
-      <button class="new-case-btn" id="new-case-btn" onclick="resetFlow()" style="display:none">
+      <button class="new-case-btn" id="new-case-btn" onclick="resetFlow()">
         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         New Case
       </button>
@@ -1302,10 +1301,13 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
   <div class="sm-prelayer sm-prelayer-1" id="sm-prelayer-1"></div>
   <div class="sm-prelayer sm-prelayer-2" id="sm-prelayer-2"></div>
   <aside class="sm-panel-wrap" id="sm-panel" aria-label="Main navigation">
-    <div class="sm-panel-logo-row">
-      <div class="sm-panel-logo" onclick="goHome()" style="cursor:pointer">Case<em>Flow</em></div>
-    </div>
     <ul class="sm-nav-list" role="list">
+      <li class="sm-nav-item" id="sm-item-home">
+        <button class="sm-nav-btn" onclick="goHome()" type="button">
+          <span class="sm-nav-num">00</span>
+          <span class="sm-nav-label">Home</span>
+        </button>
+      </li>
       <li class="sm-nav-item" id="sm-item-log">
         <button class="sm-nav-btn active" onclick="smNavigate('log')" type="button">
           <span class="sm-nav-num">01</span>
@@ -1321,7 +1323,7 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
       <li class="sm-nav-item" id="sm-item-milestones">
         <button class="sm-nav-btn" onclick="smNavigate('milestones')" type="button">
           <span class="sm-nav-num">03</span>
-          <span class="sm-nav-label">Milestones</span>
+          <span class="sm-nav-label">Milestones <span class="sm-nav-beta">Beta</span></span>
         </button>
       </li>
       <li class="sm-nav-item" id="sm-item-settings">
@@ -2295,7 +2297,12 @@ function showSummary(){
   document.getElementById('q-bubble').classList.remove('show');
   summaryEditKey = null;
   renderSummaryCard();
-  setTimeout(()=>{document.getElementById('summary-card').classList.add('show');document.getElementById('final-actions').classList.add('show')},200);
+  if(summaryRevealTimer) clearTimeout(summaryRevealTimer);
+  summaryRevealTimer=setTimeout(()=>{
+    document.getElementById('summary-card').classList.add('show');
+    document.getElementById('final-actions').classList.add('show');
+    summaryRevealTimer=null;
+  },200);
   setStateLabel('Tap any field to edit');
 }
 
@@ -2446,6 +2453,7 @@ function saveSummaryChip(key, val, e){
 let cases=JSON.parse(localStorage.getItem('cf5-cases')||'[]');
 let _currentCaseId=null; // set before saving to avoid duplicate DB inserts
 let appIridescenceRenderer=null,submitThreadsRenderer=null;
+let summaryRevealTimer=null;
 function ensureBackgroundRenderers(){
   const appBg=document.getElementById('app-iridescence-bg');
   if(appBg&&!appIridescenceRenderer){
@@ -2618,6 +2626,7 @@ async function submitCase(){
   resetFlow();
 }
 function resetFlow(){
+  if(summaryRevealTimer){clearTimeout(summaryRevealTimer);summaryRevealTimer=null;}
   // Destroy all speech recognition objects so they're created fresh next time
   recOn=false;
   if(recObj){try{recObj.abort();}catch(e){} recObj=null;}
@@ -2632,14 +2641,16 @@ function resetFlow(){
   caseData={description:'',procedures:[],alternatives:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:''};
   pendingQs=[];currentQ=-1;
   orbState='idle';hideAll();
+  document.getElementById('cpt-found-box').innerHTML='';
   document.getElementById('cpt-select-box').innerHTML='';
   document.getElementById('add-more-box').innerHTML='';
+  document.getElementById('summary-card').innerHTML='';
   const orbWrap = document.getElementById('orb-wrap');
   orbWrap.classList.remove('inactive');
   orbWrap.style.display='';
   document.getElementById('q-bubble').classList.remove('show');document.getElementById('q-bubble').textContent='';
   document.getElementById('orb-hint').classList.remove('hide');setStateLabel('');
-  document.getElementById('new-case-btn').style.display='none';
+  document.getElementById('new-case-btn').style.display='flex';
   goTab('log');
 }
 function renderHistory(){
