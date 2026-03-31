@@ -609,14 +609,36 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .mile-summary-title{font-size:22px;font-weight:700;letter-spacing:-.04em;line-height:1.05}
 .mile-summary-meta{margin-top:8px;font-size:12px;color:var(--text2);line-height:1.7}
 .mile-refresh-note{font-size:11px;color:var(--text3);text-align:right;line-height:1.55;max-width:120px}
-.mile-metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}
-.mile-metric{
-  padding:13px 14px;border-radius:18px;background:rgba(255,255,255,.028);
-  border:1px solid rgba(255,255,255,.06)
-}
+/* Overall progress bar */
+.mile-overall-bar-wrap{margin-top:18px}
+.mile-overall-bar-labels{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+.mile-overall-pct{font-size:32px;font-weight:700;letter-spacing:-.05em;line-height:1}
+.mile-overall-sub{font-size:12px;color:var(--text2)}
+.mile-overall-track{height:7px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+.mile-overall-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,rgba(79,142,247,.9) 0%,rgba(141,183,255,.96) 58%,rgba(99,214,255,.9) 100%);box-shadow:0 0 18px rgba(79,142,247,.2)}
+.mile-overall-counts{margin-top:9px;font-size:12px;color:var(--text2)}
+.mile-overall-counts b{color:var(--text);font-weight:600}
+/* Metric row — 3 cards, At Risk emphasized */
+.mile-metric-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}
+.mile-metric{padding:13px 14px;border-radius:18px;background:rgba(255,255,255,.028);border:1px solid rgba(255,255,255,.06)}
+.mile-metric.at-risk{background:rgba(248,113,113,.06);border-color:rgba(248,113,113,.18)}
 .mile-metric-label{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3)}
+.mile-metric.at-risk .mile-metric-label{color:rgba(243,176,176,.7)}
 .mile-metric-value{margin-top:8px;font-size:22px;font-weight:700;letter-spacing:-.04em}
+.mile-metric.at-risk .mile-metric-value{font-size:28px;color:#f87171}
 .mile-metric-sub{margin-top:4px;font-size:11px;color:var(--text3)}
+.mile-metric.at-risk .mile-metric-sub{color:rgba(248,113,113,.55)}
+/* Most Deficient carousel */
+.mile-section-action{font-size:12px;font-weight:700;color:var(--blue-soft);cursor:pointer;white-space:nowrap;background:none;border:none;font-family:'Sora',sans-serif;padding:0}
+.mile-deficient-scroll{display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px;scroll-snap-type:x mandatory}
+.mile-deficient-scroll::-webkit-scrollbar{display:none}
+.mile-def-card{flex:0 0 210px;scroll-snap-align:start;padding:16px;border-radius:20px;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.13);display:flex;flex-direction:column;gap:9px}
+.mile-def-rank{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(248,113,113,.65)}
+.mile-def-name{font-size:14px;font-weight:600;line-height:1.4;color:var(--text)}
+.mile-def-sub{font-size:11px;color:var(--text3);line-height:1.5}
+.mile-def-track{height:3px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+.mile-def-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,rgba(248,113,113,.8) 0%,rgba(251,191,36,.75) 100%)}
+.mile-def-gap{align-self:flex-start;font-size:12px;font-weight:700;padding:6px 10px;border-radius:999px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.14);color:#f5b1b1;white-space:nowrap}
 .mile-section{
   padding:20px;border-radius:24px;border:1px solid rgba(255,255,255,.08);
   background:linear-gradient(180deg,rgba(13,18,28,.88) 0%,rgba(10,14,21,.94) 100%);
@@ -677,7 +699,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   .mile-callout{grid-template-columns:1fr}
   .mile-actions{flex-direction:column;align-items:stretch}
   .mile-freshness{max-width:none}
-  .mile-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mile-metric-grid{grid-template-columns:1fr 1fr 1fr}
   .mile-summary-top,.mile-section-head{flex-direction:column;align-items:flex-start}
   .mile-refresh-note{text-align:left;max-width:none}
   .mile-rank-item{grid-template-columns:1fr;gap:8px}
@@ -3589,6 +3611,7 @@ const milestonesState = {
   stage: 0,
   error: '',
   stageTimers: [],
+  showAllDeficient: false,
 };
 
 function clearMilestoneStageTimers(){
@@ -3640,13 +3663,6 @@ function renderMilestonesPane(){
 
   const data=milestonesState.data;
   const filtered=milestoneViewCategories();
-  const mostDeficient=data?.categories
-    ? data.categories
-      .filter(row=>row.remaining>0)
-      .slice()
-      .sort((a,b)=>(b.remaining-a.remaining) || (a.completionPct-b.completionPct))
-      .slice(0,4)
-    : [];
 
   const introHtml = !data ? `
     <section class="mile-intro">
@@ -3724,55 +3740,79 @@ function renderMilestonesPane(){
           </div>
         </div>
       </div>
-      <div class="mile-metric-grid">
-        <div class="mile-metric">
-          <div class="mile-metric-label">Overall</div>
-          <div class="mile-metric-value">${Number(data.summary?.overallCompletionPct||0).toFixed(0)}%</div>
-          <div class="mile-metric-sub">Across required minimums</div>
+      <div class="mile-overall-bar-wrap">
+        <div class="mile-overall-bar-labels">
+          <div class="mile-overall-pct">${Number(data.summary?.overallCompletionPct||0).toFixed(0)}%</div>
+          <div class="mile-overall-sub">Overall completion</div>
         </div>
+        <div class="mile-overall-track">
+          <div class="mile-overall-fill" style="width:${Math.min(Number(data.summary?.overallCompletionPct||0),100)}%"></div>
+        </div>
+        <div class="mile-overall-counts">
+          <b>${data.summary?.totalCompleted||0}</b> of <b>${data.summary?.totalMinimum||0}</b> required cases · <b>${data.summary?.totalRemaining||0}</b> remaining
+        </div>
+      </div>
+      <div class="mile-metric-grid">
         <div class="mile-metric">
           <div class="mile-metric-label">Complete</div>
           <div class="mile-metric-value">${data.summary?.completeCategories||0}</div>
-          <div class="mile-metric-sub">Categories already satisfied</div>
+          <div class="mile-metric-sub">Categories met</div>
         </div>
         <div class="mile-metric">
-          <div class="mile-metric-label">Remaining</div>
-          <div class="mile-metric-value">${data.summary?.totalRemaining||0}</div>
-          <div class="mile-metric-sub">Cases still needed</div>
+          <div class="mile-metric-label">In Progress</div>
+          <div class="mile-metric-value">${data.summary?.incompleteCategories||0}</div>
+          <div class="mile-metric-sub">Underway</div>
         </div>
-        <div class="mile-metric">
+        <div class="mile-metric at-risk">
           <div class="mile-metric-label">At Risk</div>
           <div class="mile-metric-value">${data.summary?.atRiskCategories||0}</div>
-          <div class="mile-metric-sub">Below 50% of minimum</div>
+          <div class="mile-metric-sub">Below 50%</div>
         </div>
       </div>
     </section>` : '';
+
+  const allDeficient = data?.categories
+    ? data.categories.filter(r=>r.remaining>0).slice().sort((a,b)=>(b.remaining-a.remaining)||(a.completionPct-b.completionPct))
+    : [];
+  const showAll = milestonesState.showAllDeficient;
 
   const deficientHtml = data ? `
     <section class="mile-section">
       <div class="mile-section-head">
         <div>
           <div class="mile-section-title">Most Deficient</div>
-          <div class="mile-section-sub">The quickest way to see which logged areas are furthest from minimum expectations.</div>
+          <div class="mile-section-sub">Swipe to see which cases are furthest from minimum.</div>
         </div>
+        ${allDeficient.length ? `<button class="mile-section-action" onclick="toggleMilestoneDeficientView()" type="button">${showAll?’Collapse’:’View all →’}</button>` : ‘’}
       </div>
-      ${
-        mostDeficient.length
-          ? `<div class="mile-rank-list">
-              ${mostDeficient.map((row,idx)=>`
-                <div class="mile-rank-item">
-                  <div class="mile-rank-index">0${idx+1}</div>
-                  <div class="mile-rank-main">
-                    <div class="mile-rank-title">${escHtml(row.categoryName)}</div>
-                    <div class="mile-rank-sub">${row.completed} logged · ${row.minimumRequired} required · ${row.completionPct.toFixed(0)}% complete</div>
-                  </div>
-                  <div class="mile-rank-gap">Need ${row.remaining}</div>
-                </div>
-              `).join('')}
-            </div>`
-          : `<div class="mile-empty-note">You’ve satisfied every minimum category in the current report.</div>`
-      }
-    </section>` : '';
+      ${showAll ? `
+        <div class="mile-rank-list">
+          ${allDeficient.map((row,idx)=>`
+            <div class="mile-rank-item">
+              <div class="mile-rank-index">0${idx+1}</div>
+              <div class="mile-rank-main">
+                <div class="mile-rank-title">${escHtml(row.categoryName)}</div>
+                <div class="mile-rank-sub">${row.completed} logged · ${row.minimumRequired} required · ${row.completionPct.toFixed(0)}% complete</div>
+              </div>
+              <div class="mile-rank-gap">Need ${row.remaining}</div>
+            </div>
+          `).join(‘’)}
+        </div>
+      ` : allDeficient.length ? `
+        <div class="mile-deficient-scroll">
+          ${allDeficient.slice(0,6).map((row,idx)=>{
+            const pct=Math.max(0,Math.min(100,Number(row.completionPct||0)));
+            return `<div class="mile-def-card">
+              <div class="mile-def-rank">0${idx+1}</div>
+              <div class="mile-def-name">${escHtml(row.categoryName)}</div>
+              <div class="mile-def-sub">${row.completed} of ${row.minimumRequired} required · ${pct}% complete</div>
+              <div class="mile-def-track"><div class="mile-def-fill" style="width:${pct}%"></div></div>
+              <div class="mile-def-gap">Need ${row.remaining}</div>
+            </div>`;
+          }).join(‘’)}
+        </div>
+      ` : `<div class="mile-empty-note">You’ve satisfied every minimum category in the current report.</div>`}
+    </section>` : ‘’;
 
   const dashboardHtml = data ? `
     <section class="mile-section">
@@ -3834,6 +3874,11 @@ function setMilestoneSort(value){
 
 function setMilestoneFilter(value){
   milestonesState.filter = value || 'incomplete';
+  renderMilestonesPane();
+}
+
+function toggleMilestoneDeficientView(){
+  milestonesState.showAllDeficient = !milestonesState.showAllDeficient;
   renderMilestonesPane();
 }
 
