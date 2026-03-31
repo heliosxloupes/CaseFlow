@@ -18,6 +18,7 @@
   --line:rgba(255,255,255,0.055);--line2:rgba(255,255,255,0.10);--line3:rgba(255,255,255,0.16);
   --text:#e8edf4;--text2:#6b7d96;--text3:#384557;
   --blue:#4f8ef7;--blue-d:rgba(79,142,247,0.14);--blue-b:rgba(79,142,247,0.22);
+  --blue-soft:#8db7ff;--violet-soft:#9b8cff;--cyan-soft:#63d6ff;
   --green:#34d399;--green-d:rgba(52,211,153,0.11);
   --red:#f87171;--amber:#fbbf24;
   --r:12px;--rl:18px;
@@ -46,15 +47,44 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .btn-main.busy{opacity:.55;pointer-events:none}
 .login-note{text-align:center;margin-top:32px;font-size:12px;color:var(--text3);line-height:1.7}
 .login-err{text-align:center;font-size:13px;color:var(--red);margin-top:11px;min-height:18px}
-#pg-app{background:var(--bg);position:relative;isolation:isolate;z-index:1;touch-action:manipulation}
-.app-bar{display:flex;align-items:center;justify-content:space-between;padding:15px 20px 13px;border-bottom:1px solid var(--line);background:rgba(7,9,15,.95);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);position:sticky;top:0;z-index:400}
+#pg-app{background:linear-gradient(180deg,#09101a 0%,#07090f 46%,#06070d 100%);position:relative;isolation:isolate;z-index:1;touch-action:manipulation;overflow:hidden}
+.app-iridescence-bg{
+  position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden;
+  opacity:.18;
+  -webkit-mask-image:radial-gradient(circle at 50% 48%, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 15%, rgba(0,0,0,.72) 33%, rgba(0,0,0,1) 56%);
+  mask-image:radial-gradient(circle at 50% 48%, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 15%, rgba(0,0,0,.72) 33%, rgba(0,0,0,1) 56%);
+}
+.app-iridescence-bg::after{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(79,142,247,.05) 0%, rgba(79,142,247,0) 20%),
+    linear-gradient(180deg, rgba(4,7,12,.08) 0%, rgba(4,7,12,.24) 100%);
+  pointer-events:none;
+}
+#pg-app::before{
+  content:"";position:absolute;inset:-18% -18% 28% -18%;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(99,214,255,.08) 0%, rgba(99,214,255,0) 38%),
+    radial-gradient(circle at 82% 12%, rgba(155,140,255,.08) 0%, rgba(155,140,255,0) 30%),
+    radial-gradient(circle at 50% 10%, rgba(79,142,247,.12) 0%, rgba(79,142,247,0) 46%);
+  opacity:.9;pointer-events:none;z-index:0;
+}
+#pg-app::after{
+  content:"";position:absolute;inset:34% -14% -18% -14%;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(79,142,247,.05) 0%, rgba(79,142,247,0) 34%),
+    radial-gradient(circle at 24% 84%, rgba(99,214,255,.035) 0%, rgba(99,214,255,0) 22%),
+    radial-gradient(circle at 82% 78%, rgba(155,140,255,.035) 0%, rgba(155,140,255,0) 20%);
+  pointer-events:none;z-index:0;
+}
+.app-bar{display:flex;align-items:center;justify-content:space-between;padding:15px 20px 13px;border-bottom:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(8,12,20,.74) 0%,rgba(8,12,20,.58) 100%);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);position:sticky;top:0;z-index:400}
 .app-logo{font-size:19px;font-weight:700;letter-spacing:-1px}
-.app-logo em{font-style:normal;color:var(--blue)}
+.app-logo em{font-style:normal;background:linear-gradient(135deg,var(--blue-soft) 0%,var(--violet-soft) 55%,var(--cyan-soft) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .bar-right{display:flex;align-items:center;gap:9px;position:relative;z-index:450}
-.chip{background:var(--bg2);border:1px solid var(--line2);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--text2)}
+.chip{background:linear-gradient(180deg,rgba(20,27,39,.92) 0%,rgba(14,20,31,.92) 100%);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--text2);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
 .chip-cases{cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;pointer-events:auto!important;position:relative;z-index:2}
-.chip b{color:var(--blue);font-weight:600}
-.user-chip{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--line2);border-radius:20px;padding:5px 12px 5px 8px;font-size:12px;color:var(--text2);cursor:pointer}
+.chip b{background:linear-gradient(135deg,var(--blue-soft) 0%,var(--cyan-soft) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-weight:700}
+.user-chip{display:flex;align-items:center;gap:6px;background:linear-gradient(180deg,rgba(20,27,39,.9) 0%,rgba(14,20,31,.9) 100%);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:5px 12px 5px 8px;font-size:12px;color:var(--text2);cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
 .udot{width:7px;height:7px;background:var(--green);border-radius:50%;flex-shrink:0}
 /* tabs hidden — navigation moved to StaggeredMenu */
 .tabs{display:none}
@@ -152,7 +182,18 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .sm-panel-footer{
   padding:20px 28px 28px;border-top:1px solid rgba(255,255,255,.05);
 }
-.sm-footer-note{font-size:11px;color:var(--text3);line-height:1.6}
+.sm-footer-note{font-size:11px;color:var(--text3);line-height:1.6;margin-bottom:14px}
+.sm-logout-btn{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:13px 14px;border-radius:14px;
+  border:1px solid rgba(99,214,255,.14);
+  background:linear-gradient(180deg,rgba(20,27,39,.96) 0%,rgba(14,20,31,.94) 100%);
+  color:rgba(232,237,244,.84);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;
+  cursor:pointer;transition:transform .14s,opacity .14s,border-color .14s,box-shadow .14s;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 14px 30px rgba(0,0,0,.16);
+}
+.sm-logout-btn svg{width:15px;height:15px;stroke:currentColor;stroke-width:2;fill:none}
+.sm-logout-btn:active{transform:scale(.985);opacity:.94;border-color:rgba(99,214,255,.24)}
 #pg-app{height:100%;display:flex;flex-direction:column}
 .pane{display:none;width:100%;position:relative;z-index:220;min-height:0}
 .pane.on{display:block;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -163,6 +204,16 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   min-height:100%;
   width:100%;
   padding:24px;
+  position:relative;z-index:1;
+}
+.voice-screen::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(79,142,247,.10) 0%, rgba(79,142,247,0) 24%),
+    radial-gradient(circle at 26% 72%, rgba(99,214,255,.04) 0%, rgba(99,214,255,0) 20%),
+    radial-gradient(circle at 76% 72%, rgba(155,140,255,.04) 0%, rgba(155,140,255,0) 18%),
+    linear-gradient(180deg, rgba(9,16,26,0) 0%, rgba(9,16,26,.14) 100%);
+  pointer-events:none;z-index:0;
 }
 .orb-wrap{
   position:relative;
@@ -192,14 +243,45 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .orb-hint{
   position:absolute;inset:0;
   display:flex;align-items:center;justify-content:center;
-  flex-direction:column;gap:10px;pointer-events:none;
+  flex-direction:column;gap:12px;pointer-events:none;
   transition:opacity .3s;z-index:2;
 }
 .orb-hint.hide{opacity:0}
-.orb-hint svg{width:48px;height:48px;fill:rgba(255,255,255,.55)}
-.orb-hint span{font-size:13px;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;font-weight:500}
-.question-bubble{background:var(--bg2);border:1px solid var(--line2);border-radius:20px 20px 20px 4px;padding:16px 20px;font-size:17px;font-weight:400;color:var(--text);line-height:1.55;text-align:left;max-width:min(380px,90vw);width:100%;margin-bottom:16px;min-height:52px;opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s}
+.orb-hint svg{
+  width:48px;height:48px;fill:rgba(255,255,255,.42);
+  filter:drop-shadow(0 4px 14px rgba(99,214,255,.08));
+}
+.orb-hint span{
+  font-size:11px;color:rgba(255,255,255,.34);letter-spacing:.16em;text-transform:uppercase;font-weight:500;
+  text-shadow:0 4px 18px rgba(0,0,0,.25);
+}
+.question-bubble{position:relative;z-index:1;background:linear-gradient(180deg,rgba(19,25,34,.9) 0%,rgba(15,20,29,.96) 100%);border:1px solid rgba(255,255,255,.09);border-radius:22px 22px 22px 6px;padding:16px 20px;font-size:17px;font-weight:400;color:var(--text);line-height:1.55;text-align:left;max-width:min(380px,90vw);width:100%;margin-bottom:16px;min-height:52px;opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s,border-color .25s,box-shadow .25s;box-shadow:0 18px 40px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.03)}
 .question-bubble.show{opacity:1;transform:translateY(0)}
+.question-bubble.processing{border-color:rgba(99,214,255,.18);box-shadow:0 24px 50px rgba(0,0,0,.28),0 0 0 1px rgba(79,142,247,.05),inset 0 1px 0 rgba(255,255,255,.04)}
+.question-bubble.processing::after{
+  content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;
+  background:linear-gradient(135deg,rgba(99,214,255,.2),rgba(155,140,255,.08),rgba(79,142,247,.18));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:.9;
+}
+.q-process{display:flex;align-items:flex-start;gap:14px}
+.q-process-wheel{
+  width:28px;height:28px;flex-shrink:0;border-radius:50%;
+  border:2px solid rgba(255,255,255,.08);border-top-color:var(--cyan-soft);border-right-color:var(--blue-soft);
+  box-shadow:0 0 18px rgba(99,214,255,.16);
+  animation:cfSpin 1.05s linear infinite;margin-top:2px;
+}
+.q-process-copy{min-width:0;flex:1}
+.q-process-kicker{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(141,183,255,.72);margin-bottom:8px}
+.q-process-phrase{font-size:16px;font-weight:600;letter-spacing:-.02em;color:var(--text);line-height:1.4;min-height:36px}
+.q-process-dots{display:flex;gap:6px;margin-top:4px}
+.q-process-dots span{
+  width:6px;height:6px;border-radius:50%;
+  background:linear-gradient(135deg,var(--blue-soft) 0%,var(--cyan-soft) 100%);
+  opacity:.22;animation:cfPulseDot 1.2s ease-in-out infinite;
+}
+.q-process-dots span:nth-child(2){animation-delay:.16s}
+.q-process-dots span:nth-child(3){animation-delay:.32s}
 .answer-chips{display:flex;flex-wrap:wrap;gap:8px;max-width:min(380px,90vw);width:100%;margin-bottom:16px;opacity:0;transition:opacity .3s .1s}
 .answer-chips.show{opacity:1}
 .answer-input-wrap{display:flex;gap:8px;max-width:min(380px,90vw);width:100%;margin-bottom:16px;opacity:0;transition:opacity .3s .1s}
@@ -225,8 +307,8 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .answer-text-input{flex:1;background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);padding:12px 14px;color:var(--text);font-family:'Sora',sans-serif;font-size:15px;outline:none;transition:border-color .18s}
 .answer-text-input:focus{border-color:var(--blue)}
 .answer-text-input::placeholder{color:var(--text3)}
-.send-btn{background:var(--blue);border:none;border-radius:var(--r);padding:12px 16px;cursor:pointer;color:#fff;font-size:18px;transition:opacity .15s}
-.send-btn:active{opacity:.8}
+.send-btn{background:linear-gradient(135deg,#68a7ff 0%,#4f8ef7 55%,#5a8cff 100%);border:none;border-radius:var(--r);padding:12px 16px;cursor:pointer;color:#fff;font-size:18px;transition:opacity .15s,transform .12s,box-shadow .15s;box-shadow:0 12px 24px rgba(79,142,247,.22)}
+.send-btn:active{opacity:.8;transform:scale(.98)}
 
 .mic-small-btn{width:48px;height:48px;border-radius:50%;background:var(--bg3);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,border-color .15s;flex-shrink:0}
 .mic-small-btn.rec{background:rgba(248,113,113,.12);border-color:var(--red)}
@@ -278,11 +360,11 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 
 .add-more-head{font-size:14px;color:var(--text);font-weight:500;margin-bottom:12px;line-height:1.5}
 .add-more-row{display:flex;gap:10px;margin-bottom:10px}
-.add-more-btn{flex:1;padding:12px;border-radius:var(--r);font-family:'Sora',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--line2);background:var(--bg2);color:var(--text2);display:flex;align-items:center;justify-content:center;gap:8px;transition:border-color .15s,color .15s}
+.add-more-btn{flex:1;padding:12px;border-radius:var(--r);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.10);background:linear-gradient(180deg,rgba(20,27,39,.92) 0%,rgba(14,20,31,.92) 100%);color:var(--text2);display:flex;align-items:center;justify-content:center;gap:8px;transition:border-color .15s,color .15s,transform .12s,box-shadow .15s;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
 .add-more-btn:active{background:var(--bg3)}
 .add-more-btn svg{width:16px;height:16px;fill:currentColor;flex-shrink:0}
 .add-more-skip{width:100%;padding:11px;background:transparent;border:1px solid var(--line2);border-radius:var(--r);color:var(--text3);font-family:'Sora',sans-serif;font-size:13px;cursor:pointer;transition:color .15s}
-.done-btn{width:100%;padding:16px;background:var(--green);border:none;border-radius:var(--r);color:#071a10;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s,transform .1s;letter-spacing:-.2px}
+.done-btn{width:100%;padding:16px;background:linear-gradient(135deg,#8df3ca 0%,#34d399 48%,#1db67f 100%);border:none;border-radius:var(--r);color:#062014;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s,transform .1s,box-shadow .15s;letter-spacing:-.2px;box-shadow:0 14px 28px rgba(29,182,127,.18)}
 .done-btn:active{opacity:.85;transform:scale(.98)}
 .codes-review{background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
 .codes-review-item{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
@@ -318,7 +400,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .sum-date-input{width:100%;background:var(--bg3);border:1px solid var(--blue);border-radius:var(--r);padding:11px 14px;color:var(--text);font-family:'Sora',sans-serif;font-size:15px;outline:none;color-scheme:dark}
 
 .btn-redo{flex:1;padding:14px;background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);color:var(--text2);font-family:'Sora',sans-serif;font-size:14px;font-weight:500;cursor:pointer}
-.btn-go{flex:2;padding:14px;background:var(--green);border:none;border-radius:var(--r);color:#071a10;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.btn-go{flex:2;padding:14px;background:linear-gradient(135deg,#7decc0 0%,#34d399 46%,#17b37c 100%);border:none;border-radius:var(--r);color:#062014;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s,transform .12s,box-shadow .15s;box-shadow:0 16px 30px rgba(29,182,127,.18)}
 .btn-go:active{opacity:.85}
 .btn-go:disabled{opacity:.35;pointer-events:none}
 .hist-filters{padding:16px 20px 0;max-width:600px;margin:0 auto}
@@ -368,6 +450,35 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .settings-pass-toggle:active{opacity:.8}
 .settings-pass-toggle svg{width:18px;height:18px;display:block;stroke:var(--text2)}
 .settings-cred-status{min-height:20px;font-size:12px;margin-bottom:12px;font-weight:500}
+.settings-cred-status.loading{
+  display:flex;align-items:center;gap:12px;
+  min-height:50px;padding:12px 14px;
+  border-radius:14px;border:1px solid rgba(99,214,255,.16);
+  background:linear-gradient(180deg,rgba(17,24,35,.94) 0%,rgba(13,19,29,.96) 100%);
+  color:var(--text);box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+}
+.settings-cred-status.loading::before{
+  content:"";width:18px;height:18px;flex-shrink:0;border-radius:50%;
+  border:2px solid rgba(255,255,255,.08);
+  border-top-color:var(--cyan-soft);border-right-color:var(--blue-soft);
+  box-shadow:0 0 16px rgba(99,214,255,.16);
+  animation:cfSpin .95s linear infinite;
+}
+.settings-cred-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.settings-cred-kicker{
+  font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:rgba(141,183,255,.72);line-height:1.1;
+}
+.settings-cred-text{font-size:13px;font-weight:600;color:var(--text);line-height:1.35}
+.settings-save-btn.loading-label{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.settings-save-btn.loading-label::before{
+  content:"";width:15px;height:15px;flex-shrink:0;border-radius:50%;
+  border:2px solid rgba(255,255,255,.18);
+  border-top-color:rgba(255,255,255,.9);border-right-color:rgba(255,255,255,.68);
+  animation:cfSpin .95s linear infinite;
+}
 .settings-cred-status.ok{color:var(--green)}
 .settings-cred-status.err{color:#f87171}
 .settings-save-btn{width:100%;padding:13px;font-size:14px}
@@ -448,31 +559,82 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .search-modal .srch-results::-webkit-scrollbar-thumb{background:rgba(120,135,165,.42);border-radius:8px;border:2px solid transparent;background-clip:padding-box}
 .search-modal .srch-results::-webkit-scrollbar-thumb:hover{background:rgba(140,155,185,.55)}
 /* Submit overlay */
-.submit-overlay{position:fixed;inset:0;z-index:9000;background:rgba(7,9,15,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;opacity:0;pointer-events:none!important;transition:opacity .25s;padding:24px;box-sizing:border-box}
+.submit-overlay{position:fixed;inset:0;z-index:9000;background:radial-gradient(circle at 50% 22%, rgba(79,142,247,.14) 0%, rgba(79,142,247,0) 26%),radial-gradient(circle at 74% 18%, rgba(99,214,255,.06) 0%, rgba(99,214,255,0) 20%),linear-gradient(180deg,rgba(3,6,10,.985) 0%,rgba(3,5,9,.996) 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;opacity:0;pointer-events:none!important;transition:opacity .25s;padding:24px 10px;box-sizing:border-box;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .submit-overlay.on{opacity:1;pointer-events:all!important}
-.submit-overlay.use-orb .submit-spinner-wrap{display:none}
-.submit-orb-slot{min-height:160px;display:flex;align-items:center;justify-content:center;width:100%;max-width:360px}
-.submit-orb-slot .orb-wrap{margin:0 auto}
-.submit-success-panel{display:none;flex-direction:column;align-items:center;gap:12px;text-align:center;max-width:340px;padding:8px 12px 0}
-.submit-overlay.success-show .submit-label{display:none!important}
-.submit-overlay.success-show .submit-orb-slot{display:none}
-.submit-overlay.success-show .submit-spinner-wrap{display:none}
-.submit-overlay.success-show .submit-success-panel{display:flex!important;animation:sdFadeUp .45s ease}
+body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+.submit-orb-slot{min-height:220px;height:min(40vh,340px);display:flex;align-items:center;justify-content:center;width:min(100vw,980px);max-width:calc(100vw - 8px);position:relative}
+.submit-orb-slot::before{
+  content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(760px,100vw);height:min(360px,88vw);border-radius:50%;
+  background:radial-gradient(circle, rgba(79,142,247,.12) 0%, rgba(79,142,247,.05) 36%, rgba(79,142,247,0) 72%);
+  filter:blur(8px);pointer-events:none;
+}
+.submit-threads{
+  position:absolute;inset:0;border-radius:32px;overflow:hidden;
+  background:radial-gradient(circle at 50% 50%, rgba(13,19,29,.18) 0%, rgba(13,19,29,0) 62%);
+  filter:drop-shadow(0 20px 50px rgba(79,142,247,.10));
+}
+.submit-threads canvas,.app-iridescence-bg canvas{display:block;width:100%!important;height:100%!important}
+.submit-status-shell{
+  width:min(360px,88vw);min-height:214px;padding:20px 20px 18px;border-radius:26px;
+  background:linear-gradient(180deg,rgba(14,19,29,.88) 0%,rgba(10,14,21,.92) 100%);
+  border:1px solid rgba(255,255,255,.08);box-shadow:0 28px 70px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.04);
+  text-align:center;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  transition:opacity .34s ease,transform .34s ease;
+}
+.submit-kicker{font-family:'Sora',sans-serif;font-size:10px;font-weight:700;color:rgba(141,183,255,.72);letter-spacing:.22em;text-transform:uppercase;margin-bottom:10px}
+.submit-progress{
+  width:100%;max-width:260px;height:6px;border-radius:999px;overflow:hidden;
+  background:rgba(255,255,255,.06);margin-top:14px;position:relative;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+}
+.submit-progress::before{
+  content:"";position:absolute;inset:0 auto 0 -42%;width:42%;
+  background:linear-gradient(90deg,rgba(99,214,255,0) 0%, rgba(99,214,255,.55) 28%, rgba(141,183,255,.95) 58%, rgba(155,140,255,.35) 100%);
+  border-radius:inherit;animation:submitLoad 1.4s ease-in-out infinite;
+  box-shadow:0 0 18px rgba(99,214,255,.24);
+}
+.submit-success-panel{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;max-width:280px;padding:0;opacity:0;max-height:0;overflow:hidden;transform:translateY(8px);transition:opacity .35s ease,transform .35s ease,max-height .35s ease,margin .35s ease}
+.submit-label,.submit-progress{transition:opacity .22s ease,transform .22s ease,max-height .22s ease,margin .22s ease}
+.submit-overlay.success-show .submit-orb-slot{display:flex}
+.submit-overlay.success-show .submit-label{opacity:.32}
+.submit-overlay.success-show .submit-progress{background:rgba(52,211,153,.10);box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 0 0 1px rgba(52,211,153,.05)}
+.submit-overlay.success-show .submit-progress::before{left:0;width:100%;animation:none;background:linear-gradient(90deg,rgba(109,255,196,.92) 0%, rgba(52,211,153,.96) 68%, rgba(29,182,127,.92) 100%);box-shadow:0 0 18px rgba(52,211,153,.26)}
+.submit-overlay.success-show .submit-success-panel{opacity:1;max-height:120px;transform:translateY(0);margin-top:12px;animation:sdFadeUp .45s ease}
 .submit-overlay.success-show .submit-duo{display:none!important}
-.submit-success-icon{width:72px;height:72px;border-radius:50%;background:rgba(52,211,153,.15);border:2px solid rgba(52,211,153,.45);display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--green);line-height:1}
-.submit-success-title{font-family:'Sora',sans-serif;font-size:26px;font-weight:700;color:#fff;letter-spacing:-.02em;line-height:1.2}
-.submit-success-sub{font-family:'Sora',sans-serif;font-size:17px;color:rgba(255,255,255,.78);line-height:1.55;max-width:300px}
-.submit-spinner-wrap{position:relative;width:100px;height:100px;display:flex;align-items:center;justify-content:center}
-.spinner{background-image:linear-gradient(rgb(186,66,255) 35%,rgb(0,225,255));width:100px;height:100px;animation:spinning82341 1.7s linear infinite;border-radius:50px;filter:blur(1px);box-shadow:0px -5px 20px 0px rgb(186,66,255),0px 5px 20px 0px rgb(0,225,255);display:flex;align-items:center;justify-content:center}
-.spinner1{background-color:rgb(20,22,30);width:82px;height:82px;border-radius:50px;filter:blur(8px)}
-@keyframes spinning82341{to{transform:rotate(360deg)}}
-.submit-label{font-family:'Sora',sans-serif;font-size:14px;font-weight:600;color:rgba(255,255,255,.7);letter-spacing:.04em}
-.submit-duo{display:none;flex-direction:column;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:20px 24px;max-width:272px;text-align:center}
+.submit-success-icon{
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,rgba(18,34,31,.66) 0%,rgba(10,24,22,.82) 100%);
+  border:1px solid rgba(141,243,202,.20);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 12px 24px rgba(0,0,0,.18);
+  transform:scale(.88);opacity:0;
+}
+.submit-success-icon svg{width:18px;height:18px;stroke:#9af0cb;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.submit-overlay.success-show .submit-success-icon{animation:submitCheckIn .42s cubic-bezier(.2,.9,.2,1) forwards}
+.submit-success-title{font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:#eefbf5;letter-spacing:.02em;line-height:1.2;text-transform:uppercase}
+.submit-success-sub{font-family:'Sora',sans-serif;font-size:13px;color:rgba(255,255,255,.62);line-height:1.55;max-width:250px}
+.submit-label{font-family:'Sora',sans-serif;font-size:17px;font-weight:600;color:rgba(255,255,255,.92);letter-spacing:-.02em;line-height:1.4;min-height:42px;max-width:280px;display:flex;align-items:center;justify-content:center}
+.submit-overlay.closing .submit-status-shell{opacity:0;transform:translateY(10px) scale(.985)}
+.submit-overlay.closing .submit-orb-slot{opacity:0;transform:translateY(-8px);transition:opacity .34s ease,transform .34s ease}
+.submit-duo{display:none;flex-direction:column;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:20px 24px;max-width:272px;text-align:center;margin-top:18px}
 .submit-duo.on{display:flex;animation:sdFadeUp .4s ease}
 .submit-duo-icon{font-size:38px;line-height:1;margin-bottom:2px}
 .submit-duo-title{font-family:'Sora',sans-serif;font-size:15px;font-weight:700;color:#fff}
 .submit-duo-text{font-family:'Sora',sans-serif;font-size:13px;color:rgba(255,255,255,.6);line-height:1.6}
 @keyframes sdFadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes submitLoad{0%{left:-42%}100%{left:100%}}
+@keyframes submitCheckIn{
+  0%{opacity:0;transform:scale(.72)}
+  70%{opacity:1;transform:scale(1.08)}
+  100%{opacity:1;transform:scale(1)}
+}
+@keyframes cfSpin{to{transform:rotate(360deg)}}
+@keyframes cfPulseDot{
+  0%,100%{opacity:.22;transform:translateY(0) scale(.94)}
+  50%{opacity:1;transform:translateY(-2px) scale(1)}
+}
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--bg3);border:1px solid var(--line2);border-radius:24px;padding:11px 20px;font-size:13px;color:var(--text);font-weight:500;opacity:0;transition:all .22s;z-index:999;white-space:nowrap;pointer-events:none}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{border-color:rgba(52,211,153,.28);color:var(--green)}
@@ -482,7 +644,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .err-banner-text{flex:1;font-size:13px;color:rgba(255,255,255,.85);line-height:1.55;word-break:break-word;font-family:'Sora',sans-serif}
 .err-banner-close{flex-shrink:0;font-size:16px;color:rgba(255,255,255,.35);padding:0 4px}
 .toast.err{border-color:rgba(248,113,113,.28);color:var(--red)}
-.new-case-btn{display:flex;align-items:center;gap:5px;background:var(--blue-d);border:1px solid var(--blue-b);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--blue);font-family:'Sora',sans-serif;font-weight:500;cursor:pointer;transition:background .15s}
+.new-case-btn{display:flex;align-items:center;gap:5px;background:linear-gradient(180deg,rgba(79,142,247,.16) 0%,rgba(79,142,247,.10) 100%);border:1px solid rgba(99,214,255,.18);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--blue-soft);font-family:'Sora',sans-serif;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s}
 /* Collapse hidden flow elements so the orb is truly centered on initial load */
 .question-bubble:not(.show),
 .answer-chips:not(.show),
@@ -506,7 +668,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   flex-direction:column;
   align-items:center;justify-content:center;
   overflow:hidden;padding:0;height:auto;
-  background:#07090f;z-index:200;
+  background:#05070d;z-index:200;
 }
 .login-waves-bg{
   position:absolute;inset:0;width:100%;height:100%;pointer-events:none;
@@ -517,26 +679,53 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 /* overlay to darken waves slightly so UI is readable */
 .login-dim{
   position:absolute;inset:0;pointer-events:none;z-index:1;
-  background:rgba(7,9,15,0.55);
+  background:
+    radial-gradient(circle at 50% 18%, rgba(79,142,247,.12) 0%, rgba(79,142,247,0) 28%),
+    radial-gradient(circle at 18% 76%, rgba(99,214,255,.08) 0%, rgba(99,214,255,0) 26%),
+    radial-gradient(circle at 82% 22%, rgba(155,140,255,.08) 0%, rgba(155,140,255,0) 22%),
+    linear-gradient(180deg, rgba(4,6,11,.56) 0%, rgba(4,6,11,.74) 100%);
 }
 /* scrollable UI layer */
 .login-ui{
   position:relative;z-index:10;
-  width:100%;max-width:400px;
-  padding:0 28px;
+  width:100%;max-width:440px;
+  padding:32px 22px 0;
   display:flex;flex-direction:column;align-items:center;
-  overflow-y:auto;max-height:100dvh;
+  justify-content:center;overflow-y:auto;max-height:100dvh;
   -webkit-overflow-scrolling:touch;
   scrollbar-width:none;
 }
 .login-ui::-webkit-scrollbar{display:none}
+.login-shell{
+  width:100%;
+  background:linear-gradient(180deg,rgba(10,14,21,.76) 0%,rgba(9,13,20,.9) 100%);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:28px;
+  box-shadow:0 28px 80px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.05);
+  backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);
+  padding:24px 20px 18px;
+}
 /* logo */
 .login-logo-wrap{
-  text-align:center;padding-top:max(56px,10dvh);padding-bottom:44px;
+  text-align:center;padding:4px 8px 24px;
+}
+.login-logo-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 12px;margin-bottom:18px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.04);
+  color:rgba(215,229,255,.6);
+  font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+}
+.login-logo-badge::before{
+  content:"";width:7px;height:7px;border-radius:50%;
+  background:linear-gradient(135deg,#63d6ff 0%,#8db7ff 100%);
+  box-shadow:0 0 14px rgba(99,214,255,.28);
 }
 .login-logo-name{
-  font-size:40px;font-weight:700;letter-spacing:-2.5px;
-  color:#fff;text-shadow:0 2px 32px rgba(0,0,0,.6);
+  font-size:42px;font-weight:700;letter-spacing:-2.6px;
+  color:#fff;text-shadow:0 4px 32px rgba(0,0,0,.42);
 }
 .login-logo-name em{
   font-style:normal;
@@ -546,44 +735,51 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   text-shadow:none;
 }
 .login-logo-tag{
-  font-size:11px;color:rgba(255,255,255,.38);
-  letter-spacing:.2em;text-transform:uppercase;margin-top:8px;
+  font-size:11px;color:rgba(255,255,255,.42);
+  letter-spacing:.18em;text-transform:uppercase;margin-top:8px;
+}
+.login-hero-copy{
+  margin:14px auto 0;max-width:300px;
+  font-size:14px;line-height:1.65;color:rgba(232,237,244,.68);
 }
 /* CTA button row */
 .login-cta-row{
-  display:flex;gap:10px;width:100%;
+  display:flex;gap:8px;width:100%;
+  padding:5px;
+  border-radius:18px;
+  background:rgba(255,255,255,.035);
+  border:1px solid rgba(255,255,255,.06);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
 }
 .login-cta-btn{
-  flex:1;padding:15px 10px;
+  flex:1;padding:13px 10px;
   font-family:'Sora',sans-serif;font-size:14px;font-weight:600;
   border-radius:14px;cursor:pointer;
   transition:all .2s;letter-spacing:-.1px;
-  border:1.5px solid transparent;
+  border:1px solid transparent;
 }
 .login-cta-btn.primary{
-  background:linear-gradient(135deg,#5a98ff 0%,#a78bfa 60%,#60a5fa 100%);
-  color:#fff;border-color:transparent;
-  box-shadow:0 4px 24px rgba(100,120,255,0.45);
-}
-.login-cta-btn.primary:hover{opacity:.88;box-shadow:0 6px 28px rgba(120,100,255,0.55)}
-.login-cta-btn.primary.active{
-  background:transparent;
-  color:transparent;
-  background-clip:text;-webkit-background-clip:text;
-  background-image:linear-gradient(135deg,#5a98ff 0%,#a78bfa 60%,#60a5fa 100%);
-  -webkit-text-fill-color:transparent;
-  border-image:linear-gradient(135deg,#5a98ff,#a78bfa,#60a5fa) 1;
-  border-style:solid;border-width:1.5px;
+  background:rgba(255,255,255,.02);
+  color:rgba(232,237,244,.7);border-color:transparent;
   box-shadow:none;
 }
-.login-cta-btn.secondary{
-  background:rgba(255,255,255,0.07);color:var(--text2);
-  border-color:rgba(255,255,255,0.10);
+.login-cta-btn.primary:hover{opacity:.92}
+.login-cta-btn.primary.active{
+  background:linear-gradient(135deg,rgba(90,152,255,.22) 0%,rgba(167,139,250,.16) 58%,rgba(96,165,250,.18) 100%);
+  color:#fff;
+  border-color:rgba(141,183,255,.18);
+  box-shadow:0 10px 26px rgba(60,90,180,.16),inset 0 1px 0 rgba(255,255,255,.04);
 }
-.login-cta-btn.secondary:hover{background:rgba(255,255,255,0.11)}
+.login-cta-btn.secondary{
+  background:rgba(255,255,255,.02);color:rgba(232,237,244,.7);
+  border-color:transparent;
+}
+.login-cta-btn.secondary:hover{background:rgba(255,255,255,.05)}
 .login-cta-btn.secondary.active{
-  background:rgba(255,255,255,0.12);color:var(--text);
-  border-color:rgba(255,255,255,0.2);
+  background:linear-gradient(135deg,rgba(90,152,255,.22) 0%,rgba(167,139,250,.16) 58%,rgba(96,165,250,.18) 100%);
+  color:#fff;
+  border-color:rgba(141,183,255,.18);
+  box-shadow:0 10px 26px rgba(60,90,180,.16),inset 0 1px 0 rgba(255,255,255,.04);
 }
 /* expandable panels */
 .login-panel{
@@ -593,18 +789,19 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   opacity:0;margin-top:0;
 }
 .login-panel.open{
-  max-height:700px;opacity:1;margin-top:20px;
+  max-height:700px;opacity:1;margin-top:14px;
 }
 .login-panel-inner{
-  background:rgba(13,17,25,0.78);
+  background:linear-gradient(180deg,rgba(12,17,26,.76) 0%,rgba(10,14,22,.88) 100%);
   backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
   border:1px solid rgba(255,255,255,0.07);
-  border-radius:18px;padding:24px 20px 28px;
+  border-radius:22px;padding:22px 18px 22px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
 }
 .login-footer-text{
   position:relative;z-index:10;
-  padding:20px 28px max(24px,env(safe-area-inset-bottom));
-  font-size:11px;color:rgba(255,255,255,0.15);
+  padding:18px 28px max(24px,env(safe-area-inset-bottom));
+  font-size:11px;color:rgba(255,255,255,0.18);
   letter-spacing:.04em;text-align:center;
 }
 .auth-tabs{
@@ -625,21 +822,34 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 }
 .form-field{margin-bottom:14px}
 .form-label{
-  display:block;font-size:11px;color:var(--text3);
-  letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;font-weight:600;
+  display:block;font-size:10px;color:rgba(215,229,255,.34);
+  letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px;font-weight:700;
 }
 .form-input{
-  width:100%;background:rgba(255,255,255,0.06);
-  border:1px solid rgba(255,255,255,0.1);
-  border-radius:10px;padding:13px 14px;color:var(--text);
+  width:100%;background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.09);
+  border-radius:14px;padding:14px 14px;color:var(--text);
   font-family:'Sora',sans-serif;font-size:15px;outline:none;
-  transition:border-color .18s,background .18s;box-sizing:border-box;
+  transition:border-color .18s,background .18s,box-shadow .18s;box-sizing:border-box;
 }
-.form-input:focus{border-color:var(--blue);background:rgba(79,142,247,0.07)}
-.form-input::placeholder{color:var(--text3)}
+.form-input:focus{border-color:rgba(141,183,255,.34);background:rgba(79,142,247,0.07);box-shadow:0 0 0 4px rgba(79,142,247,.08)}
+.form-input::placeholder{color:rgba(255,255,255,.24)}
 .auth-err{
   text-align:center;font-size:13px;color:var(--red);
   margin-top:10px;min-height:18px;line-height:1.5;
+}
+.login-panel .btn-main{
+  margin-top:10px!important;
+  background:linear-gradient(135deg,#6ea4ff 0%,#7596ff 48%,#9b8cff 100%);
+  border-radius:16px;
+  box-shadow:0 16px 34px rgba(71,104,210,.24);
+}
+.login-panel .btn-main.busy{box-shadow:none}
+.login-shell-foot{
+  margin-top:16px;padding-top:14px;
+  border-top:1px solid rgba(255,255,255,.06);
+  text-align:center;font-size:11px;line-height:1.6;
+  color:rgba(255,255,255,.3);
 }
 .login-footer{
   position:relative;z-index:20;
@@ -666,10 +876,13 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 
   <!-- Scrollable UI -->
   <div class="login-ui">
+    <div class="login-shell">
     <!-- Brand -->
     <div class="login-logo-wrap">
+      <div class="login-logo-badge">Plastic Surgery Workflow</div>
       <div class="login-logo-name">Case<em>Flow</em></div>
       <div class="login-logo-tag">ACGME Case Logging</div>
+      <div class="login-hero-copy">A calmer way to review, capture, and submit operative cases without leaving your flow.</div>
     </div>
 
     <!-- CTA buttons -->
@@ -729,6 +942,8 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
         <div class="auth-err" id="r-err"></div>
       </div>
     </div>
+    <div class="login-shell-foot">Secure sign-in, encrypted case history, and a single workflow from dictation to ACGME submission.</div>
+    </div>
 
     <div style="height:max(32px,env(safe-area-inset-bottom))"></div>
   </div>
@@ -737,6 +952,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 </div>
 
 <div class="page" id="pg-app">
+  <div class="app-iridescence-bg" id="app-iridescence-bg"></div>
   <div class="app-bar">
     <div class="app-bar-left">
       <button class="sm-toggle-btn" id="sm-toggle" onclick="smToggle()" aria-label="Toggle menu" aria-expanded="false">
@@ -746,7 +962,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
         </div>
         <span class="sm-toggle-text" id="sm-toggle-text">Menu</span>
       </button>
-      <div class="app-logo" onclick="smNavigate('log')" style="cursor:pointer">Case<em>Flow</em></div>
+      <div class="app-logo" onclick="goHome()" style="cursor:pointer">Case<em>Flow</em></div>
     </div>
     <div class="bar-right">
       <div class="chip chip-cases" id="hdr-chip-cases" title="Open case history" role="button" tabindex="0"><b id="hdr-n">0</b> cases</div>
@@ -763,7 +979,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
         <div class="orb-canvas-wrap" id="orb-canvas-wrap"></div>
         <div class="orb-hint" id="orb-hint">
           <svg viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 14.9A7.002 7.002 0 0 1 5 9H3a9 9 0 0 0 8 8.94V20H8v2h8v-2h-3v-2.06A9 9 0 0 0 21 9h-2a7 7 0 0 1-5.5 6.9z"/></svg>
-          <span>Tap to start</span>
+          <span>Tap here</span>
         </div>
       </div>
       <div class="question-bubble" id="q-bubble"></div>
@@ -906,7 +1122,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   <div class="sm-prelayer sm-prelayer-2" id="sm-prelayer-2"></div>
   <aside class="sm-panel-wrap" id="sm-panel" aria-label="Main navigation">
     <div class="sm-panel-logo-row">
-      <div class="sm-panel-logo">Case<em>Flow</em></div>
+      <div class="sm-panel-logo" onclick="goHome()" style="cursor:pointer">Case<em>Flow</em></div>
     </div>
     <ul class="sm-nav-list" role="list">
       <li class="sm-nav-item" id="sm-item-log">
@@ -930,6 +1146,10 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
     </ul>
     <div class="sm-panel-footer">
       <div class="sm-footer-note">ACGME Case Logging</div>
+      <button class="sm-logout-btn" onclick="doLogout()" type="button">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        <span>Log Out</span>
+      </button>
     </div>
   </aside>
 </div>
@@ -955,20 +1175,25 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   </div>
 </div>
 <div class="submit-overlay" id="submit-overlay">
-  <div class="submit-orb-slot" id="submit-orb-slot"></div>
-  <div class="submit-spinner-wrap" id="submit-spinner-wrap">
-    <div class="spinner"><div class="spinner1"></div></div>
+  <div class="submit-orb-slot" id="submit-orb-slot">
+    <div class="submit-threads" id="submit-threads"></div>
   </div>
-  <div class="submit-label" id="submit-label">Submitting to ACGME…</div>
-  <div class="submit-success-panel" id="submit-success-panel">
-    <div class="submit-success-icon">&#10003;</div>
-    <div class="submit-success-title" id="submit-success-title">Submitted to ACGME</div>
-    <div class="submit-success-sub" id="submit-success-sub">Your case was sent successfully.</div>
-  </div>
-  <div class="submit-duo" id="submit-duo">
-    <div class="submit-duo-icon">📱</div>
-    <div class="submit-duo-title">Approve Duo Push</div>
-    <div class="submit-duo-text">Check your phone and approve the Duo notification from ACGME to continue. This screen will close automatically once approved.</div>
+  <div class="submit-status-shell">
+    <div class="submit-kicker" id="submit-kicker">CaseFlow Submission</div>
+    <div class="submit-label" id="submit-label">Submitting to ACGME…</div>
+    <div class="submit-progress" id="submit-progress"></div>
+    <div class="submit-success-panel" id="submit-success-panel">
+      <div class="submit-success-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 12.5 10 17l8.5-10"/></svg>
+      </div>
+      <div class="submit-success-title" id="submit-success-title">Captured in ACGME</div>
+      <div class="submit-success-sub" id="submit-success-sub">Your case was sent successfully.</div>
+    </div>
+    <div class="submit-duo" id="submit-duo">
+      <div class="submit-duo-icon">📱</div>
+      <div class="submit-duo-title">Approve Duo Push</div>
+      <div class="submit-duo-text">Check your phone and approve the Duo notification from ACGME to continue. This screen will close automatically once approved.</div>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -1088,6 +1313,15 @@ let fuRec=null,fuOn=false,fuFinal='',fuInt='';
 // MediaRecorder instances for Groq Whisper transcription (run alongside Web Speech API)
 let mainMediaRec=null,mainAudioChunks=[];
 let addMoreMediaRec=null,addMoreAudioChunks=[];
+const PROCESSING_PHRASES = [
+  'Cerebrating your case…',
+  'Scrubbing into your dictation…',
+  'Decoding surgeon-speak…',
+  'Connecting the procedural dots…',
+  'Thinking like a chief resident…',
+  'Gently interrogating the transcription…',
+];
+let processingBubbleTimer=null,processingBubbleIndex=0;
 
 /**
  * Start a MediaRecorder on the given stream, storing chunks in the provided array.
@@ -1230,7 +1464,7 @@ function stopInitialListening(){
     if(mainMediaRec){try{mainMediaRec.stop();}catch(_){} mainMediaRec=null;mainAudioChunks=[];}
     orbState='idle';document.getElementById('orb-hint').classList.remove('hide');showBubble('');setStateLabel('');return;
   }
-  orbState='thinking';showBubble('Finding your CPT codes…');setStateLabel('');
+  orbState='thinking';showProcessingBubble();setStateLabel('');
   AudioFX.startThink();
   // Get Groq transcript (falls back to Web Speech text if Groq fails)
   const recSnap=mainMediaRec,chunksSnap=mainAudioChunks;
@@ -1281,6 +1515,7 @@ function localExtract(text){
 }
 function nextQuestion(){
   AudioFX.stopThink();
+  stopProcessingBubble();
   currentQ++;if(currentQ>=pendingQs.length){showSummary();return}
   const q=pendingQs[currentQ];hideAnswerUI();
   // Hide orb during follow-up questions — not needed, takes up space
@@ -1336,7 +1571,42 @@ function stopFuRec(){
   else{document.getElementById('a-voice-tx').textContent='Tap mic or type above';document.getElementById('a-voice-tx').classList.remove('has-text')}
 }
 function submitTextAnswer(){const val=document.getElementById('a-text-input').value.trim();if(!val)return;document.getElementById('a-text-input').value='';answerQuestion(val)}
-function showBubble(text){const el=document.getElementById('q-bubble');el.textContent=text;if(text)el.classList.add('show')}
+function stopProcessingBubble(){
+  if(processingBubbleTimer){clearInterval(processingBubbleTimer);processingBubbleTimer=null;}
+  const el=document.getElementById('q-bubble');
+  const phraseEl=document.getElementById('q-process-phrase');
+  if(phraseEl) phraseEl.textContent='';
+  el.classList.remove('processing');
+}
+function showBubble(text){
+  stopProcessingBubble();
+  const el=document.getElementById('q-bubble');
+  el.textContent=text;
+  if(text) el.classList.add('show');
+  else el.classList.remove('show');
+}
+function showProcessingBubble(startIndex=0){
+  stopProcessingBubble();
+  const el=document.getElementById('q-bubble');
+  processingBubbleIndex=((startIndex%PROCESSING_PHRASES.length)+PROCESSING_PHRASES.length)%PROCESSING_PHRASES.length;
+  el.classList.add('show','processing');
+  el.innerHTML=
+    '<div class="q-process">'+
+      '<div class="q-process-wheel" aria-hidden="true"></div>'+
+      '<div class="q-process-copy">'+
+        '<div class="q-process-kicker">CaseFlow is reviewing</div>'+
+        '<div class="q-process-phrase" id="q-process-phrase"></div>'+
+        '<div class="q-process-dots" aria-hidden="true"><span></span><span></span><span></span></div>'+
+      '</div>'+
+    '</div>';
+  const phraseEl=document.getElementById('q-process-phrase');
+  if(phraseEl) phraseEl.textContent=PROCESSING_PHRASES[processingBubbleIndex];
+  processingBubbleTimer=setInterval(()=>{
+    processingBubbleIndex=(processingBubbleIndex+1)%PROCESSING_PHRASES.length;
+    const nextEl=document.getElementById('q-process-phrase');
+    if(nextEl) nextEl.textContent=PROCESSING_PHRASES[processingBubbleIndex];
+  },1700);
+}
 function hideAnswerUI(){
   document.getElementById('a-chips').classList.remove('show');
   const acw=document.getElementById('a-combo-wrap');if(acw){acw.classList.remove('show');acw.innerHTML='';}
@@ -1349,7 +1619,7 @@ function hideAnswerUI(){
   document.getElementById('srch-results-box').innerHTML='';
   if(fuOn)stopFuRec();
 }
-function hideAll(){hideAnswerUI();document.getElementById('cpt-found-box').classList.remove('show');document.getElementById('cpt-select-box').classList.remove('show');document.getElementById('add-more-box').classList.remove('show');document.getElementById('summary-card').classList.remove('show');document.getElementById('final-actions').classList.remove('show')}
+function hideAll(){stopProcessingBubble();hideAnswerUI();document.getElementById('cpt-found-box').classList.remove('show');document.getElementById('cpt-select-box').classList.remove('show');document.getElementById('add-more-box').classList.remove('show');document.getElementById('summary-card').classList.remove('show');document.getElementById('final-actions').classList.remove('show')}
 function showChips(opts){const el=document.getElementById('a-chips');el.innerHTML=opts.map(o=>`<div class="chip-opt" onclick="chipPick('${o}',this)">${o}</div>`).join('');el.classList.add('show');}
 /** Site / attending: searchable combo (same data as ACGME profile lists) */
 function showFlowCombo(which){
@@ -1984,34 +2254,67 @@ function saveSummaryChip(key, val, e){
 }
 let cases=JSON.parse(localStorage.getItem('cf5-cases')||'[]');
 let _currentCaseId=null; // set before saving to avoid duplicate DB inserts
-/** While submitting, the live orb is moved into #submit-orb-slot so the gradient “thinking” orb shows on the overlay. */
-let _orbSlotRestore=null;
-function moveOrbToSubmitOverlay(){
-  const ow=document.getElementById('orb-wrap');
-  const slot=document.getElementById('submit-orb-slot');
-  if(!ow||!slot)return;
-  if(ow.parentElement!==slot){
-    _orbSlotRestore={parent:ow.parentElement,next:ow.nextSibling};
-    slot.appendChild(ow);
+let appIridescenceRenderer=null,submitThreadsRenderer=null;
+function ensureBackgroundRenderers(){
+  const appBg=document.getElementById('app-iridescence-bg');
+  if(appBg&&!appIridescenceRenderer){
+    appIridescenceRenderer=new IridescenceRenderer(appBg,{
+      color:'#6f8eff',
+      amplitude:0.12,
+      speed:0.2,
+      mouseReact:false,
+    });
   }
-  ow.style.display='';
+  const submitBg=document.getElementById('submit-threads');
+  if(submitBg&&!submitThreadsRenderer){
+    submitThreadsRenderer=new ThreadsRenderer(submitBg,{
+      color:'#8ab6ff',
+      amplitude:1.35,
+      distance:0.06,
+      speed:0.2,
+    });
+  }
+}
+function moveOrbToSubmitOverlay(){
+  ensureBackgroundRenderers();
   orbState='thinking';
 }
 function restoreOrbFromSubmitOverlay(){
-  const ow=document.getElementById('orb-wrap');
-  const slot=document.getElementById('submit-orb-slot');
-  if(!ow||!slot||ow.parentElement!==slot)return;
-  if(_orbSlotRestore&&_orbSlotRestore.parent){
-    const {parent,next}=_orbSlotRestore;
-    try{
-      if(next&&next.parentNode===parent) parent.insertBefore(ow,next);
-      else parent.appendChild(ow);
-    }catch(_){ parent.appendChild(ow); }
-  } else {
-    const vs=document.getElementById('voice-screen');
-    if(vs) vs.insertBefore(ow, vs.firstChild);
-  }
-  _orbSlotRestore=null;
+  return;
+}
+function resetSubmitOverlayUI(){
+  const overlay=document.getElementById('submit-overlay');
+  const labelEl=document.getElementById('submit-label');
+  const kickerEl=document.getElementById('submit-kicker');
+  const duoEl=document.getElementById('submit-duo');
+  const succPanel=document.getElementById('submit-success-panel');
+  if(!overlay||!labelEl||!kickerEl||!duoEl||!succPanel) return;
+  overlay.classList.remove('closing');
+  overlay.classList.remove('success-show');
+  succPanel.style.display='';
+  labelEl.style.display='';
+  kickerEl.textContent='CaseFlow Submission';
+  labelEl.textContent='Submitting to ACGME…';
+  duoEl.classList.remove('on');
+}
+function showSubmitOverlaySuccess(title, subtitle){
+  const overlay=document.getElementById('submit-overlay');
+  const kickerEl=document.getElementById('submit-kicker');
+  const labelEl=document.getElementById('submit-label');
+  const succTitle=document.getElementById('submit-success-title');
+  const succSub=document.getElementById('submit-success-sub');
+  if(!overlay||!kickerEl||!labelEl||!succTitle||!succSub) return;
+  kickerEl.textContent='CaseFlow Submission';
+  labelEl.textContent='Submitting to ACGME...';
+  succTitle.textContent=title;
+  succSub.textContent=subtitle;
+  overlay.classList.add('success-show');
+}
+async function closeSubmitOverlaySmooth(){
+  const overlay=document.getElementById('submit-overlay');
+  if(!overlay) return;
+  overlay.classList.add('closing');
+  await sleep(320);
 }
 /** Ensures the visible Case ID input value is in caseData before submit (avoids stale state if input diverged). */
 function syncCaseIdFromSummaryInput(){
@@ -2035,25 +2338,21 @@ async function submitCase(){
   const btn=document.getElementById('go-btn');
   const overlay=document.getElementById('submit-overlay');
   const labelEl=document.getElementById('submit-label');
+  const kickerEl=document.getElementById('submit-kicker');
   const duoEl=document.getElementById('submit-duo');
-  const succPanel=document.getElementById('submit-success-panel');
-  const succTitle=document.getElementById('submit-success-title');
-  const succSub=document.getElementById('submit-success-sub');
 
   document.getElementById('cpt-found-box').classList.remove('show');
   document.getElementById('summary-card').classList.remove('show');
   document.getElementById('final-actions').classList.remove('show');
 
   btn.disabled=true;
-  overlay.classList.remove('success-show');
-  succPanel.style.display='none';
-  labelEl.style.display='';
-  labelEl.textContent='Submitting to ACGME…';
-  duoEl.classList.remove('on');
+  resetSubmitOverlayUI();
   moveOrbToSubmitOverlay();
-  overlay.classList.add('on','use-orb');
+  document.body.classList.add('submit-active');
+  overlay.classList.add('on');
   // Don’t auto-show “Duo” after a fixed delay — that misleads when the failure is session/auth (not Duo).
   const waitHintTimer=setTimeout(()=>{
+    kickerEl.textContent='Awaiting ACGME response';
     if(overlay.classList.contains('on')) labelEl.textContent='Still contacting ACGME… If your hospital uses Duo, you may get a push to approve.';
   },15000);
 
@@ -2089,6 +2388,7 @@ async function submitCase(){
 
     clearTimeout(waitHintTimer);
     duoEl.classList.remove('on');
+    kickerEl.textContent='CaseFlow Submission';
     labelEl.textContent='Submitting to ACGME…';
     const localId='cf-'+Date.now();
     const c={id:localId,...payload,yr:payload.yr,cid:caseData.caseId,status,ts:new Date().toISOString()};
@@ -2097,23 +2397,22 @@ async function submitCase(){
     document.getElementById('hdr-n').textContent=cases.length;
 
     if(status==='submitted'){
-      labelEl.style.display='none';
-      succTitle.textContent='Submitted to ACGME';
-      succSub.textContent='Your case was logged successfully.';
-      succPanel.style.display='flex';
-      overlay.classList.add('success-show');
+      showSubmitOverlaySuccess(
+        'Captured in ACGME',
+        'Your case has been captured in ACGME.'
+      );
       orbState='idle';
-      await sleep(2400);
+      await sleep(1500);
+      await closeSubmitOverlaySmooth();
     } else {
       orbState='idle';
     }
   } finally {
     clearTimeout(waitHintTimer);
     duoEl.classList.remove('on');
-    overlay.classList.remove('on','use-orb','success-show');
-    succPanel.style.display='none';
-    labelEl.style.display='';
-    labelEl.textContent='Submitting to ACGME…';
+    overlay.classList.remove('on','success-show');
+    document.body.classList.remove('submit-active');
+    resetSubmitOverlayUI();
     restoreOrbFromSubmitOverlay();
     btn.disabled=false;
   }
@@ -2130,6 +2429,7 @@ function resetFlow(){
   stopMic();
   savedMicStream=null;
   txFinal='';txInt='';fuFinal='';fuInt='';addMoreFinal='';addMoreInt='';
+  stopProcessingBubble();
   caseData={description:'',procedures:[],alternatives:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:''};
   pendingQs=[];currentQ=-1;
   orbState='idle';hideAll();
@@ -2468,19 +2768,15 @@ async function resubmitCase(){
   const btn=document.getElementById('resubmit-btn');
   const overlay=document.getElementById('submit-overlay');
   const labelEl2=document.getElementById('submit-label');
+  const kickerEl2=document.getElementById('submit-kicker');
   const duoEl2=document.getElementById('submit-duo');
-  const succPanel=document.getElementById('submit-success-panel');
-  const succTitle=document.getElementById('submit-success-title');
-  const succSub=document.getElementById('submit-success-sub');
   btn.disabled=true;
-  overlay.classList.remove('success-show');
-  succPanel.style.display='none';
-  labelEl2.style.display='';
-  labelEl2.textContent='Submitting to ACGME…';
-  duoEl2.classList.remove('on');
+  resetSubmitOverlayUI();
   moveOrbToSubmitOverlay();
-  overlay.classList.add('on','use-orb');
+  document.body.classList.add('submit-active');
+  overlay.classList.add('on');
   const waitHintTimer2=setTimeout(()=>{
+    kickerEl2.textContent='Awaiting ACGME response';
     if(overlay.classList.contains('on')) labelEl2.textContent='Still contacting ACGME… If your hospital uses Duo, you may get a push to approve.';
   },15000);
 
@@ -2509,6 +2805,7 @@ async function resubmitCase(){
 
     clearTimeout(waitHintTimer2);
     duoEl2.classList.remove('on');
+    kickerEl2.textContent='CaseFlow Submission';
     labelEl2.textContent='Submitting to ACGME…';
     const idx=cases.findIndex(c=>c.id===editingCase.id);
     if(idx>-1){
@@ -2519,23 +2816,22 @@ async function resubmitCase(){
     }
 
     if(newStatus==='submitted'){
-      labelEl2.style.display='none';
-      succTitle.textContent='Re-submitted to ACGME';
-      succSub.textContent='Your case update was sent successfully.';
-      succPanel.style.display='flex';
-      overlay.classList.add('success-show');
+      showSubmitOverlaySuccess(
+        'Captured in ACGME',
+        'Your case has been captured in ACGME.'
+      );
       orbState='idle';
-      await sleep(2400);
+      await sleep(1500);
+      await closeSubmitOverlaySmooth();
     } else {
       orbState='idle';
     }
   } finally {
     clearTimeout(waitHintTimer2);
     duoEl2.classList.remove('on');
-    overlay.classList.remove('on','use-orb','success-show');
-    succPanel.style.display='none';
-    labelEl2.style.display='';
-    labelEl2.textContent='Submitting to ACGME…';
+    overlay.classList.remove('on','success-show');
+    document.body.classList.remove('submit-active');
+    resetSubmitOverlayUI();
     restoreOrbFromSubmitOverlay();
     btn.disabled=false;
   }
@@ -2626,17 +2922,49 @@ function toggleAcgmeForm(){
 // Stores the MFA sessionId while we wait for the user's OTP code
 let _pendingMfaSessionId = null;
 
+function setAcgmeLoadingStatus(kicker, text){
+  const statusEl = document.getElementById('s-cred-status');
+  if(!statusEl) return;
+  statusEl.className = 'settings-cred-status loading';
+  statusEl.innerHTML =
+    '<div class="settings-cred-copy">'+
+      '<div class="settings-cred-kicker">'+esc(kicker)+'</div>'+
+      '<div class="settings-cred-text">'+esc(text)+'</div>'+
+    '</div>';
+}
+
+function setAcgmeStatusError(message){
+  const statusEl = document.getElementById('s-cred-status');
+  if(!statusEl) return;
+  statusEl.textContent = message;
+  statusEl.className = 'settings-cred-status err';
+}
+
+function setBusyButtonState(btn, text){
+  if(!btn) return;
+  btn.classList.add('busy','loading-label');
+  btn.textContent = text;
+}
+
+function clearBusyButtonState(btn, text){
+  if(!btn) return;
+  btn.classList.remove('busy','loading-label');
+  btn.textContent = text;
+}
+
 async function saveAcgmeCredentials(){
   const user = document.getElementById('s-acgme-user').value.trim();
   const pass = document.getElementById('s-acgme-pass').value;
   const statusEl = document.getElementById('s-cred-status');
-  if(!user || !pass){ statusEl.textContent='Enter both username and password.'; statusEl.className='settings-cred-status err'; return; }
+  if(!user || !pass){ setAcgmeStatusError('Enter both username and password.'); return; }
   try{
     if(ACGME_BACKEND_URL){
       statusEl.textContent = 'Opening ACGME login…';
       statusEl.className = 'settings-cred-status';
+      setAcgmeLoadingStatus('Secure connection in progress', 'Opening ACGME login...');
       const saveBtn = document.querySelector('#s-acgme-form .settings-save-btn');
       if(saveBtn){ saveBtn.classList.add('busy'); saveBtn.textContent = 'Connecting…'; }
+      setBusyButtonState(saveBtn, 'Connecting...');
       const token = localStorage.getItem('cf5-token');
       const resp = await fetch(`${ACGME_BACKEND_URL}/api/auth/save-credentials`,{
         method:'POST',
@@ -2645,12 +2973,14 @@ async function saveAcgmeCredentials(){
       });
       const data = await resp.json();
       if(saveBtn){ saveBtn.classList.remove('busy'); saveBtn.textContent = 'Save Credentials'; }
+      clearBusyButtonState(saveBtn, 'Save Credentials');
       if(!resp.ok) throw new Error(data.error||'ACGME verification failed');
 
       if(data.mfaRequired && data.sessionId){
         // MFA needed — show the OTP input
         _pendingMfaSessionId = data.sessionId;
         statusEl.textContent = '';
+        statusEl.className = 'settings-cred-status';
         document.getElementById('s-mfa-section').style.display = 'block';
         document.getElementById('s-mfa-code').focus();
         toast('Check your email/phone for a verification code','');
@@ -2670,19 +3000,22 @@ async function saveAcgmeCredentials(){
   } catch(e){
     statusEl.textContent = e.message;
     statusEl.className = 'settings-cred-status err';
+    clearBusyButtonState(document.querySelector('#s-acgme-form .settings-save-btn'), 'Save Credentials');
   }
 }
 
 async function completeMfaLogin(){
   const code = document.getElementById('s-mfa-code').value.trim();
   const statusEl = document.getElementById('s-cred-status');
-  if(!code){ statusEl.textContent='Enter the verification code.'; statusEl.className='settings-cred-status err'; return; }
-  if(!_pendingMfaSessionId){ statusEl.textContent='No pending MFA session. Please start over.'; statusEl.className='settings-cred-status err'; return; }
+  if(!code){ setAcgmeStatusError('Enter the verification code.'); return; }
+  if(!_pendingMfaSessionId){ setAcgmeStatusError('No pending MFA session. Please start over.'); return; }
   try{
     statusEl.textContent = 'Verifying code…';
     statusEl.className = 'settings-cred-status';
+    setAcgmeLoadingStatus('Verification in progress', 'Verifying your ACGME access...');
     const mfaBtn = document.querySelector('#s-mfa-section .btn-main');
     if(mfaBtn){ mfaBtn.classList.add('busy'); mfaBtn.textContent = 'Verifying…'; }
+    setBusyButtonState(mfaBtn, 'Verifying...');
     const token = localStorage.getItem('cf5-token');
     const resp = await fetch(`${ACGME_BACKEND_URL}/api/auth/complete-mfa`,{
       method:'POST',
@@ -2690,6 +3023,7 @@ async function completeMfaLogin(){
       body:JSON.stringify({sessionId:_pendingMfaSessionId, code}),
     });
     const data = await resp.json();
+    clearBusyButtonState(mfaBtn, 'Verify Code');
     if(!resp.ok) throw new Error(data.error||'MFA verification failed');
     localStorage.setItem('cf5-vault', JSON.stringify({saved:true}));
     _pendingMfaSessionId = null;
@@ -2699,6 +3033,7 @@ async function completeMfaLogin(){
     if(mfaBtn){ mfaBtn.classList.remove('busy'); mfaBtn.textContent = 'Verify Code'; }
     document.getElementById('s-cred-status').textContent = e.message;
     document.getElementById('s-cred-status').className = 'settings-cred-status err';
+    clearBusyButtonState(mfaBtn, 'Verify Code');
   }
 }
 
@@ -3011,6 +3346,7 @@ async function launchApp(name,email){
   const displayName=(name||(email||'').split('@')[0]||'—');
   document.getElementById('hdr-u').textContent=displayName.split(' ')[0];
   showPage('pg-app');
+  ensureBackgroundRenderers();
   startOrb();
   // Re-bind tap/click handlers after app is visible (guards against partial reloads)
   try{ initPointerBindings(); }catch(e){}
@@ -3442,6 +3778,237 @@ void main(){
   destroy(){cancelAnimationFrame(this._raf);window.removeEventListener('resize',this._onResize);if(this._canvas.parentNode)this._canvas.parentNode.removeChild(this._canvas);const ext=this._gl&&this._gl.getExtension('WEBGL_lose_context');if(ext)ext.loseContext();}
 }
 
+/* ================================================================
+   IridescenceRenderer — vanilla WebGL port of supplied OGL effect
+   ================================================================ */
+class IridescenceRenderer{
+  static VERT=`attribute vec2 uv;attribute vec2 position;varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position,0.0,1.0);}`;
+  static FRAG=`precision highp float;
+uniform float uTime;uniform vec3 uColor;uniform vec3 uResolution;uniform vec2 uMouse;uniform float uAmplitude;uniform float uSpeed;
+varying vec2 vUv;
+void main(){
+  float mr=min(uResolution.x,uResolution.y);
+  vec2 uv=(vUv.xy*2.0-1.0)*uResolution.xy/mr;
+  uv+=(uMouse-vec2(0.5))*uAmplitude;
+  float d=-uTime*0.5*uSpeed;
+  float a=0.0;
+  for(float i=0.0;i<8.0;++i){
+    a+=cos(i-d-a*uv.x);
+    d+=sin(uv.y*i+a);
+  }
+  d+=uTime*0.5*uSpeed;
+  vec3 col=vec3(cos(uv*vec2(d,a))*0.6+0.4,cos(a+d)*0.5+0.5);
+  col=cos(col*cos(vec3(d,a,2.5))*0.5+0.5)*uColor;
+  gl_FragColor=vec4(col,1.0);
+}`;
+  constructor(container,opts={}){
+    this.container=container;
+    this._speed=opts.speed??0.2;
+    this._amplitude=opts.amplitude??0.1;
+    this._mouseReact=!!opts.mouseReact;
+    this._color=this._rgb(opts.color??'#6f8eff');
+    this._mouse=[0.5,0.5];
+    this._canvas=document.createElement('canvas');
+    this._canvas.style.cssText='position:absolute;inset:0;width:100%!important;height:100%!important;display:block;';
+    container.appendChild(this._canvas);
+    this._gl=this._canvas.getContext('webgl',{alpha:false,antialias:true});
+    if(!this._gl){console.warn('Iridescence: WebGL unavailable');return;}
+    this._build();
+    this._resize();
+    this._onResize=this._resize.bind(this);
+    window.addEventListener('resize',this._onResize);
+    if(this._mouseReact){
+      this._onMouseMove=this._handleMouseMove.bind(this);
+      this.container.addEventListener('mousemove',this._onMouseMove);
+    }
+    this._raf=requestAnimationFrame(this._loop.bind(this));
+  }
+  _rgb(hex){const s=hex.replace('#','');return[parseInt(s.slice(0,2),16)/255,parseInt(s.slice(2,4),16)/255,parseInt(s.slice(4,6),16)/255];}
+  _compile(type,src){const gl=this._gl;const sh=gl.createShader(type);gl.shaderSource(sh,src);gl.compileShader(sh);if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)){console.error('Iridescence shader:',gl.getShaderInfoLog(sh));return null;}return sh;}
+  _build(){
+    const gl=this._gl;
+    const vs=this._compile(gl.VERTEX_SHADER,IridescenceRenderer.VERT);
+    const fs=this._compile(gl.FRAGMENT_SHADER,IridescenceRenderer.FRAG);
+    if(!vs||!fs)return;
+    this._pgm=gl.createProgram();
+    gl.attachShader(this._pgm,vs);
+    gl.attachShader(this._pgm,fs);
+    gl.linkProgram(this._pgm);
+    if(!gl.getProgramParameter(this._pgm,gl.LINK_STATUS)){console.error('Iridescence link:',gl.getProgramInfoLog(this._pgm));return;}
+    gl.useProgram(this._pgm);
+    const posL=gl.getAttribLocation(this._pgm,'position');
+    const uvL=gl.getAttribLocation(this._pgm,'uv');
+    const pb=gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,pb);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(posL);
+    gl.vertexAttribPointer(posL,2,gl.FLOAT,false,0,0);
+    const ub=gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,ub);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,2,0,0,2]),gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(uvL);
+    gl.vertexAttribPointer(uvL,2,gl.FLOAT,false,0,0);
+    this._u={};
+    ['uTime','uColor','uResolution','uMouse','uAmplitude','uSpeed'].forEach(n=>{this._u[n]=gl.getUniformLocation(this._pgm,n);});
+    gl.clearColor(0,0,0,1);
+  }
+  _resize(){
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    const rect=this.container.getBoundingClientRect();
+    const w=Math.max(1,rect.width||window.innerWidth||1);
+    const h=Math.max(1,rect.height||window.innerHeight||1);
+    this._canvas.width=w*dpr;
+    this._canvas.height=h*dpr;
+    if(this._gl)this._gl.viewport(0,0,this._canvas.width,this._canvas.height);
+  }
+  _handleMouseMove(e){
+    const rect=this.container.getBoundingClientRect();
+    this._mouse[0]=(e.clientX-rect.left)/rect.width;
+    this._mouse[1]=1-((e.clientY-rect.top)/rect.height);
+  }
+  _loop(ts){
+    this._raf=requestAnimationFrame(this._loop.bind(this));
+    if(!this._pgm)return;
+    const gl=this._gl;
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(this._pgm);
+    gl.uniform1f(this._u.uTime,ts*0.001);
+    gl.uniform3f(this._u.uColor,this._color[0],this._color[1],this._color[2]);
+    gl.uniform3f(this._u.uResolution,this._canvas.width,this._canvas.height,this._canvas.width/this._canvas.height);
+    gl.uniform2f(this._u.uMouse,this._mouseReact?this._mouse[0]:0.5,this._mouseReact?this._mouse[1]:0.5);
+    gl.uniform1f(this._u.uAmplitude,this._amplitude);
+    gl.uniform1f(this._u.uSpeed,this._speed);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+  }
+  destroy(){
+    cancelAnimationFrame(this._raf);
+    window.removeEventListener('resize',this._onResize);
+    if(this._mouseReact&&this._onMouseMove)this.container.removeEventListener('mousemove',this._onMouseMove);
+    if(this._canvas.parentNode)this._canvas.parentNode.removeChild(this._canvas);
+    const ext=this._gl&&this._gl.getExtension('WEBGL_lose_context');
+    if(ext)ext.loseContext();
+  }
+}
+
+/* ================================================================
+   ThreadsRenderer — vanilla WebGL port of supplied OGL Threads
+   ================================================================ */
+class ThreadsRenderer{
+  static VERT=`attribute vec2 position;attribute vec2 uv;varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position,0.0,1.0);}`;
+  static FRAG=`precision highp float;
+uniform float iTime;uniform vec3 iResolution;uniform vec3 uColor;uniform float uAmplitude;uniform float uDistance;uniform vec2 uMouse;
+#define PI 3.1415926538
+const int u_line_count = 40;
+const float u_line_width = 7.0;
+const float u_line_blur = 10.0;
+float Perlin2D(vec2 P){
+  vec2 Pi=floor(P);
+  vec4 Pf_Pfmin1=P.xyxy-vec4(Pi,Pi+1.0);
+  vec4 Pt=vec4(Pi.xy,Pi.xy+1.0);
+  Pt=Pt-floor(Pt*(1.0/71.0))*71.0;
+  Pt+=vec2(26.0,161.0).xyxy;
+  Pt*=Pt;
+  Pt=Pt.xzxz*Pt.yyww;
+  vec4 hash_x=fract(Pt*(1.0/951.135664));
+  vec4 hash_y=fract(Pt*(1.0/642.949883));
+  vec4 grad_x=hash_x-0.49999;
+  vec4 grad_y=hash_y-0.49999;
+  vec4 grad_results=inversesqrt(grad_x*grad_x+grad_y*grad_y)*(grad_x*Pf_Pfmin1.xzxz+grad_y*Pf_Pfmin1.yyww);
+  grad_results*=1.4142135623730950;
+  vec2 blend=Pf_Pfmin1.xy*Pf_Pfmin1.xy*Pf_Pfmin1.xy*(Pf_Pfmin1.xy*(Pf_Pfmin1.xy*6.0-15.0)+10.0);
+  vec4 blend2=vec4(blend,vec2(1.0-blend));
+  return dot(grad_results,blend2.zxzx*blend2.wwyy);
+}
+float pixel(float count,vec2 resolution){return (1.0/max(resolution.x,resolution.y))*count;}
+float lineFn(vec2 st,float width,float perc,float offset,vec2 mouse,float time,float amplitude,float distance){
+  float split_offset=(perc*0.4);
+  float split_point=0.1+split_offset;
+  float amplitude_normal=smoothstep(split_point,0.7,st.x);
+  float amplitude_strength=0.5;
+  float finalAmplitude=amplitude_normal*amplitude_strength*amplitude*(1.0+(mouse.y-0.5)*0.2);
+  float time_scaled=time/10.0+(mouse.x-0.5)*1.0;
+  float blur=smoothstep(split_point,split_point+0.05,st.x)*perc;
+  float xnoise=mix(
+    Perlin2D(vec2(time_scaled,st.x+perc)*2.5),
+    Perlin2D(vec2(time_scaled,st.x+time_scaled)*3.5)/1.5,
+    st.x*0.3
+  );
+  float y=0.5+(perc-0.5)*distance+xnoise/2.0*finalAmplitude;
+  float line_start=smoothstep(y+(width/2.0)+(u_line_blur*pixel(1.0,iResolution.xy)*blur),y,st.y);
+  float line_end=smoothstep(y,y-(width/2.0)-(u_line_blur*pixel(1.0,iResolution.xy)*blur),st.y);
+  return clamp((line_start-line_end)*(1.0-smoothstep(0.0,1.0,pow(perc,0.3))),0.0,1.0);
+}
+void mainImage(out vec4 fragColor,in vec2 fragCoord){
+  vec2 uv=fragCoord/iResolution.xy;
+  float line_strength=1.0;
+  for(int i=0;i<u_line_count;i++){
+    float p=float(i)/float(u_line_count);
+    line_strength*=(1.0-lineFn(uv,u_line_width*pixel(1.0,iResolution.xy)*(1.0-p),p,(PI*1.0)*p,uMouse,iTime,uAmplitude,uDistance));
+  }
+  float colorVal=1.0-line_strength;
+  fragColor=vec4(uColor*colorVal,colorVal);
+}
+void main(){mainImage(gl_FragColor,gl_FragCoord.xy);}`;
+  constructor(container,opts={}){
+    this.container=container;
+    this._speed=opts.speed??0.2;
+    this._amplitude=opts.amplitude??1.0;
+    this._distance=opts.distance??0.1;
+    this._color=this._rgb(opts.color??'#6ea4ff');
+    this._mouse=[0.5,0.5];
+    this._canvas=document.createElement('canvas');
+    this._canvas.style.cssText='position:absolute;inset:0;width:100%!important;height:100%!important;display:block;';
+    container.appendChild(this._canvas);
+    this._gl=this._canvas.getContext('webgl',{alpha:true,premultipliedAlpha:false,antialias:true});
+    if(!this._gl){console.warn('Threads: WebGL unavailable');return;}
+    this._build();this._resize();
+    this._onResize=this._resize.bind(this);
+    window.addEventListener('resize',this._onResize);
+    this._raf=requestAnimationFrame(this._loop.bind(this));
+  }
+  _rgb(hex){const s=hex.replace('#','');return[parseInt(s.slice(0,2),16)/255,parseInt(s.slice(2,4),16)/255,parseInt(s.slice(4,6),16)/255];}
+  _compile(type,src){const gl=this._gl;const sh=gl.createShader(type);gl.shaderSource(sh,src);gl.compileShader(sh);if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)){console.error('Threads shader:',gl.getShaderInfoLog(sh));return null;}return sh;}
+  _build(){
+    const gl=this._gl;
+    const vs=this._compile(gl.VERTEX_SHADER,ThreadsRenderer.VERT);
+    const fs=this._compile(gl.FRAGMENT_SHADER,ThreadsRenderer.FRAG);
+    if(!vs||!fs)return;
+    this._pgm=gl.createProgram();gl.attachShader(this._pgm,vs);gl.attachShader(this._pgm,fs);gl.linkProgram(this._pgm);
+    if(!gl.getProgramParameter(this._pgm,gl.LINK_STATUS)){console.error('Threads link:',gl.getProgramInfoLog(this._pgm));return;}
+    gl.useProgram(this._pgm);
+    const posL=gl.getAttribLocation(this._pgm,'position');
+    const uvL=gl.getAttribLocation(this._pgm,'uv');
+    const pb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,pb);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);gl.enableVertexAttribArray(posL);gl.vertexAttribPointer(posL,2,gl.FLOAT,false,0,0);
+    const ub=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,ub);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,2,0,0,2]),gl.STATIC_DRAW);gl.enableVertexAttribArray(uvL);gl.vertexAttribPointer(uvL,2,gl.FLOAT,false,0,0);
+    this._u={};
+    ['iTime','iResolution','uColor','uAmplitude','uDistance','uMouse'].forEach(n=>{this._u[n]=gl.getUniformLocation(this._pgm,n);});
+    gl.clearColor(0,0,0,0);
+    gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+  }
+  _resize(){
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    const rect=this.container.getBoundingClientRect();
+    const w=Math.max(1,rect.width||window.innerWidth||1);
+    const h=Math.max(1,rect.height||window.innerHeight||1);
+    this._canvas.width=w*dpr;this._canvas.height=h*dpr;
+    if(this._gl)this._gl.viewport(0,0,this._canvas.width,this._canvas.height);
+  }
+  _loop(ts){
+    this._raf=requestAnimationFrame(this._loop.bind(this));
+    if(!this._pgm)return;
+    const gl=this._gl;
+    gl.clear(gl.COLOR_BUFFER_BIT);gl.useProgram(this._pgm);
+    gl.uniform1f(this._u.iTime,ts*0.001*this._speed);
+    gl.uniform3f(this._u.iResolution,this._canvas.width,this._canvas.height,this._canvas.width/this._canvas.height);
+    gl.uniform3f(this._u.uColor,this._color[0],this._color[1],this._color[2]);
+    gl.uniform1f(this._u.uAmplitude,this._amplitude);
+    gl.uniform1f(this._u.uDistance,this._distance);
+    gl.uniform2f(this._u.uMouse,0.5,0.5);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+  }
+  destroy(){cancelAnimationFrame(this._raf);window.removeEventListener('resize',this._onResize);if(this._canvas.parentNode)this._canvas.parentNode.removeChild(this._canvas);const ext=this._gl&&this._gl.getExtension('WEBGL_lose_context');if(ext)ext.loseContext();}
+}
+
 // ─── Audio Feedback ──────────────────────────────────────────────────────────
 const AudioFX = (() => {
   let ctx = null;
@@ -3641,6 +4208,7 @@ const SM = (() => {
 function smToggle()       { SM.toggle(); }
 function smClose()        { SM.close(); }
 function smNavigate(tab)  { SM.navigate(tab); }
+function goHome()         { try{ SM.close(); }catch(_){} resetFlow(); }
 </script>
 </body>
 </html>
