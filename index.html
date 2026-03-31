@@ -1173,13 +1173,15 @@ async function processDescription(text){
   caseData.description=text;caseData.date=isoToday();buildIndex();
   let extracted=null;
   try{
-    const res=await fetch('/api/parse-case',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:'plastic-surgery'})});
+    const res=await fetch('/api/parse-case',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:'plastic-surgery',sites:getSitesForEdit(),attendings:getAttendingsForEdit()})});
     if(!res.ok)throw new Error();extracted=await res.json()
   }
   catch(e){extracted=localExtract(text)}
   if(extracted.role)caseData.role=extracted.role;
   if(extracted.patientType)caseData.patientType=extracted.patientType;
   if(extracted.caseYear)caseData.caseYear='Year '+(extracted.caseYear||4);
+  if(extracted.attending)caseData.attending=extracted.attending;
+  if(extracted.site)caseData.site=extracted.site;
   if(extracted.notes)caseData.notes=extracted.notes;
   if(extracted.suggestedCodes&&extracted.suggestedCodes.length){
     // Primary codes go straight into procedures

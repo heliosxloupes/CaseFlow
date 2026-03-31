@@ -89,8 +89,11 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { transcript, specialty = 'plastic-surgery', year = '4' } = req.body;
+  const { transcript, specialty = 'plastic-surgery', year = '4', sites = [], attendings = [] } = req.body;
   if (!transcript) return res.status(400).json({ error: 'No transcript provided' });
+
+  const siteList = sites.length ? sites : ['Larkin Community Hospital', 'Larkin Palm Springs', 'Affiliated Site'];
+  const attendingList = attendings.length ? attendings : ['Dr. Smith', 'Dr. Johnson', 'Dr. Williams', 'Dr. Brown'];
 
   // TODO: When adding new specialties, load specialty-specific CODES/INDEX here
   // e.g. const { CODES, INDEX } = DB[specialty] || DB['plastic-surgery'];
@@ -111,21 +114,27 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 400,
-        system: `You are a medical coding assistant for a Plastic Surgery residency at Larkin Community Hospital, Hialeah FL.
+        system: `You are a medical coding assistant for a Plastic Surgery residency.
 Extract case details from the resident's spoken description.
-Available attendings: Dr. Smith, Dr. Johnson, Dr. Williams, Dr. Brown.
-Available sites: Larkin Community Hospital, Larkin Palm Springs, Affiliated Site.
+
+Available attendings (use FUZZY matching — partial last name like "Castrellon" or "Dr. Castrellon" should match the correct full name from this list):
+${attendingList.map((a, i) => `${i + 1}. ${a}`).join('\n')}
+
+Available sites (use FUZZY matching — partial name like "Larkin", "palmetto", "palm springs" should match the closest entry):
+${siteList.map((s, i) => `${i + 1}. ${s}`).join('\n')}
 
 Return ONLY valid JSON, no markdown:
 {
   "role": "Surgeon" | "Assistant" | "Teaching Assistant" | "Observer",
   "patientType": "Adult" | "Pediatric",
   "caseYear": 1-6,
-  "attending": "Dr. Smith" | "Dr. Johnson" | "Dr. Williams" | "Dr. Brown" | null,
-  "site": "Larkin Community Hospital" | "Larkin Palm Springs" | "Affiliated Site" | null,
+  "attending": exact string from attendings list above, or null if not mentioned,
+  "site": exact string from sites list above, or null if not mentioned,
   "notes": "brief clinical notes",
   "procedures": ["procedure name 1", "procedure name 2"]
 }
+
+For attending and site: return the EXACT string from the list above. Use fuzzy/partial matching — if the resident says a last name or partial name, find the best match. Only return null if the attending/site was genuinely not mentioned or cannot be matched.
 
 CRITICAL for procedures: Use SHORT, specific CPT-style names (2-5 words). Match the exact clinical terminology used in CPT code descriptions. Do NOT write verbose sentences.
 Good examples:
