@@ -80,7 +80,7 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .app-bar{display:flex;align-items:center;justify-content:space-between;padding:15px 20px 13px;border-bottom:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(8,12,20,.74) 0%,rgba(8,12,20,.58) 100%);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);position:sticky;top:0;z-index:400}
 .app-logo{font-size:19px;font-weight:700;letter-spacing:-1px}
 .app-logo em{font-style:normal;background:linear-gradient(135deg,var(--blue-soft) 0%,var(--violet-soft) 55%,var(--cyan-soft) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.bar-right{display:flex;align-items:center;gap:9px;position:relative;z-index:450}
+.bar-right{display:flex;align-items:center;gap:10px;position:relative;z-index:450;flex-shrink:0}
 .chip{background:linear-gradient(180deg,rgba(20,27,39,.92) 0%,rgba(14,20,31,.92) 100%);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--text2);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
 .chip-cases{cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;pointer-events:auto!important;position:relative;z-index:2}
 .chip b{background:linear-gradient(135deg,var(--blue-soft) 0%,var(--cyan-soft) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-weight:700}
@@ -91,7 +91,7 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .tab{display:none}
 
 /* ── Staggered Menu ──────────────────────────────────────────── */
-.app-bar-left{display:flex;align-items:center;gap:12px}
+.app-bar-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
 .sm-toggle-btn{
   display:flex;align-items:center;gap:8px;
   background:none;border:none;cursor:pointer;
@@ -182,6 +182,12 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .sm-panel-footer{
   padding:20px 28px 28px;border-top:1px solid rgba(255,255,255,.05);
 }
+.sm-account-mini{
+  display:flex;align-items:center;gap:8px;
+  font-size:11px;color:rgba(232,237,244,.48);line-height:1.5;margin-bottom:14px
+}
+.sm-account-mini .udot{width:6px;height:6px;opacity:.9}
+.sm-account-name{color:rgba(232,237,244,.74);font-weight:600}
 .sm-footer-note{font-size:11px;color:var(--text3);line-height:1.6;margin-bottom:14px}
 .sm-logout-btn{
   width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
@@ -820,6 +826,16 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
 .err-banner-close{flex-shrink:0;font-size:16px;color:rgba(255,255,255,.35);padding:0 4px}
 .toast.err{border-color:rgba(248,113,113,.28);color:var(--red)}
 .new-case-btn{display:flex;align-items:center;gap:5px;background:linear-gradient(180deg,rgba(79,142,247,.16) 0%,rgba(79,142,247,.10) 100%);border:1px solid rgba(99,214,255,.18);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--blue-soft);font-family:'Sora',sans-serif;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s}
+@media (max-width:560px){
+  .app-bar{padding:13px 14px 11px}
+  .app-bar-left{gap:10px}
+  .app-logo{font-size:17px}
+  .sm-toggle-text{font-size:11px}
+  .bar-right{gap:8px}
+  .chip{padding:4px 10px;border-radius:18px;font-size:11px}
+  .new-case-btn{padding:4px 10px;font-size:11px;gap:4px}
+  .new-case-btn svg{width:11px;height:11px}
+}
 /* Collapse hidden flow elements so the orb is truly centered on initial load */
 .question-bubble:not(.show),
 .answer-chips:not(.show),
@@ -1130,7 +1146,6 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         New Case
       </button>
-      <div class="user-chip" onclick="doLogout()"><div class="udot"></div><span id="hdr-u">&#8212;</span></div>
     </div>
   </div>
   <div class="pane on" id="pn-log">
@@ -1317,6 +1332,10 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
       </li>
     </ul>
     <div class="sm-panel-footer">
+      <div class="sm-account-mini">
+        <div class="udot"></div>
+        <span class="sm-account-name" id="sm-hdr-u">&#8212;</span>
+      </div>
       <div class="sm-footer-note">ACGME Case Logging</div>
       <button class="sm-logout-btn" onclick="doLogout()" type="button">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
@@ -3524,7 +3543,9 @@ function doLogout(){
 
 async function launchApp(name,email){
   const displayName=(name||(email||'').split('@')[0]||'—');
-  document.getElementById('hdr-u').textContent=displayName.split(' ')[0];
+  const firstName = displayName.split(' ')[0];
+  const menuName = document.getElementById('sm-hdr-u');
+  if(menuName) menuName.textContent = firstName;
   showPage('pg-app');
   ensureBackgroundRenderers();
   startOrb();
