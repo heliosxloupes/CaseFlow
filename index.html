@@ -218,6 +218,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .voice-screen.is-home-orb-active .orb-wrap{margin-bottom:0;transform:translateY(-14px)}
 .voice-screen:not(.is-home-idle):not(.is-home-orb-active){justify-content:flex-start;padding-top:28px}
 .voice-screen:not(.is-home-idle):not(.is-home-orb-active) .orb-wrap{margin-bottom:20px}
+.voice-screen.is-asking{justify-content:center;padding-top:20px}
 .floating-home-tools{
   position:fixed;left:18px;bottom:26px;z-index:260;
   display:flex;flex-direction:column;align-items:flex-start;gap:10px;
@@ -527,6 +528,54 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 }
 .q-process-dots span:nth-child(2){animation-delay:.16s}
 .q-process-dots span:nth-child(3){animation-delay:.32s}
+/* Text input fallback */
+.type-toggle{
+  display:flex;align-items:center;gap:6px;
+  margin-top:-4px;margin-bottom:20px;
+  font-size:12px;font-weight:500;letter-spacing:.02em;
+  color:var(--text3);cursor:pointer;border:none;background:none;
+  padding:4px 0;transition:color .2s;
+}
+.type-toggle:hover{color:var(--text2)}
+.type-toggle svg{width:13px;height:13px;flex-shrink:0;opacity:.7}
+.text-input-box{
+  width:100%;max-width:min(380px,90vw);
+  background:var(--bg1);
+  border:1px solid var(--line2);
+  border-radius:var(--rl);
+  padding:4px 4px 4px 16px;
+  display:flex;flex-direction:column;
+  opacity:0;transform:translateY(8px);
+  transition:opacity .25s,transform .25s,border-color .2s;
+  pointer-events:none;
+  margin-bottom:20px;
+}
+.text-input-box.show{opacity:1;transform:translateY(0);pointer-events:auto}
+.text-input-box:focus-within{border-color:rgba(79,142,247,.35)}
+.text-input-textarea{
+  width:100%;resize:none;border:none;background:transparent;
+  font-size:15px;line-height:1.55;color:var(--text);
+  font-family:inherit;
+  padding:10px 8px 6px 0;
+  min-height:44px;max-height:120px;overflow-y:auto;
+  outline:none;
+}
+.text-input-textarea::placeholder{color:var(--text3)}
+.text-input-footer{
+  display:flex;align-items:center;justify-content:flex-end;
+  padding:2px 2px 2px 0;
+}
+.text-input-send{
+  width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;
+  background:var(--blue);
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,opacity .15s,transform .15s;
+  flex-shrink:0;
+}
+.text-input-send:hover{background:#3a7ef6}
+.text-input-send:active{transform:scale(.93)}
+.text-input-send:disabled{background:var(--bg3);opacity:.5;cursor:default;transform:none}
+.text-input-send svg{width:16px;height:16px;color:#fff;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .answer-chips{display:flex;flex-wrap:wrap;gap:8px;max-width:min(380px,90vw);width:100%;margin-bottom:16px;opacity:0;transition:opacity .3s .1s}
 .answer-chips.show{opacity:1}
 .answer-input-wrap{display:flex;gap:8px;max-width:min(380px,90vw);width:100%;margin-bottom:16px;opacity:0;transition:opacity .3s .1s}
@@ -585,10 +634,13 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .srch-count{padding:8px 14px;font-size:11px;color:var(--text3);border-bottom:1px solid var(--line)}
 
 .cpt-found-label{font-size:10px;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-bottom:10px}
-.cpt-found-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.cpt-found-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);transition:opacity .2s}
 .cpt-found-item:last-child{border-bottom:none}
+.cpt-found-item.removing{opacity:0}
 .cpt-found-code{font-size:12px;font-weight:600;color:var(--blue);min-width:46px;padding-top:2px}
 .cpt-found-desc{flex:1;font-size:13px;color:var(--text);line-height:1.35}
+.cpt-found-remove{flex-shrink:0;background:none;border:none;padding:2px 4px;cursor:pointer;color:var(--text3);font-size:16px;line-height:1;border-radius:4px;transition:color .15s}
+.cpt-found-remove:hover,.cpt-found-remove:active{color:var(--red)}
 
 .cpt-select-head{font-size:14px;color:var(--text);font-weight:500;margin-bottom:12px;line-height:1.5}
 .cpt-select-option{background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s}
@@ -1540,6 +1592,19 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
           <span>Tap here</span>
         </div>
       </div>
+      <!-- Type instead fallback -->
+      <button class="type-toggle" id="type-toggle" type="button" onclick="toggleTextInput()" aria-label="Type instead of speaking">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 10H3"/><path d="M21 6H3"/><path d="M21 14H3"/><path d="M17 18H3"/></svg>
+        type instead
+      </button>
+      <div class="text-input-box" id="text-input-box">
+        <textarea class="text-input-textarea" id="text-input-ta" rows="1" placeholder="Describe the procedure you performed…" oninput="onTextInputChange()" onkeydown="onTextInputKeydown(event)"></textarea>
+        <div class="text-input-footer">
+          <button class="text-input-send" id="text-input-send" type="button" disabled onclick="submitTextInput()" aria-label="Submit">
+            <svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+          </button>
+        </div>
+      </div>
       <div class="question-bubble" id="q-bubble"></div>
       <div class="answer-chips" id="a-chips"></div>
       <div class="flow-combo-wrap" id="a-combo-wrap"></div>
@@ -2098,25 +2163,25 @@ let caseData={description:'',procedures:[],role:null,site:null,attending:null,pa
 /** Matches ADS Case ID input (bootstrap-maxlength on apps.acgme.org). */
 const CASE_ID_MAX_LEN=25;
 const APP_TOS_VERSION='2026-03-31';
-const APP_ONBOARDING_VERSION='2026-04-01';
+const APP_ONBOARDING_VERSION='2026-04-02';
 const ONBOARDING_STEPS=[
   {
-    title:'Log cases with the voice orb',
-    description:'Tap the orb on the home screen and describe the case in plain language. CaseFlow listens, structures the details, and guides you through anything still missing.',
+    title:'Connect ACGME once, then stay fast',
+    description:'Open Settings, add your ACGME credentials, and complete any verification prompt. CaseFlow will submit cases on your behalf and alert you if the connection needs attention.',
     label:'Step 1 of 4',
+    visual:'settings',
+  },
+  {
+    title:'Log cases with the voice orb',
+    description:'Tap the orb and say what you did, where you did it, who your attending was, and the date. CaseFlow structures everything and asks about anything it missed.',
+    label:'Step 2 of 4',
     visual:'orb',
   },
   {
     title:'Review and confirm before you submit',
-    description:'CaseFlow suggests CPT procedures, lets you confirm the right codes, and builds a clean case summary so you can save or submit with confidence.',
-    label:'Step 2 of 4',
-    visual:'cards',
-  },
-  {
-    title:'Connect ACGME once, then stay fast',
-    description:'Open Settings, add your ACGME credentials, and complete any verification prompt. After that, CaseFlow can submit on your behalf and alert you if the connection needs attention.',
+    description:'CaseFlow suggests CPT codes, lets you confirm the right ones, and builds a clean case summary so you can save or submit with confidence.',
     label:'Step 3 of 4',
-    visual:'settings',
+    visual:'cards',
   },
   {
     title:'Use milestones to spot what still needs work',
@@ -2147,9 +2212,61 @@ const QUESTIONS=[
   {key:'patientType',isEmpty:()=>!caseData.patientType,question:'Was this an adult or pediatric patient?',type:'chips',options:['Adult','Pediatric']},
   {key:'caseYear',isEmpty:()=>!caseData.caseYear,question:'What year of residency are you in?',type:'chips',options:['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6']},
 ];
+function toggleTextInput(){
+  const box=document.getElementById('text-input-box');
+  const toggle=document.getElementById('type-toggle');
+  const isOpen=box.classList.contains('show');
+  if(isOpen){
+    box.classList.remove('show');
+    toggle.style.opacity='';
+  } else {
+    box.classList.add('show');
+    toggle.style.opacity='0.4';
+    setTimeout(()=>document.getElementById('text-input-ta')?.focus(),220);
+  }
+}
+function hideTextInput(){
+  document.getElementById('text-input-box')?.classList.remove('show');
+  const toggle=document.getElementById('type-toggle');
+  if(toggle) toggle.style.opacity='';
+}
+function onTextInputChange(){
+  const ta=document.getElementById('text-input-ta');
+  const btn=document.getElementById('text-input-send');
+  if(!ta||!btn) return;
+  // Auto-grow
+  ta.style.height='auto';
+  ta.style.height=Math.min(ta.scrollHeight,120)+'px';
+  btn.disabled=!ta.value.trim();
+}
+function onTextInputKeydown(e){
+  // Cmd/Ctrl+Enter submits; plain Enter adds newline
+  if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();submitTextInput();}
+}
+async function submitTextInput(){
+  if(orbState!=='idle') return;
+  const ta=document.getElementById('text-input-ta');
+  const text=ta?.value.trim();
+  if(!text) return;
+  // Hide input, kick off same pipeline as voice
+  hideTextInput();
+  document.getElementById('orb-wrap').style.display='none';
+  document.querySelector('.voice-screen')?.classList.add('is-asking');
+  document.getElementById('type-toggle').style.display='none';
+  orbState='thinking';
+  showProcessingBubble();
+  AudioFX.startThink();
+  buildIndex();
+  ta.value='';
+  ta.style.height='auto';
+  document.getElementById('text-input-send').disabled=true;
+  await processDescription(text);
+}
 async function handleOrbTap(){
   if(addMoreRecOn){ stopAddMoreVoice(); return; }
   if(document.getElementById('add-more-box').classList.contains('show')) return;
+  // If text input is open, close it — voice is taking over
+  hideTextInput();
   if(orbState==='idle') await startInitialListening();
   else if(orbState==='listening') stopInitialListening();
 }
@@ -2256,6 +2373,7 @@ function nextQuestion(){
   const q=pendingQs[currentQ];hideAnswerUI();
   // Hide orb during follow-up questions — not needed, takes up space
   document.getElementById('orb-wrap').style.display='none';
+  document.querySelector('.voice-screen')?.classList.add('is-asking');
   document.getElementById('q-bubble').classList.add('show');
   setTimeout(()=>{
     showBubble(q.question);document.getElementById('q-bubble').classList.add('show');
@@ -2819,8 +2937,13 @@ function doneAddingCodes(){
 function showCptFound(procs){
   const box=document.getElementById('cpt-found-box');
   if(!procs.length){box.classList.remove('show');return}
-  box.innerHTML=`<div class="cpt-found-label">&#10022; CPT codes identified (${procs.length})</div>`+procs.map(p=>`<div class="cpt-found-item"><div class="cpt-found-code">${p.c}</div><div class="cpt-found-desc">${p.d}<br><span style="font-size:11px;color:var(--text3)">${p.a}</span></div></div>`).join('');
+  box.innerHTML=`<div class="cpt-found-label">&#10022; CPT codes identified (${procs.length})</div>`+procs.map((p,i)=>`<div class="cpt-found-item" id="cpt-found-item-${i}"><div class="cpt-found-code">${p.c}</div><div class="cpt-found-desc">${p.d}<br><span style="font-size:11px;color:var(--text3)">${p.a}</span></div><button class="cpt-found-remove" onclick="removeCptFound(${i})" aria-label="Remove">&#215;</button></div>`).join('');
   box.classList.add('show');
+}
+function removeCptFound(idx){
+  const item=document.getElementById(`cpt-found-item-${idx}`);
+  if(item){item.classList.add('removing');setTimeout(()=>{caseData.procedures.splice(idx,1);showCptFound(caseData.procedures);},200);}
+  else{caseData.procedures.splice(idx,1);showCptFound(caseData.procedures);}
 }
 function setStateLabel(t){document.getElementById('state-label').textContent=t}
 const SUMMARY_FIELDS = [
@@ -2837,6 +2960,7 @@ let summaryEditKey = null;
 function showSummary(){
   hideAnswerUI();
   document.getElementById('orb-wrap').style.display='none';
+  document.querySelector('.voice-screen')?.classList.remove('is-asking');
   document.getElementById('q-bubble').classList.remove('show');
   summaryEditKey = null;
   renderSummaryCard();
@@ -3184,6 +3308,15 @@ function resetFlow(){
   pendingQs=[];currentQ=-1;
   orbState='idle';
   clearHomeFlowPanels();
+  document.querySelector('.voice-screen')?.classList.remove('is-asking');
+  // Restore text input toggle
+  hideTextInput();
+  const typeToggle=document.getElementById('type-toggle');
+  if(typeToggle){typeToggle.style.display='';typeToggle.style.opacity='';}
+  const textTa=document.getElementById('text-input-ta');
+  if(textTa){textTa.value='';textTa.style.height='auto';}
+  const textSend=document.getElementById('text-input-send');
+  if(textSend) textSend.disabled=true;
   const orbWrap = document.getElementById('orb-wrap');
   orbWrap.classList.remove('inactive');
   orbWrap.style.display='';
@@ -4382,6 +4515,10 @@ function updateHomeFloatingUi(){
     voiceScreen.classList.toggle('is-home-orb-active',orbVisible && !visible);
   }
   if(bubble) bubble.classList.toggle('home-prompt-slot',orbVisible);
+  // Show/hide type-instead toggle with the home idle state
+  const typeToggle=document.getElementById('type-toggle');
+  if(typeToggle) typeToggle.style.display=visible?'':'none';
+  if(!visible) hideTextInput();
   if(!tools || !status || !statusCopy) return;
   tools.classList.toggle('is-visible',visible);
   if(!visible){
