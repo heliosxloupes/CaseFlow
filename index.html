@@ -221,7 +221,10 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .floating-home-tools{
   position:fixed;left:18px;bottom:26px;z-index:260;
   display:flex;flex-direction:column;align-items:flex-start;gap:10px;
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .22s ease, visibility .22s ease;
 }
+.floating-home-tools.is-visible{opacity:1;visibility:visible;pointer-events:auto}
 .floating-home-menu{position:relative}
 .floating-home-trigger{
   width:52px;height:52px;border-radius:999px;border:1px solid rgba(255,255,255,.10);
@@ -494,6 +497,11 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 }
 .question-bubble{position:relative;z-index:1;background:linear-gradient(180deg,rgba(19,25,34,.9) 0%,rgba(15,20,29,.96) 100%);border:1px solid rgba(255,255,255,.09);border-radius:22px 22px 22px 6px;padding:16px 20px;font-size:17px;font-weight:400;color:var(--text);line-height:1.55;text-align:left;max-width:min(380px,90vw);width:100%;margin-bottom:16px;min-height:52px;opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s,border-color .25s,box-shadow .25s;box-shadow:0 18px 40px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.03)}
 .question-bubble.show{opacity:1;transform:translateY(0)}
+.voice-screen.is-home-idle .question-bubble,
+.voice-screen.is-home-orb-active .question-bubble{
+  min-height:88px;
+  margin-bottom:16px!important;
+}
 .question-bubble.processing{border-color:rgba(99,214,255,.18);box-shadow:0 24px 50px rgba(0,0,0,.28),0 0 0 1px rgba(79,142,247,.05),inset 0 1px 0 rgba(255,255,255,.04)}
 .question-bubble.processing::after{
   content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;
@@ -1192,7 +1200,7 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
   .btn-del-case,.case-edit-footer .btn-go{padding:12px 10px;font-size:13px}
 }
 /* Collapse hidden flow elements so the orb is truly centered on initial load */
-.question-bubble:not(.show),
+.question-bubble:not(.show):not(.home-prompt-slot),
 .answer-chips:not(.show),
 .flow-combo-wrap:not(.show),
 .answer-input-wrap:not(.show),
@@ -1562,7 +1570,7 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
         <button class="btn-go" id="go-btn" onclick="submitCase()">Submit to ACGME</button>
       </div>
     </div>
-    <div class="floating-home-tools" id="floating-home-tools" style="display:none">
+    <div class="floating-home-tools" id="floating-home-tools">
       <div class="floating-home-menu" id="floating-home-menu">
         <button class="floating-home-trigger" id="floating-home-trigger" type="button" onclick="toggleFloatingHomeMenu()" aria-label="Open quick actions" aria-expanded="false">
           <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
@@ -4368,12 +4376,14 @@ function updateHomeFloatingUi(){
   const voiceScreen=document.getElementById('voice-screen');
   const visible=isHomeOrbIdleState();
   const orbVisible=isHomeOrbVisibleState();
+  const bubble=document.getElementById('q-bubble');
   if(voiceScreen){
     voiceScreen.classList.toggle('is-home-idle',visible);
     voiceScreen.classList.toggle('is-home-orb-active',orbVisible && !visible);
   }
+  if(bubble) bubble.classList.toggle('home-prompt-slot',orbVisible);
   if(!tools || !status || !statusCopy) return;
-  tools.style.display=visible?'flex':'none';
+  tools.classList.toggle('is-visible',visible);
   if(!visible){
     closeFloatingHomeMenu();
     return;
