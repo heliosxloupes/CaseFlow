@@ -220,7 +220,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .voice-screen:not(.is-home-idle):not(.is-home-orb-active) .orb-wrap{margin-bottom:20px}
 .voice-screen.is-asking{justify-content:center;padding-top:20px}
 .floating-home-tools{
-  position:fixed;left:18px;bottom:26px;z-index:260;
+  position:fixed;left:18px;bottom:52px;z-index:260;
   display:flex;flex-direction:column;align-items:flex-start;gap:10px;
   opacity:0;visibility:hidden;pointer-events:none;
   transition:opacity .22s ease, visibility .22s ease;
@@ -436,7 +436,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   .voice-screen.is-home-orb-active{padding-bottom:134px}
   .voice-screen.is-home-idle .orb-wrap{transform:translateY(-8px)}
   .voice-screen.is-home-orb-active .orb-wrap{transform:translateY(-8px)}
-  .floating-home-tools{left:14px;bottom:20px}
+  .floating-home-tools{left:14px;bottom:46px}
   .floating-home-action{min-width:148px}
   .floating-home-status{padding:9px 11px;font-size:10px}
   .onboard-shell{padding:14px}
@@ -529,15 +529,6 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .q-process-dots span:nth-child(2){animation-delay:.16s}
 .q-process-dots span:nth-child(3){animation-delay:.32s}
 /* Text input fallback */
-.type-toggle{
-  display:flex;align-items:center;gap:6px;
-  margin-top:-4px;margin-bottom:20px;
-  font-size:12px;font-weight:500;letter-spacing:.02em;
-  color:var(--text3);cursor:pointer;border:none;background:none;
-  padding:4px 0;transition:color .2s;
-}
-.type-toggle:hover{color:var(--text2)}
-.type-toggle svg{width:13px;height:13px;flex-shrink:0;opacity:.7}
 .text-input-box{
   width:100%;max-width:min(380px,90vw);
   background:var(--bg1);
@@ -545,12 +536,9 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   border-radius:var(--rl);
   padding:4px 4px 4px 16px;
   display:flex;flex-direction:column;
-  opacity:0;transform:translateY(8px);
-  transition:opacity .25s,transform .25s,border-color .2s;
-  pointer-events:none;
   margin-bottom:20px;
+  transition:border-color .2s;
 }
-.text-input-box.show{opacity:1;transform:translateY(0);pointer-events:auto}
 .text-input-box:focus-within{border-color:rgba(79,142,247,.35)}
 .text-input-textarea{
   width:100%;resize:none;border:none;background:transparent;
@@ -1592,11 +1580,7 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
           <span>Tap here</span>
         </div>
       </div>
-      <!-- Type instead fallback -->
-      <button class="type-toggle" id="type-toggle" type="button" onclick="toggleTextInput()" aria-label="Type instead of speaking">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 10H3"/><path d="M21 6H3"/><path d="M21 14H3"/><path d="M17 18H3"/></svg>
-        type instead
-      </button>
+      <!-- Text input fallback -->
       <div class="text-input-box" id="text-input-box">
         <textarea class="text-input-textarea" id="text-input-ta" rows="1" placeholder="Describe the procedure you performed…" oninput="onTextInputChange()" onkeydown="onTextInputKeydown(event)"></textarea>
         <div class="text-input-footer">
@@ -2212,23 +2196,12 @@ const QUESTIONS=[
   {key:'patientType',isEmpty:()=>!caseData.patientType,question:'Was this an adult or pediatric patient?',type:'chips',options:['Adult','Pediatric']},
   {key:'caseYear',isEmpty:()=>!caseData.caseYear,question:'What year of residency are you in?',type:'chips',options:['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6']},
 ];
-function toggleTextInput(){
-  const box=document.getElementById('text-input-box');
-  const toggle=document.getElementById('type-toggle');
-  const isOpen=box.classList.contains('show');
-  if(isOpen){
-    box.classList.remove('show');
-    toggle.style.opacity='';
-  } else {
-    box.classList.add('show');
-    toggle.style.opacity='0.4';
-    setTimeout(()=>document.getElementById('text-input-ta')?.focus(),220);
-  }
-}
 function hideTextInput(){
-  document.getElementById('text-input-box')?.classList.remove('show');
-  const toggle=document.getElementById('type-toggle');
-  if(toggle) toggle.style.opacity='';
+  // box is always visible on home; just reset its state
+  const ta=document.getElementById('text-input-ta');
+  if(ta){ta.value='';ta.style.height='auto';}
+  const btn=document.getElementById('text-input-send');
+  if(btn) btn.disabled=true;
 }
 function onTextInputChange(){
   const ta=document.getElementById('text-input-ta');
@@ -2248,18 +2221,16 @@ async function submitTextInput(){
   const ta=document.getElementById('text-input-ta');
   const text=ta?.value.trim();
   if(!text) return;
-  // Hide input, kick off same pipeline as voice
-  hideTextInput();
+  // Clear input and kick off same pipeline as voice
+  ta.value='';ta.style.height='auto';
+  document.getElementById('text-input-send').disabled=true;
   document.getElementById('orb-wrap').style.display='none';
+  document.getElementById('text-input-box').style.display='none';
   document.querySelector('.voice-screen')?.classList.add('is-asking');
-  document.getElementById('type-toggle').style.display='none';
   orbState='thinking';
   showProcessingBubble();
   AudioFX.startThink();
   buildIndex();
-  ta.value='';
-  ta.style.height='auto';
-  document.getElementById('text-input-send').disabled=true;
   await processDescription(text);
 }
 async function handleOrbTap(){
@@ -3309,14 +3280,10 @@ function resetFlow(){
   orbState='idle';
   clearHomeFlowPanels();
   document.querySelector('.voice-screen')?.classList.remove('is-asking');
-  // Restore text input toggle
+  // Restore text input box
+  const textInputBox=document.getElementById('text-input-box');
+  if(textInputBox) textInputBox.style.display='';
   hideTextInput();
-  const typeToggle=document.getElementById('type-toggle');
-  if(typeToggle){typeToggle.style.display='';typeToggle.style.opacity='';}
-  const textTa=document.getElementById('text-input-ta');
-  if(textTa){textTa.value='';textTa.style.height='auto';}
-  const textSend=document.getElementById('text-input-send');
-  if(textSend) textSend.disabled=true;
   const orbWrap = document.getElementById('orb-wrap');
   orbWrap.classList.remove('inactive');
   orbWrap.style.display='';
@@ -4515,9 +4482,6 @@ function updateHomeFloatingUi(){
     voiceScreen.classList.toggle('is-home-orb-active',orbVisible && !visible);
   }
   if(bubble) bubble.classList.toggle('home-prompt-slot',orbVisible);
-  // Show/hide type-instead toggle with the home idle state
-  const typeToggle=document.getElementById('type-toggle');
-  if(typeToggle) typeToggle.style.display=visible?'':'none';
   if(!visible) hideTextInput();
   if(!tools || !status || !statusCopy) return;
   tools.classList.toggle('is-visible',visible);
