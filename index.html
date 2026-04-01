@@ -210,6 +210,211 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   padding:24px;
   position:relative;z-index:1;
 }
+.home-action-dock{
+  position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
+  width:min(92vw,480px);z-index:260;
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;
+  background:linear-gradient(180deg,rgba(14,19,29,.88) 0%,rgba(10,14,21,.94) 100%);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:24px;
+  box-shadow:0 22px 50px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.04);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+}
+.home-dock-status{
+  flex:1;min-width:0;
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:18px;
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+}
+.home-dock-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:rgba(255,255,255,.18)}
+.home-dock-dot.ok{background:#34d399;box-shadow:0 0 12px rgba(52,211,153,.4)}
+.home-dock-dot.warn{background:#fbbf24;box-shadow:0 0 10px rgba(251,191,36,.26)}
+.home-dock-copy{min-width:0}
+.home-dock-kicker{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(141,183,255,.72)}
+.home-dock-label{font-size:12px;color:rgba(232,237,244,.82);line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-dock-btn{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  min-width:54px;padding:12px 14px;border-radius:18px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.028);color:var(--text2);
+  font-family:'Sora',sans-serif;font-size:12px;font-weight:700;cursor:pointer;
+  transition:transform .16s ease, background .16s ease, border-color .16s ease, color .16s ease;
+}
+.home-dock-btn svg{width:15px;height:15px;stroke:currentColor;stroke-width:2;fill:none}
+.home-dock-btn:active{transform:scale(.98)}
+.home-dock-btn.primary{
+  background:linear-gradient(135deg,rgba(90,152,255,.18) 0%,rgba(79,142,247,.14) 100%);
+  color:var(--blue-soft);border-color:rgba(99,214,255,.18);
+}
+.home-dock-btn.secondary{
+  color:rgba(214,221,233,.78)
+}
+.home-dock-btn.status-attn{
+  color:#f9d27c;border-color:rgba(251,191,36,.18);background:rgba(251,191,36,.06)
+}
+.onboard-shell{
+  position:fixed;inset:0;z-index:9050;
+  background:radial-gradient(circle at 50% 18%, rgba(79,142,247,.10) 0%, rgba(79,142,247,0) 24%), linear-gradient(180deg,rgba(4,7,12,.92) 0%,rgba(4,6,11,.97) 100%);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;opacity:0;pointer-events:none!important;transition:opacity .24s ease;
+}
+.onboard-shell.on{opacity:1;pointer-events:all!important}
+.onboard-card{
+  width:min(940px,100%);min-height:min(84vh,720px);
+  background:linear-gradient(180deg,rgba(14,19,29,.92) 0%,rgba(10,14,21,.96) 100%);
+  border:1px solid rgba(255,255,255,.08);border-radius:34px;
+  box-shadow:0 32px 90px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.04);
+  display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);
+  overflow:hidden;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+}
+.onboard-visual{
+  position:relative;padding:28px;display:flex;align-items:center;justify-content:center;overflow:hidden;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(99,214,255,.10) 0%, rgba(99,214,255,0) 24%),
+    radial-gradient(circle at 82% 16%, rgba(155,140,255,.10) 0%, rgba(155,140,255,0) 22%),
+    linear-gradient(180deg, rgba(10,15,24,.88) 0%, rgba(7,10,16,.96) 100%);
+}
+.onboard-stage{
+  position:relative;width:min(100%,460px);aspect-ratio:1/1.02;border-radius:30px;
+  background:radial-gradient(circle at 50% 28%, rgba(79,142,247,.09) 0%, rgba(79,142,247,0) 26%), linear-gradient(180deg,rgba(8,12,18,.82) 0%,rgba(6,9,15,.96) 100%);
+  border:1px solid rgba(255,255,255,.06);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+  overflow:hidden;
+}
+.onboard-glow{
+  position:absolute;border-radius:50%;filter:blur(34px);pointer-events:none;
+  background:radial-gradient(circle, rgba(99,214,255,.18) 0%, rgba(99,214,255,0) 70%);
+}
+.onboard-glow.g1{width:180px;height:180px;left:-28px;top:18px}
+.onboard-glow.g2{width:160px;height:160px;right:-24px;top:54px;background:radial-gradient(circle, rgba(155,140,255,.16) 0%, rgba(155,140,255,0) 70%)}
+.onboard-glow.g3{width:220px;height:220px;left:50%;bottom:-78px;transform:translateX(-50%);background:radial-gradient(circle, rgba(79,142,247,.15) 0%, rgba(79,142,247,0) 74%)}
+.onboard-orb-mini{
+  position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);
+  width:180px;height:180px;border-radius:50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(141,183,255,.78) 0%, rgba(141,183,255,.22) 18%, rgba(79,142,247,.18) 34%, rgba(10,20,36,0) 64%),
+    radial-gradient(circle at 60% 62%, rgba(99,214,255,.22) 0%, rgba(99,214,255,.06) 24%, rgba(10,20,36,0) 62%),
+    linear-gradient(180deg,#12203b 0%, #0a1324 100%);
+  border:1px solid rgba(141,183,255,.18);
+  box-shadow:0 0 0 16px rgba(79,142,247,.04), 0 28px 64px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
+  animation:onboardFloat 5.8s ease-in-out infinite;
+}
+.onboard-wave{
+  position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);
+  width:220px;height:220px;border-radius:50%;border:1px solid rgba(99,214,255,.10);
+  animation:onboardPulse 2.6s ease-out infinite;
+}
+.onboard-wave.w2{animation-delay:.7s}
+.onboard-wave.w3{animation-delay:1.4s}
+.onboard-card-stack{
+  position:absolute;border-radius:24px;border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,rgba(18,25,38,.92) 0%,rgba(12,18,28,.96) 100%);
+  box-shadow:0 18px 44px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.onboard-card-stack.top{width:64%;height:30%;left:10%;top:12%;transform:rotate(-8deg)}
+.onboard-card-stack.bottom{width:60%;height:28%;right:12%;bottom:12%;transform:rotate(8deg)}
+.onboard-card-head{
+  height:16px;margin:16px;border-radius:999px;background:linear-gradient(90deg,rgba(99,214,255,.28) 0%,rgba(79,142,247,.08) 100%);
+}
+.onboard-card-line{
+  height:10px;margin:0 16px 10px;border-radius:999px;background:rgba(255,255,255,.06)
+}
+.onboard-card-line.short{width:46%}
+.onboard-settings-shell{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:72%;padding:22px;border-radius:28px;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,rgba(16,22,34,.94) 0%,rgba(11,16,24,.98) 100%);
+  box-shadow:0 22px 56px rgba(0,0,0,.3)
+}
+.onboard-settings-title{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(141,183,255,.72);margin-bottom:18px}
+.onboard-status-pill{
+  display:flex;align-items:center;gap:9px;padding:12px 14px;border-radius:18px;
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);margin-bottom:12px
+}
+.onboard-status-pill .dot{width:10px;height:10px;border-radius:50%;background:#34d399;box-shadow:0 0 10px rgba(52,211,153,.36)}
+.onboard-status-pill.warn .dot{background:#fbbf24;box-shadow:0 0 10px rgba(251,191,36,.3)}
+.onboard-status-pill span{font-size:12px;color:rgba(232,237,244,.8)}
+.onboard-button-row{display:flex;gap:10px;margin-top:14px}
+.onboard-button-chip{
+  flex:1;padding:11px 12px;border-radius:16px;border:1px solid rgba(99,214,255,.14);
+  background:rgba(79,142,247,.08);font-size:12px;font-weight:700;color:var(--blue-soft);text-align:center
+}
+.onboard-chart-shell{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:76%;padding:24px;border-radius:28px;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,rgba(16,22,34,.94) 0%,rgba(11,16,24,.98) 100%);
+}
+.onboard-chart-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:18px}
+.onboard-chart-title{font-size:15px;font-weight:700;color:var(--text)}
+.onboard-chart-kicker{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(141,183,255,.68)}
+.onboard-chart-bars{display:flex;align-items:flex-end;gap:14px;height:180px}
+.onboard-chart-bar{flex:1;border-radius:18px 18px 10px 10px;background:linear-gradient(180deg,rgba(79,142,247,.92) 0%,rgba(95,200,235,.84) 100%);box-shadow:0 0 20px rgba(79,142,247,.18)}
+.onboard-chart-bar.warn{background:linear-gradient(180deg,rgba(255,123,133,.92) 0%,rgba(243,191,60,.84) 100%)}
+.onboard-copy{
+  padding:34px 30px 28px;display:flex;flex-direction:column;justify-content:space-between;
+}
+.onboard-topline{font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:rgba(141,183,255,.74)}
+.onboard-title{margin-top:16px;font-size:34px;font-weight:700;line-height:1.02;letter-spacing:-.05em;color:var(--text)}
+.onboard-desc{margin-top:18px;font-size:14px;line-height:1.8;color:rgba(232,237,244,.66);max-width:34ch}
+.onboard-progress{display:flex;gap:10px;margin-top:24px}
+.onboard-progress-dot{
+  flex:1;height:8px;border-radius:999px;background:rgba(255,255,255,.08);
+  overflow:hidden;position:relative
+}
+.onboard-progress-dot::before{
+  content:"";position:absolute;inset:0;width:100%;transform-origin:left center;transform:scaleX(0);
+  background:linear-gradient(90deg,rgba(99,214,255,.86) 0%,rgba(79,142,247,.96) 68%,rgba(155,140,255,.82) 100%);
+  border-radius:inherit;transition:transform .28s ease
+}
+.onboard-progress-dot.active::before,.onboard-progress-dot.done::before{transform:scaleX(1)}
+.onboard-step-label{margin-top:12px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(141,183,255,.72)}
+.onboard-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:32px}
+.onboard-skip{
+  background:none;border:none;color:rgba(232,237,244,.44);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer
+}
+.onboard-btn-row{display:flex;gap:10px}
+.onboard-btn{
+  min-width:116px;padding:14px 18px;border-radius:18px;border:none;cursor:pointer;
+  font-family:'Sora',sans-serif;font-size:13px;font-weight:700;letter-spacing:-.01em
+}
+.onboard-btn.secondary{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--text2)}
+.onboard-btn.primary{background:linear-gradient(135deg,#6ea4ff 0%,#7596ff 48%,#9b8cff 100%);color:#fff;box-shadow:0 14px 30px rgba(71,104,210,.22)}
+.btn-main.with-loader{display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-main-spinner{
+  width:18px;height:18px;border-radius:999px;flex-shrink:0;
+  border:2.5px solid rgba(255,255,255,.24);border-top-color:#fff;border-right-color:rgba(255,255,255,.72);
+  animation:cfSpin .9s linear infinite;
+}
+@keyframes onboardPulse{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}
+  30%{opacity:.6}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.18)}
+}
+@keyframes onboardFloat{
+  0%,100%{transform:translate(-50%,-50%) translateY(0)}
+  50%{transform:translate(-50%,-50%) translateY(-8px)}
+}
+@media (max-width:920px){
+  .onboard-card{grid-template-columns:1fr}
+  .onboard-visual{min-height:300px}
+}
+@media (max-width:640px){
+  .home-action-dock{bottom:18px;width:min(94vw,94vw);padding:10px}
+  .home-dock-status{padding:10px 11px}
+  .home-dock-kicker{font-size:9px}
+  .home-dock-label{font-size:11px}
+  .home-dock-btn{padding:11px 12px;min-width:50px}
+  .onboard-shell{padding:14px}
+  .onboard-copy{padding:26px 22px 22px}
+  .onboard-title{font-size:28px}
+  .onboard-desc{font-size:13px;line-height:1.75}
+  .onboard-actions{flex-direction:column;align-items:stretch}
+  .onboard-btn-row{width:100%}
+  .onboard-btn{flex:1}
+}
 .voice-screen::before{
   content:"";position:absolute;inset:0;
   background:
@@ -1328,6 +1533,23 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
         <button class="btn-go" id="go-btn" onclick="submitCase()">Submit to ACGME</button>
       </div>
     </div>
+    <div class="home-action-dock" id="home-action-dock" style="display:none">
+      <div class="home-dock-status" id="home-dock-status">
+        <div class="home-dock-dot" id="home-dock-dot"></div>
+        <div class="home-dock-copy">
+          <div class="home-dock-kicker">Quick Actions</div>
+          <div class="home-dock-label" id="home-dock-label">ACGME status loading...</div>
+        </div>
+      </div>
+      <button class="home-dock-btn primary" id="home-dock-acgme-btn" type="button" onclick="openAcgmeFromDock()">
+        <svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M3 12h18"/></svg>
+        <span id="home-dock-acgme-text">Connect</span>
+      </button>
+      <button class="home-dock-btn secondary" type="button" onclick="goTab('milestones')">
+        <svg viewBox="0 0 24 24"><path d="M5 19V9"/><path d="M12 19V5"/><path d="M19 19v-7"/></svg>
+        <span>Milestones</span>
+      </button>
+    </div>
   </div>
   <div class="pane" id="pn-history">
     <div class="hist-filters">
@@ -1443,11 +1665,12 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
               <div class="settings-meta-label">Terms</div>
               <div class="settings-meta-value" id="beta-tos-status">&#8212;</div>
             </div>
-            <div class="settings-meta-row">
-              <div class="settings-meta-label">Account</div>
-              <div class="settings-meta-value" id="beta-account-created">&#8212;</div>
-            </div>
+          <div class="settings-meta-row">
+            <div class="settings-meta-label">Account</div>
+            <div class="settings-meta-value" id="beta-account-created">&#8212;</div>
           </div>
+          </div>
+          <button class="settings-quiet-btn" style="margin-top:14px" onclick="openQuickGuide()">View Quick Guide</button>
           <button class="settings-quiet-btn" style="margin-top:14px" onclick="openTosModal()">View Terms of Service</button>
         </div>
       </div>
@@ -1525,6 +1748,34 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
       </button>
     </div>
   </aside>
+</div>
+<div class="onboard-shell" id="onboard-shell" aria-hidden="true">
+  <div class="onboard-card">
+    <div class="onboard-visual">
+      <div class="onboard-stage" id="onboard-stage"></div>
+    </div>
+    <div class="onboard-copy">
+      <div>
+        <div class="onboard-topline">Welcome to CaseFlow</div>
+        <div class="onboard-title" id="onboard-title">Log cases with the voice orb</div>
+        <div class="onboard-desc" id="onboard-desc">Tap the orb, describe the case naturally, and CaseFlow turns your dictation into a structured case draft you can review before submitting.</div>
+        <div class="onboard-progress" id="onboard-progress">
+          <div class="onboard-progress-dot active"></div>
+          <div class="onboard-progress-dot"></div>
+          <div class="onboard-progress-dot"></div>
+          <div class="onboard-progress-dot"></div>
+        </div>
+        <div class="onboard-step-label" id="onboard-step-label">Step 1 of 4</div>
+      </div>
+      <div class="onboard-actions">
+        <button class="onboard-skip" type="button" onclick="finishOnboarding(true)">Skip guide</button>
+        <div class="onboard-btn-row">
+          <button class="onboard-btn secondary" id="onboard-back-btn" type="button" onclick="changeOnboardingStep(-1)">Back</button>
+          <button class="onboard-btn primary" id="onboard-next-btn" type="button" onclick="changeOnboardingStep(1)">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 <div class="search-modal" id="search-modal" onclick="if(event.target===this)closeSearchModal()">
   <button class="search-modal-close" onclick="closeSearchModal()">&#x2715;</button>
@@ -1802,6 +2053,33 @@ let caseData={description:'',procedures:[],role:null,site:null,attending:null,pa
 /** Matches ADS Case ID input (bootstrap-maxlength on apps.acgme.org). */
 const CASE_ID_MAX_LEN=25;
 const APP_TOS_VERSION='2026-03-31';
+const APP_ONBOARDING_VERSION='2026-04-01';
+const ONBOARDING_STEPS=[
+  {
+    title:'Log cases with the voice orb',
+    description:'Tap the orb on the home screen and describe the case in plain language. CaseFlow listens, structures the details, and guides you through anything still missing.',
+    label:'Step 1 of 4',
+    visual:'orb',
+  },
+  {
+    title:'Review and confirm before you submit',
+    description:'CaseFlow suggests CPT procedures, lets you confirm the right codes, and builds a clean case summary so you can save or submit with confidence.',
+    label:'Step 2 of 4',
+    visual:'cards',
+  },
+  {
+    title:'Connect ACGME once, then stay fast',
+    description:'Open Settings, add your ACGME credentials, and complete any verification prompt. After that, CaseFlow can submit on your behalf and alert you if the connection needs attention.',
+    label:'Step 3 of 4',
+    visual:'settings',
+  },
+  {
+    title:'Use milestones to spot what still needs work',
+    description:'Your milestones view turns logged cases into progress signals so you can see deficient categories, incomplete requirements, and where to focus next.',
+    label:'Step 4 of 4',
+    visual:'chart',
+  },
+];
 let currentUserMeta={
   id:null,
   email:'',
@@ -1814,6 +2092,7 @@ let currentUserMeta={
   lastLoginAt:null,
 };
 let adminDiagnostics=null;
+let onboardingStep=0;
 let pendingQs=[],currentQ=-1;
 const QUESTIONS=[
   {key:'procedures',isEmpty:()=>caseData.procedures.length===0,question:"I couldn't identify the procedure. What was performed? Search by name or CPT code.",type:'cpt-search'},
@@ -3365,6 +3644,7 @@ function loadSettingsUI(){
   } else if(currentUserMeta.isAdmin){
     renderAdminDiagnostics();
   }
+  updateHomeActionDock();
 }
 function toggleAcgmeForm(){
   const form=document.getElementById('s-acgme-form');
@@ -3748,15 +4028,15 @@ async function doLogin(){
   errEl.textContent='';
   if(!email||!pass){errEl.textContent='Please enter your email and password.';return;}
   const btn=document.getElementById('l-btn');
-  btn.textContent='Signing in…';btn.classList.add('busy');
+  setAuthButtonLoading(btn,'Signing In');
   try{
     const res=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
     const data=await res.json();
-    btn.textContent='Sign In';btn.classList.remove('busy');
+    clearAuthButtonLoading(btn);
     if(!res.ok){errEl.textContent=data.error||'Sign in failed.';return;}
     _onAuthSuccess(data,pass);
   }catch(e){
-    btn.textContent='Sign In';btn.classList.remove('busy');
+    clearAuthButtonLoading(btn);
     errEl.textContent='Network error — check your connection.';
     sendClientLog({source:'auth.login',severity:'error',message:e.message||'Login request failed'});
   }
@@ -3778,15 +4058,16 @@ async function doRegister(){
   if(!betaKey){errEl.textContent='Please enter your beta key.';return;}
   if(!tosAccepted){errEl.textContent='Please accept the Terms of Service.';return;}
   const btn=document.getElementById('r-btn');
-  btn.textContent='Creating account…';btn.classList.add('busy');
+  setAuthButtonLoading(btn,'Creating Account');
   try{
     const res=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pass,betaKey,tosAccepted})});
     const data=await res.json();
-    btn.textContent='Create Account';btn.classList.remove('busy');
+    clearAuthButtonLoading(btn);
     if(!res.ok){errEl.textContent=data.error||'Registration failed.';return;}
+    localStorage.setItem('cf5-onboard-pending-email',email.toLowerCase());
     _onAuthSuccess(data,pass);
   }catch(e){
-    btn.textContent='Create Account';btn.classList.remove('busy');
+    clearAuthButtonLoading(btn);
     errEl.textContent='Network error — check your connection.';
     sendClientLog({source:'auth.register',severity:'error',message:e.message||'Registration request failed'});
   }
@@ -3826,6 +4107,224 @@ function doLogout(skipConfirm){
   localStorage.removeItem('cf5-user-meta');
   resetFlow();
   showPage('pg-login');
+}
+
+function onboardingStorageKey(email){
+  const safe=(email||'guest').toLowerCase();
+  return `cf5-onboarding-seen-${APP_ONBOARDING_VERSION}-${safe}`;
+}
+
+function shouldShowOnboarding(email){
+  const pending=(localStorage.getItem('cf5-onboard-pending-email')||'').toLowerCase();
+  if(pending && pending===(email||'').toLowerCase()) return true;
+  const createdAt=currentUserMeta.createdAt?Date.parse(currentUserMeta.createdAt):NaN;
+  const rolloutStart=Date.parse('2026-04-01T00:00:00-04:00');
+  if(!Number.isFinite(createdAt) || createdAt<rolloutStart) return false;
+  return localStorage.getItem(onboardingStorageKey(email))!=='1';
+}
+
+function markOnboardingSeen(email){
+  if(!email) return;
+  localStorage.setItem(onboardingStorageKey(email),'1');
+  const pending=(localStorage.getItem('cf5-onboard-pending-email')||'').toLowerCase();
+  if(pending===(email||'').toLowerCase()) localStorage.removeItem('cf5-onboard-pending-email');
+}
+
+function renderOnboardingVisual(step){
+  const stage=document.getElementById('onboard-stage');
+  if(!stage) return;
+  const visual=ONBOARDING_STEPS[step]?.visual||'orb';
+  const baseGlows=`
+    <div class="onboard-glow g1"></div>
+    <div class="onboard-glow g2"></div>
+    <div class="onboard-glow g3"></div>
+  `;
+  if(visual==='orb'){
+    stage.innerHTML=`
+      ${baseGlows}
+      <div class="onboard-wave"></div>
+      <div class="onboard-wave w2"></div>
+      <div class="onboard-wave w3"></div>
+      <div class="onboard-orb-mini"></div>
+      <div class="onboard-card-stack top">
+        <div class="onboard-card-head"></div>
+        <div class="onboard-card-line"></div>
+        <div class="onboard-card-line short"></div>
+      </div>
+      <div class="onboard-card-stack bottom">
+        <div class="onboard-card-head"></div>
+        <div class="onboard-card-line"></div>
+        <div class="onboard-card-line short"></div>
+      </div>
+    `;
+    return;
+  }
+  if(visual==='cards'){
+    stage.innerHTML=`
+      ${baseGlows}
+      <div class="onboard-card-stack top" style="left:12%;top:15%;width:58%;height:28%;transform:rotate(-10deg)">
+        <div class="onboard-card-head"></div>
+        <div class="onboard-card-line"></div>
+        <div class="onboard-card-line"></div>
+        <div class="onboard-card-line short"></div>
+      </div>
+      <div class="onboard-card-stack bottom" style="right:10%;bottom:14%;width:64%;height:34%;transform:rotate(7deg)">
+        <div class="onboard-card-head"></div>
+        <div class="onboard-card-line"></div>
+        <div class="onboard-card-line"></div>
+        <div class="onboard-card-line short"></div>
+      </div>
+      <div class="onboard-button-row" style="position:absolute;left:12%;right:12%;bottom:11%">
+        <div class="onboard-button-chip">Review CPT</div>
+        <div class="onboard-button-chip">Submit</div>
+      </div>
+    `;
+    return;
+  }
+  if(visual==='settings'){
+    stage.innerHTML=`
+      ${baseGlows}
+      <div class="onboard-settings-shell">
+        <div class="onboard-settings-title">ACGME Connection</div>
+        <div class="onboard-status-pill"><div class="dot"></div><span>Encrypted credential vault ready</span></div>
+        <div class="onboard-status-pill warn"><div class="dot"></div><span>Reconnect prompt if ACGME expires</span></div>
+        <div class="onboard-button-row">
+          <div class="onboard-button-chip">Save Credentials</div>
+          <div class="onboard-button-chip">Verify</div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+  stage.innerHTML=`
+    ${baseGlows}
+    <div class="onboard-chart-shell">
+      <div class="onboard-chart-head">
+        <div>
+          <div class="onboard-chart-kicker">Progress</div>
+          <div class="onboard-chart-title">Milestones snapshot</div>
+        </div>
+        <div class="settings-badge">Live beta</div>
+      </div>
+      <div class="onboard-chart-bars">
+        <div class="onboard-chart-bar" style="height:72%"></div>
+        <div class="onboard-chart-bar warn" style="height:38%"></div>
+        <div class="onboard-chart-bar" style="height:84%"></div>
+        <div class="onboard-chart-bar" style="height:58%"></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderOnboarding(){
+  const step=Math.max(0,Math.min(onboardingStep,ONBOARDING_STEPS.length-1));
+  const data=ONBOARDING_STEPS[step];
+  const title=document.getElementById('onboard-title');
+  const desc=document.getElementById('onboard-desc');
+  const stepLabel=document.getElementById('onboard-step-label');
+  const backBtn=document.getElementById('onboard-back-btn');
+  const nextBtn=document.getElementById('onboard-next-btn');
+  if(title) title.textContent=data.title;
+  if(desc) desc.textContent=data.description;
+  if(stepLabel) stepLabel.textContent=data.label;
+  if(backBtn) backBtn.style.visibility=step===0?'hidden':'visible';
+  if(nextBtn) nextBtn.textContent=step===ONBOARDING_STEPS.length-1?'Get Started':'Next';
+  document.querySelectorAll('#onboard-progress .onboard-progress-dot').forEach((dot,idx)=>{
+    dot.classList.toggle('active',idx===step);
+    dot.classList.toggle('done',idx<step);
+  });
+  renderOnboardingVisual(step);
+}
+
+function openOnboarding(force){
+  if(!force && !shouldShowOnboarding(currentUserMeta.email)) return;
+  onboardingStep=0;
+  renderOnboarding();
+  const shell=document.getElementById('onboard-shell');
+  if(shell){
+    shell.classList.add('on');
+    shell.setAttribute('aria-hidden','false');
+  }
+}
+
+function finishOnboarding(forceMark){
+  const shell=document.getElementById('onboard-shell');
+  if(shell){
+    shell.classList.remove('on');
+    shell.setAttribute('aria-hidden','true');
+  }
+  if(forceMark!==false) markOnboardingSeen(currentUserMeta.email);
+}
+
+function changeOnboardingStep(delta){
+  const next=onboardingStep + delta;
+  if(next<0){
+    onboardingStep=0;
+    renderOnboarding();
+    return;
+  }
+  if(next>=ONBOARDING_STEPS.length){
+    finishOnboarding(true);
+    return;
+  }
+  onboardingStep=next;
+  renderOnboarding();
+}
+
+function updateHomeActionDock(){
+  const dock=document.getElementById('home-action-dock');
+  const pane=document.getElementById('pn-log');
+  if(!dock || !pane) return;
+  const visible=!!pane.classList.contains('on');
+  dock.style.display=visible?'flex':'none';
+  if(!visible) return;
+  const dot=document.getElementById('home-dock-dot');
+  const label=document.getElementById('home-dock-label');
+  const actionBtn=document.getElementById('home-dock-acgme-btn');
+  const actionText=document.getElementById('home-dock-acgme-text');
+  const hasVault=!!localStorage.getItem('cf5-vault');
+  let statusClass='warn';
+  let statusText='Connect ACGME in Settings to enable auto-submit.';
+  let actionLabel='Connect';
+  if(hasVault && acgmeServerSessionActive!==false){
+    statusClass='ok';
+    statusText='ACGME connected. You can log a case and submit when ready.';
+    actionLabel='Status';
+  } else if(hasVault && acgmeServerSessionActive===false){
+    statusClass='warn';
+    statusText='ACGME needs attention. Reconnect before your next submission.';
+    actionLabel='Reconnect';
+  }
+  if(dot) dot.className=`home-dock-dot ${statusClass}`;
+  if(label) label.textContent=statusText;
+  if(actionBtn) actionBtn.className=`home-dock-btn primary ${statusClass==='warn'?'status-attn':''}`;
+  if(actionText) actionText.textContent=actionLabel;
+}
+
+function openAcgmeFromDock(){
+  goTab('settings');
+  const needsForm=!localStorage.getItem('cf5-vault') || acgmeServerSessionActive===false;
+  if(needsForm && !document.getElementById('s-acgme-form')?.classList.contains('open')){
+    toggleAcgmeForm();
+  }
+  if(needsForm) document.getElementById('s-acgme-user')?.focus();
+}
+
+function openQuickGuide(){
+  openOnboarding(true);
+}
+
+function setAuthButtonLoading(btn, loadingText){
+  if(!btn) return;
+  if(!btn.dataset.label) btn.dataset.label=btn.textContent.trim();
+  btn.classList.add('busy','with-loader');
+  btn.innerHTML=`<span class="btn-main-spinner" aria-hidden="true"></span><span>${loadingText}</span>`;
+}
+
+function clearAuthButtonLoading(btn){
+  if(!btn) return;
+  btn.classList.remove('busy','with-loader');
+  btn.textContent=btn.dataset.label||btn.textContent;
 }
 
 function openTosModal(){document.getElementById('tos-modal')?.classList.add('on')}
@@ -4066,6 +4565,10 @@ async function launchApp(name,email){
   }
   if(localStorage.getItem('cf5-vault') && ACGME_BACKEND_URL && localStorage.getItem('cf5-token')){
     await fetchAcgmeProfile();
+  }
+  updateHomeActionDock();
+  if(shouldShowOnboarding(email)){
+    requestAnimationFrame(()=>setTimeout(()=>openOnboarding(false),220));
   }
 }
 
@@ -4551,6 +5054,7 @@ function goTab(n){
   if(n==='history')renderHistory();
   if(n==='milestones')loadMilestonesUI();
   if(n==='settings')loadSettingsUI();
+  updateHomeActionDock();
 }
 /** Header “N cases” chip — switches to History and scrolls to the list */
 function chipCasesClick(){
@@ -4655,6 +5159,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   initPointerBindings();
   initTouchDebug();
   startOrb();
+  document.addEventListener('keydown',(event)=>{
+    if(event.key==='Escape' && document.getElementById('onboard-shell')?.classList.contains('on')){
+      finishOnboarding(true);
+    }
+  });
   const wavesBg=document.getElementById('login-waves-bg');
   if(wavesBg) new LineWavesRenderer(wavesBg,{
     speed:0.1, innerLineCount:32, outerLineCount:36,
