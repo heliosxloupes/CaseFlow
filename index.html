@@ -210,10 +210,14 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   padding:20px 24px 24px;
   position:relative;z-index:1;
 }
-.voice-screen.is-home-idle{justify-content:center;padding-top:12px;padding-bottom:138px}
+.voice-screen.is-home-idle,
+.voice-screen.is-home-orb-active{justify-content:center;padding-bottom:138px}
+.voice-screen.is-home-idle{padding-top:12px}
 .voice-screen.is-home-idle .orb-wrap{margin-bottom:0;transform:translateY(-14px)}
-.voice-screen:not(.is-home-idle){justify-content:flex-start;padding-top:28px}
-.voice-screen:not(.is-home-idle) .orb-wrap{margin-bottom:20px}
+.voice-screen.is-home-orb-active{padding-top:20px}
+.voice-screen.is-home-orb-active .orb-wrap{margin-bottom:20px;transform:translateY(-10px)}
+.voice-screen:not(.is-home-idle):not(.is-home-orb-active){justify-content:flex-start;padding-top:28px}
+.voice-screen:not(.is-home-idle):not(.is-home-orb-active) .orb-wrap{margin-bottom:20px}
 .floating-home-tools{
   position:fixed;left:18px;bottom:26px;z-index:260;
   display:flex;flex-direction:column;align-items:flex-start;gap:10px;
@@ -424,8 +428,10 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   .onboard-visual{min-height:300px}
 }
 @media (max-width:640px){
-  .voice-screen.is-home-idle{padding-bottom:134px}
+  .voice-screen.is-home-idle,
+  .voice-screen.is-home-orb-active{padding-bottom:134px}
   .voice-screen.is-home-idle .orb-wrap{transform:translateY(-8px)}
+  .voice-screen.is-home-orb-active .orb-wrap{transform:translateY(-4px)}
   .floating-home-tools{left:14px;bottom:20px}
   .floating-home-action{min-width:148px}
   .floating-home-status{padding:9px 11px;font-size:10px}
@@ -4319,6 +4325,15 @@ function isHomeOrbIdleState(){
   return !activeSelectors.some(sel=>document.querySelector(sel));
 }
 
+function isHomeOrbVisibleState(){
+  const pane=document.getElementById('pn-log');
+  const orbWrap=document.getElementById('orb-wrap');
+  if(!pane?.classList.contains('on')) return false;
+  if(!orbWrap || orbWrap.style.display==='none') return false;
+  if(document.body.classList.contains('submit-active')) return false;
+  return true;
+}
+
 function closeFloatingHomeMenu(){
   const menu=document.getElementById('floating-home-menu');
   const trigger=document.getElementById('floating-home-trigger');
@@ -4352,7 +4367,11 @@ function updateHomeFloatingUi(){
   const statusCopy=document.getElementById('floating-home-status-copy');
   const voiceScreen=document.getElementById('voice-screen');
   const visible=isHomeOrbIdleState();
-  if(voiceScreen) voiceScreen.classList.toggle('is-home-idle',visible);
+  const orbVisible=isHomeOrbVisibleState();
+  if(voiceScreen){
+    voiceScreen.classList.toggle('is-home-idle',visible);
+    voiceScreen.classList.toggle('is-home-orb-active',orbVisible && !visible);
+  }
   if(!tools || !status || !statusCopy) return;
   tools.style.display=visible?'flex':'none';
   if(!visible){
