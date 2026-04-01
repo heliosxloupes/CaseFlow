@@ -7,7 +7,8 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test:getcodes": "node test/getCodesPayload.test.js",
-    "generate-key": "node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+    "generate-key": "node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+    "seed:beta": "node scripts/seedBetaInvites.js 10"
   },
   "dependencies": {
     "abort-controller": "^3.0.0",

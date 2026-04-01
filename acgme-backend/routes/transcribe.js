@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const Groq = require('groq-sdk');
 const { toFile } = require('groq-sdk');
+const { logActivity } = require('../services/logService');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -73,6 +74,16 @@ router.post('/', upload.single('audio'), async (req, res, next) => {
     const transcript = typeof result === 'string' ? result.trim() : (result.text || '').trim();
 
     console.log(`[transcribe] user=${req.userId} len=${req.file.size}b → "${transcript.slice(0, 120)}"`);
+    await logActivity({
+      userId: req.userId,
+      userEmail: req.userEmail,
+      eventType: 'voice.transcribe',
+      message: 'Audio transcription requested',
+      context: {
+        bytes: req.file.size,
+        transcriptPreview: transcript.slice(0, 120),
+      },
+    });
     res.json({ transcript });
   } catch (err) {
     console.error('[transcribe] error:', err.message);

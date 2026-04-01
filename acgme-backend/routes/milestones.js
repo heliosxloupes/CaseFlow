@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db');
 const pw = require('../services/playwrightService');
 const { generateMilestonesReport, REPORT_NAME } = require('../services/milestonesService');
+const { logActivity } = require('../services/logService');
 
 async function getMilestonesSession(userId) {
   const cookieHeader = await pw.getValidCookieHeader(userId);
@@ -46,6 +47,17 @@ router.post('/generate', async (req, res, next) => {
        DO UPDATE SET report_data = EXCLUDED.report_data, generated_at = NOW(), updated_at = NOW()`,
       [req.userId, REPORT_NAME, JSON.stringify(report)]
     );
+
+    await logActivity({
+      userId: req.userId,
+      userEmail: req.userEmail,
+      eventType: 'milestones.generate',
+      message: 'Generated milestones report',
+      context: {
+        reportName: REPORT_NAME,
+        categoryCount: Array.isArray(report.categories) ? report.categories.length : 0,
+      },
+    });
 
     res.json(report);
   } catch (err) {

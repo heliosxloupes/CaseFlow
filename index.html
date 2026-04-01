@@ -506,6 +506,33 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .settings-setup-btn{width:100%;padding:13px;font-size:14px;margin-bottom:0;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:var(--purple)}
 .settings-setup-btn:hover{background:rgba(168,85,247,.2)}
 .settings-danger-zone{}
+.settings-note-card{background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:12px;padding:14px 16px;font-size:12px;color:var(--text2);line-height:1.65}
+.settings-meta-list{display:grid;gap:10px}
+.settings-meta-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;font-size:12px}
+.settings-meta-label{color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-size:10px;font-weight:700;padding-top:2px}
+.settings-meta-value{text-align:right;color:var(--text2);line-height:1.55}
+.settings-textarea{width:100%;min-height:120px;resize:vertical;background:var(--bg2);border:1px solid var(--line2);border-radius:12px;padding:12px;color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none}
+.settings-textarea:focus{border-color:var(--blue)}
+.settings-secondary-btn{width:100%;padding:13px;background:linear-gradient(180deg,rgba(20,27,39,.94) 0%,rgba(14,20,31,.96) 100%);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
+.settings-secondary-btn:active{opacity:.9}
+.settings-quiet-btn{width:100%;padding:12px;background:transparent;border:1px solid var(--line2);border-radius:12px;color:var(--text2);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.settings-quiet-btn:active{border-color:var(--blue);color:var(--blue-soft)}
+.settings-danger-btn{width:100%;padding:12px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.26);border-radius:12px;color:#fca5a5;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.settings-danger-btn:active{opacity:.9}
+.settings-admin-wrap{display:flex;flex-direction:column;gap:12px}
+.settings-admin-user{padding:14px;border-radius:14px;background:rgba(255,255,255,.028);border:1px solid rgba(255,255,255,.06)}
+.settings-admin-user-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.settings-admin-user-name{font-size:13px;font-weight:700;color:var(--text)}
+.settings-admin-user-meta{margin-top:6px;font-size:11px;color:var(--text3);line-height:1.6}
+.settings-admin-actions{display:flex;gap:8px;margin-top:12px}
+.settings-admin-actions button{flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);color:var(--text2);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
+.settings-admin-logbox{margin-top:12px;padding:12px;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);max-height:280px;overflow:auto}
+.settings-admin-logline{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.settings-admin-logline:last-child{border-bottom:none;padding-bottom:0}
+.settings-admin-logmeta{font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+.settings-admin-logmsg{font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.settings-badge{display:inline-flex;align-items:center;justify-content:center;padding:5px 9px;border-radius:999px;border:1px solid rgba(99,214,255,.16);background:rgba(79,142,247,.10);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue-soft)}
+.settings-admin-empty{font-size:12px;color:var(--text3);line-height:1.6}
 .btn-signout{width:100%;padding:13px;background:transparent;border:1px solid var(--line2);border-radius:var(--r);color:var(--text2);font-family:'Sora',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:border-color .15s,color .15s}
 .btn-signout:active{border-color:#f87171;color:#f87171}
 /* Milestones */
@@ -888,6 +915,17 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--bg3);border:1px solid var(--line2);border-radius:24px;padding:11px 20px;font-size:13px;color:var(--text);font-weight:500;opacity:0;transition:all .22s;z-index:999;white-space:nowrap;pointer-events:none}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{border-color:rgba(52,211,153,.28);color:var(--green)}
+.modal-shell{position:fixed;inset:0;z-index:9100;background:rgba(4,7,12,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none!important;transition:opacity .2s;padding:18px}
+.modal-shell.on{opacity:1;pointer-events:all!important}
+.modal-card{width:min(540px,100%);max-height:min(82vh,760px);overflow:auto;background:linear-gradient(180deg,rgba(14,19,29,.96) 0%,rgba(10,14,21,.98) 100%);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:22px 20px 20px;box-shadow:0 28px 70px rgba(0,0,0,.34)}
+.modal-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:16px}
+.modal-title{font-size:18px;font-weight:700;color:var(--text)}
+.modal-close{width:34px;height:34px;border-radius:50%;border:1px solid var(--line2);background:var(--bg2);color:var(--text2);font-size:18px;cursor:pointer}
+.modal-copy{font-size:13px;line-height:1.75;color:var(--text2)}
+.modal-copy h4{font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--text3);margin:18px 0 8px}
+.modal-copy p+p{margin-top:10px}
+.modal-copy ul{margin:10px 0 0 18px}
+.modal-copy li{margin-bottom:8px}
 .err-banner{position:fixed;bottom:0;left:0;right:0;z-index:9900;padding:12px 16px 24px;background:rgba(20,10,10,.97);border-top:1px solid rgba(248,113,113,.3);cursor:pointer}
 .err-banner-body{display:flex;align-items:flex-start;gap:10px;max-width:500px;margin:0 auto}
 .err-banner-icon{font-size:18px;flex-shrink:0;margin-top:1px;color:#f87171}
@@ -1108,6 +1146,12 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
   box-shadow:0 16px 34px rgba(71,104,210,.24);
 }
 .login-panel .btn-main.busy{box-shadow:none}
+.auth-helper-text{margin-top:12px;font-size:11px;line-height:1.65;color:rgba(255,255,255,.34);text-align:center}
+.auth-check{display:flex;align-items:flex-start;gap:10px;margin-top:4px;padding:12px 12px 10px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.auth-check input{margin-top:2px;accent-color:var(--blue);width:16px;height:16px;flex-shrink:0}
+.auth-check-label{font-size:12px;line-height:1.6;color:rgba(232,237,244,.7)}
+.text-link-btn{background:none;border:none;padding:0;color:var(--blue-soft);font:inherit;cursor:pointer}
+.text-link-btn:active{opacity:.84}
 .login-shell-foot{
   margin-top:34px;padding-top:18px;
   border-top:1px solid rgba(255,255,255,.06);
@@ -1198,13 +1242,24 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
           <label class="form-label">Confirm Password</label>
           <input class="form-input" type="password" id="r-pass2" placeholder="Repeat password"
                  autocomplete="new-password"
-                 onkeydown="if(event.key==='Enter')doRegister()">
+                 onkeydown="if(event.key==='Enter')document.getElementById('r-beta-key').focus()">
         </div>
+        <div class="form-field">
+          <label class="form-label">Beta Key</label>
+          <input class="form-input" type="text" id="r-beta-key" placeholder="CASEFLOW-BETA-XXXX"
+                 autocapitalize="characters" autocorrect="off"
+                 onkeydown="if(event.key==='Enter')document.getElementById('r-tos').focus()">
+        </div>
+        <label class="auth-check">
+          <input type="checkbox" id="r-tos">
+          <span class="auth-check-label">I agree to the <button class="text-link-btn" type="button" onclick="openTosModal()">Terms of Service</button> for this beta and understand that usage may be logged for debugging.</span>
+        </label>
         <button class="btn-main" id="r-btn" onclick="doRegister()" style="margin-top:8px">Create Account</button>
         <div class="auth-err" id="r-err"></div>
+        <div class="auth-helper-text">Each tester needs a valid beta key. If you delete and recreate your account later, use the same email and the same beta key.</div>
       </div>
     </div>
-    <div class="login-shell-foot">Secure sign-in, encrypted case history, and a single workflow from dictation to ACGME submission.</div>
+    <div class="login-shell-foot">Secure sign-in, encrypted case history, and a single workflow from dictation to ACGME submission. <button class="text-link-btn" type="button" onclick="openTosModal()">Terms</button></div>
     </div>
 
     <div style="height:max(32px,env(safe-area-inset-bottom))"></div>
@@ -1376,7 +1431,45 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
       </div>
 
       <div class="settings-section settings-danger-zone">
+        <div class="settings-section-title">Beta Program</div>
+        <div class="settings-note-card">
+          <div id="beta-build-label" class="settings-badge" style="margin-bottom:12px">Beta Build</div>
+          <div class="settings-meta-list">
+            <div class="settings-meta-row">
+              <div class="settings-meta-label">Beta Key</div>
+              <div class="settings-meta-value" id="beta-key-label">&#8212;</div>
+            </div>
+            <div class="settings-meta-row">
+              <div class="settings-meta-label">Terms</div>
+              <div class="settings-meta-value" id="beta-tos-status">&#8212;</div>
+            </div>
+            <div class="settings-meta-row">
+              <div class="settings-meta-label">Account</div>
+              <div class="settings-meta-value" id="beta-account-created">&#8212;</div>
+            </div>
+          </div>
+          <button class="settings-quiet-btn" style="margin-top:14px" onclick="openTosModal()">View Terms of Service</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Report an Issue</div>
+        <div class="settings-section-desc">Send a note with your current app context so beta issues are attached to your account for review.</div>
+        <textarea class="settings-textarea" id="feedback-note" placeholder="What happened? What were you trying to do?"></textarea>
+        <button class="settings-secondary-btn" style="margin-top:12px" onclick="submitFeedbackReport()">Send Beta Feedback</button>
+      </div>
+
+      <div class="settings-section" id="admin-section" style="display:none">
+        <div class="settings-section-title">Admin Diagnostics</div>
+        <div class="settings-section-desc">Private beta overview for tracking tester activity, invite status, and account-scoped error logs.</div>
+        <button class="settings-secondary-btn" onclick="loadAdminDiagnostics()">Refresh Diagnostics</button>
+        <div id="admin-overview" class="settings-admin-wrap" style="margin-top:12px"></div>
+      </div>
+
+      <div class="settings-section settings-danger-zone">
         <div class="settings-section-title">Account</div>
+        <div class="settings-section-desc">Beta testers can delete and recreate their account later with the same email and beta key if needed.</div>
+        <button class="settings-danger-btn" style="margin-bottom:12px" onclick="recreateBetaAccount()">Delete Beta Account</button>
         <button class="btn-signout" onclick="doLogout()">Sign Out</button>
       </div>
 
@@ -1473,6 +1566,32 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
       <div class="submit-duo-icon">📱</div>
       <div class="submit-duo-title">Approve Duo Push</div>
       <div class="submit-duo-text">Check your phone and approve the Duo notification from ACGME to continue. This screen will close automatically once approved.</div>
+    </div>
+  </div>
+</div>
+<div class="modal-shell" id="tos-modal" onclick="if(event.target===this)closeTosModal()">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-title">CaseFlow Terms of Service</div>
+      <button class="modal-close" type="button" onclick="closeTosModal()">&#x2715;</button>
+    </div>
+    <div class="modal-copy">
+      <p>CaseFlow is a limited beta tool for assisting surgical residents with case capture, review, and ACGME submission workflows. It is provided for internal testing and evaluation only.</p>
+      <h4>Use of the beta</h4>
+      <ul>
+        <li>You are responsible for verifying all case data before submission to ACGME.</li>
+        <li>You agree not to share your beta key or allow anyone else to use your account.</li>
+        <li>CaseFlow may log errors, submission failures, and beta feedback tied to your account for debugging and support.</li>
+      </ul>
+      <h4>Privacy and security</h4>
+      <ul>
+        <li>CaseFlow stores account and beta usage data needed to operate the service.</li>
+        <li>ACGME credential workflows and beta diagnostics may include operational metadata for troubleshooting.</li>
+        <li>Do not enter protected information that your institution does not permit in this beta environment.</li>
+      </ul>
+      <h4>No warranty</h4>
+      <p>This beta is provided as-is for testing. You should independently confirm any output, submission status, or educational tracking information before relying on it.</p>
+      <p>Terms version: <span id="tos-version-label">2026-03-31</span></p>
     </div>
   </div>
 </div>
@@ -1682,6 +1801,19 @@ function makeRec(onResult,onEnd){
 let caseData={description:'',procedures:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:''};
 /** Matches ADS Case ID input (bootstrap-maxlength on apps.acgme.org). */
 const CASE_ID_MAX_LEN=25;
+const APP_TOS_VERSION='2026-03-31';
+let currentUserMeta={
+  id:null,
+  email:'',
+  name:'',
+  isAdmin:false,
+  betaKeyLabel:'',
+  tosAcceptedAt:null,
+  tosVersion:APP_TOS_VERSION,
+  createdAt:null,
+  lastLoginAt:null,
+};
+let adminDiagnostics=null;
 let pendingQs=[],currentQ=-1;
 const QUESTIONS=[
   {key:'procedures',isEmpty:()=>caseData.procedures.length===0,question:"I couldn't identify the procedure. What was performed? Search by name or CPT code.",type:'cpt-search'},
@@ -2678,6 +2810,7 @@ async function submitCase(){
         showErrBanner('Case saved locally. ACGME submission failed:\n\n'+e.message+'\n\nYou can re-submit from Case History. Tap to dismiss.'+hint2);
       }
       console.warn('ACGME submit error:',e);
+      sendClientLog({source:'case.submit',severity:'error',message:e.message||'ACGME submit failed',context:{caseId:caseData.caseId||null}});
     }
 
     clearTimeout(waitHintTimer);
@@ -3115,6 +3248,7 @@ async function resubmitCase(){
         : '';
       showErrBanner('Re-submission failed. ACGME error:\n\n'+e.message+'\n\nCase status set to pending. Tap to dismiss.'+hint);
       console.warn('ACGME resubmit error:',e);
+      sendClientLog({source:'case.resubmit',severity:'error',message:e.message||'ACGME resubmit failed',context:{caseId:editingCase?.id||null}});
     }
 
     clearTimeout(waitHintTimer2);
@@ -3212,6 +3346,24 @@ function loadSettingsUI(){
     sub.textContent='Add your ACGME credentials to enable auto-submit';
     editBtn.style.display='none';
     setupBtn.style.display='block';
+  }
+
+  const betaKeyEl=document.getElementById('beta-key-label');
+  const betaTosEl=document.getElementById('beta-tos-status');
+  const betaCreatedEl=document.getElementById('beta-account-created');
+  const buildLabelEl=document.getElementById('beta-build-label');
+  const adminSection=document.getElementById('admin-section');
+  if(betaKeyEl) betaKeyEl.textContent=currentUserMeta.betaKeyLabel||'Pending';
+  if(betaTosEl) betaTosEl.textContent=currentUserMeta.tosAcceptedAt
+    ? `Accepted ${fmtStamp(currentUserMeta.tosAcceptedAt)}`
+    : `Not recorded (${currentUserMeta.tosVersion||APP_TOS_VERSION})`;
+  if(betaCreatedEl) betaCreatedEl.textContent=fmtStamp(currentUserMeta.createdAt);
+  if(buildLabelEl) buildLabelEl.textContent=`${(currentUserMeta.isAdmin?'Admin ':'')}Beta Build ${APP_TOS_VERSION}`;
+  if(adminSection) adminSection.style.display=currentUserMeta.isAdmin?'block':'none';
+  if(currentUserMeta.isAdmin && !adminDiagnostics){
+    loadAdminDiagnostics();
+  } else if(currentUserMeta.isAdmin){
+    renderAdminDiagnostics();
   }
 }
 function toggleAcgmeForm(){
@@ -3315,6 +3467,7 @@ async function saveAcgmeCredentials(){
     statusEl.textContent = e.message;
     statusEl.className = 'settings-cred-status err';
     clearBusyButtonState(document.querySelector('#s-acgme-form .settings-save-btn'), 'Save Credentials');
+    sendClientLog({source:'acgme.connect',severity:'error',message:e.message||'ACGME credential save failed'});
   }
 }
 
@@ -3348,6 +3501,7 @@ async function completeMfaLogin(){
     document.getElementById('s-cred-status').textContent = e.message;
     document.getElementById('s-cred-status').className = 'settings-cred-status err';
     clearBusyButtonState(mfaBtn, 'Verify Code');
+    sendClientLog({source:'acgme.mfa',severity:'error',message:e.message||'ACGME MFA verification failed'});
   }
 }
 
@@ -3604,6 +3758,7 @@ async function doLogin(){
   }catch(e){
     btn.textContent='Sign In';btn.classList.remove('busy');
     errEl.textContent='Network error — check your connection.';
+    sendClientLog({source:'auth.login',severity:'error',message:e.message||'Login request failed'});
   }
 }
 
@@ -3612,16 +3767,20 @@ async function doRegister(){
   const email=document.getElementById('r-email').value.trim();
   const pass=document.getElementById('r-pass').value;
   const pass2=document.getElementById('r-pass2').value;
+  const betaKey=document.getElementById('r-beta-key').value.trim().toUpperCase();
+  const tosAccepted=document.getElementById('r-tos').checked;
   const errEl=document.getElementById('r-err');
   errEl.textContent='';
   if(!name){errEl.textContent='Please enter your name.';return;}
   if(!email){errEl.textContent='Please enter your email.';return;}
   if(pass.length<8){errEl.textContent='Password must be at least 8 characters.';return;}
   if(pass!==pass2){errEl.textContent='Passwords do not match.';return;}
+  if(!betaKey){errEl.textContent='Please enter your beta key.';return;}
+  if(!tosAccepted){errEl.textContent='Please accept the Terms of Service.';return;}
   const btn=document.getElementById('r-btn');
   btn.textContent='Creating account…';btn.classList.add('busy');
   try{
-    const res=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pass})});
+    const res=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pass,betaKey,tosAccepted})});
     const data=await res.json();
     btn.textContent='Create Account';btn.classList.remove('busy');
     if(!res.ok){errEl.textContent=data.error||'Registration failed.';return;}
@@ -3629,6 +3788,7 @@ async function doRegister(){
   }catch(e){
     btn.textContent='Create Account';btn.classList.remove('busy');
     errEl.textContent='Network error — check your connection.';
+    sendClientLog({source:'auth.register',severity:'error',message:e.message||'Registration request failed'});
   }
 }
 
@@ -3638,13 +3798,24 @@ function _onAuthSuccess(data,pass){
   const name=data.user?.name||email.split('@')[0];
   localStorage.setItem('cf5-email',email);
   localStorage.setItem('cf5-name',name);
+  localStorage.setItem('cf5-user-meta',JSON.stringify(data.user||{}));
+  applyUserMeta({
+    email,
+    name,
+    isAdmin:!!data.user?.isAdmin,
+    betaKeyLabel:data.user?.betaKeyLabel||'',
+    tosAcceptedAt:data.user?.tosAcceptedAt||null,
+    tosVersion:data.user?.tosVersion||APP_TOS_VERSION,
+  });
   sessionPassword=pass;
   launchApp(name,email);
 }
 
-function doLogout(){
-  if(!confirm('Sign out?'))return;
+function doLogout(skipConfirm){
+  if(!skipConfirm && !confirm('Sign out?'))return;
   sessionPassword='';
+  adminDiagnostics=null;
+  currentUserMeta={id:null,email:'',name:'',isAdmin:false,betaKeyLabel:'',tosAcceptedAt:null,tosVersion:APP_TOS_VERSION,createdAt:null,lastLoginAt:null};
   localStorage.removeItem('cf5-token');
   localStorage.removeItem('cf5-name');
   localStorage.removeItem('cf5-vault');
@@ -3652,8 +3823,224 @@ function doLogout(){
   localStorage.removeItem('cf5-attendings');
   localStorage.removeItem('cf5-roles');
   localStorage.removeItem('cf5-patient-types');
+  localStorage.removeItem('cf5-user-meta');
   resetFlow();
   showPage('pg-login');
+}
+
+function openTosModal(){document.getElementById('tos-modal')?.classList.add('on')}
+function closeTosModal(){document.getElementById('tos-modal')?.classList.remove('on')}
+
+function fmtStamp(iso){
+  if(!iso) return '—';
+  try{
+    return new Date(iso).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+  }catch(_){return '—'}
+}
+
+function applyUserMeta(meta){
+  if(!meta) return;
+  currentUserMeta={
+    ...currentUserMeta,
+    ...meta,
+  };
+  const stored={
+    email:currentUserMeta.email,
+    name:currentUserMeta.name,
+    isAdmin:currentUserMeta.isAdmin,
+    betaKeyLabel:currentUserMeta.betaKeyLabel,
+    tosAcceptedAt:currentUserMeta.tosAcceptedAt,
+    tosVersion:currentUserMeta.tosVersion,
+    createdAt:currentUserMeta.createdAt,
+    lastLoginAt:currentUserMeta.lastLoginAt,
+  };
+  localStorage.setItem('cf5-user-meta',JSON.stringify(stored));
+  const tosVersionEl=document.getElementById('tos-version-label');
+  if(tosVersionEl) tosVersionEl.textContent=currentUserMeta.tosVersion||APP_TOS_VERSION;
+}
+
+async function syncUserMetaFromServer(){
+  if(!ACGME_BACKEND_URL) return null;
+  const token=localStorage.getItem('cf5-token');
+  if(!token) return null;
+  try{
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/auth/me`,{
+      headers:{'Authorization':`Bearer ${token}`}
+    });
+    if(!res.ok) throw new Error('Could not load account metadata.');
+    const payload=await res.json();
+    if(payload?.user){
+      applyUserMeta({
+        id:payload.user.id,
+        email:payload.user.email||'',
+        name:payload.user.name||'',
+        isAdmin:!!payload.user.isAdmin,
+        betaKeyLabel:payload.user.betaKeyLabel||'',
+        tosAcceptedAt:payload.user.tosAcceptedAt||null,
+        tosVersion:payload.user.tosVersion||APP_TOS_VERSION,
+        createdAt:payload.user.createdAt||null,
+        lastLoginAt:payload.user.lastLoginAt||null,
+      });
+    }
+    return payload;
+  }catch(e){
+    console.warn('syncUserMetaFromServer:',e.message);
+    return null;
+  }
+}
+
+async function sendClientLog(payload){
+  const token=localStorage.getItem('cf5-token');
+  if(!token||!ACGME_BACKEND_URL) return;
+  try{
+    await fetch(`${ACGME_BACKEND_URL}/api/logs/client`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':`Bearer ${token}`,
+        'X-Client-Route':typeof SM!=='undefined'&&SM.active?SM.active:'app',
+      },
+      body:JSON.stringify(payload),
+    });
+  }catch(e){
+    console.warn('sendClientLog:',e.message);
+  }
+}
+
+async function submitFeedbackReport(){
+  const noteEl=document.getElementById('feedback-note');
+  const note=(noteEl?.value||'').trim();
+  if(!note){ toast('Add a note before sending',''); return; }
+  const token=localStorage.getItem('cf5-token');
+  if(!token||!ACGME_BACKEND_URL){ toast('Sign in again to send feedback','err'); return; }
+  try{
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/logs/feedback`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+      body:JSON.stringify({
+        note,
+        context:{
+          pane:typeof SM!=='undefined'?SM.active:'app',
+          caseCount:cases.length,
+          acgmeConnected:!!localStorage.getItem('cf5-vault'),
+          acgmeSessionActive:acgmeServerSessionActive,
+        },
+      }),
+    });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error||'Could not send feedback.');
+    noteEl.value='';
+    toast('Feedback sent','ok');
+  }catch(e){
+    toast(e.message,'err');
+  }
+}
+
+async function recreateBetaAccount(){
+  if(!confirm('Delete this beta account? You will be signed out and can recreate it later with the same email and beta key.')) return;
+  const token=localStorage.getItem('cf5-token');
+  if(!token||!ACGME_BACKEND_URL){ toast('Sign in again to manage this account','err'); return; }
+  try{
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/auth/beta-account`,{
+      method:'DELETE',
+      headers:{'Authorization':`Bearer ${token}`},
+    });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error||'Could not delete beta account.');
+    alert(data.message||'Beta account deleted.');
+    doLogout(true);
+  }catch(e){
+    toast(e.message,'err');
+  }
+}
+
+function renderAdminDiagnostics(){
+  const host=document.getElementById('admin-overview');
+  if(!host) return;
+  if(!adminDiagnostics){
+    host.innerHTML='<div class="settings-admin-empty">No diagnostics loaded yet.</div>';
+    return;
+  }
+  const users=(adminDiagnostics.users||[]).map(user=>{
+    return `<div class="settings-admin-user">
+      <div class="settings-admin-user-head">
+        <div>
+          <div class="settings-admin-user-name">${escHtml(user.name||user.email||'Tester')}</div>
+          <div class="settings-admin-user-meta">${escHtml(user.email||'')}<br>Beta key: ${escHtml(user.beta_key_label||'—')}<br>Created: ${escHtml(fmtStamp(user.created_at))}<br>Last login: ${escHtml(fmtStamp(user.last_login_at))}</div>
+        </div>
+        <div class="settings-badge">${Number(user.error_count||0)} errors</div>
+      </div>
+      <div class="settings-admin-actions">
+        <button type="button" onclick="loadAdminUserLogs(${Number(user.id)})">View Logs</button>
+      </div>
+      <div id="admin-user-log-${Number(user.id)}"></div>
+    </div>`;
+  }).join('');
+
+  const invites=(adminDiagnostics.invites||[]).slice(0,20).map(invite=>{
+    const claimed=invite.claimed_email||'Unclaimed';
+    return `<div class="settings-admin-logline">
+      <div class="settings-admin-logmeta">${escHtml(invite.label||invite.invite_key||'Invite')} · ${invite.is_active?'active':'inactive'}</div>
+      <div class="settings-admin-logmsg">${escHtml(claimed)}${invite.used_at?` · used ${escHtml(fmtStamp(invite.used_at))}`:''}</div>
+    </div>`;
+  }).join('')||'<div class="settings-admin-empty">No invites found.</div>';
+
+  host.innerHTML = `
+    ${users||'<div class="settings-admin-empty">No beta users found.</div>'}
+    <div class="settings-note-card">
+      <div class="settings-section-title" style="margin-bottom:12px">Recent Invite Status</div>
+      <div class="settings-admin-logbox">${invites}</div>
+    </div>
+  `;
+}
+
+async function loadAdminDiagnostics(){
+  if(!currentUserMeta.isAdmin){ return; }
+  const host=document.getElementById('admin-overview');
+  if(host) host.innerHTML='<div class="settings-admin-empty">Loading diagnostics…</div>';
+  const token=localStorage.getItem('cf5-token');
+  if(!token||!ACGME_BACKEND_URL){ if(host) host.innerHTML='<div class="settings-admin-empty">Sign in again to load diagnostics.</div>'; return; }
+  try{
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/admin/overview`,{
+      headers:{'Authorization':`Bearer ${token}`}
+    });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error||'Could not load diagnostics.');
+    adminDiagnostics=data;
+    renderAdminDiagnostics();
+  }catch(e){
+    if(host) host.innerHTML=`<div class="settings-admin-empty">${escHtml(e.message)}</div>`;
+  }
+}
+
+async function loadAdminUserLogs(userId){
+  const target=document.getElementById(`admin-user-log-${userId}`);
+  if(!target) return;
+  target.innerHTML='<div class="settings-admin-logbox"><div class="settings-admin-empty">Loading logs…</div></div>';
+  const token=localStorage.getItem('cf5-token');
+  try{
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/admin/users/${userId}/logs`,{
+      headers:{'Authorization':`Bearer ${token}`}
+    });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error||'Could not load user logs.');
+    const errors=(data.errors||[]).map(row=>`
+      <div class="settings-admin-logline">
+        <div class="settings-admin-logmeta">${escHtml(row.source||'error')} · ${escHtml(row.severity||'error')} · ${escHtml(fmtStamp(row.created_at))}</div>
+        <div class="settings-admin-logmsg">${escHtml(row.message||'')}</div>
+      </div>`).join('')||'<div class="settings-admin-empty">No error logs for this user.</div>';
+    const activity=(data.activity||[]).slice(0,20).map(row=>`
+      <div class="settings-admin-logline">
+        <div class="settings-admin-logmeta">${escHtml(row.event_type||'activity')} · ${escHtml(fmtStamp(row.created_at))}</div>
+        <div class="settings-admin-logmsg">${escHtml(row.message||'')}</div>
+      </div>`).join('')||'<div class="settings-admin-empty">No activity yet.</div>';
+    target.innerHTML=`
+      <div class="settings-admin-logbox">${errors}</div>
+      <div class="settings-admin-logbox">${activity}</div>
+    `;
+  }catch(e){
+    target.innerHTML=`<div class="settings-admin-logbox"><div class="settings-admin-empty">${escHtml(e.message)}</div></div>`;
+  }
 }
 
 async function launchApp(name,email){
@@ -3670,6 +4057,7 @@ async function launchApp(name,email){
   await loadCasesFromDB();
   document.getElementById('hdr-n').textContent=cases.length;
   renderHistory();
+  await syncUserMetaFromServer();
   await syncAcgmeSettingsFromServer();
   const cachedSites      = JSON.parse(localStorage.getItem('cf5-sites')||'[]');
   const cachedAttendants = JSON.parse(localStorage.getItem('cf5-attendings')||'[]');
@@ -4282,6 +4670,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   const token=localStorage.getItem('cf5-token');
   const name=localStorage.getItem('cf5-name')||'';
   const email=localStorage.getItem('cf5-email')||'';
+  const storedMeta=JSON.parse(localStorage.getItem('cf5-user-meta')||'null');
+  if(storedMeta) applyUserMeta(storedMeta);
   if(token&&jwtValid(token)){
     launchApp(name,email);
   } else {
@@ -4297,6 +4687,25 @@ function toast(msg,type=''){const t=document.getElementById('toast');t.textConte
 function showErrBanner(msg,onClick){const b=document.getElementById('err-banner');document.getElementById('err-banner-text').textContent=msg;b.style.display='block';b.onclick=onClick?function(){onClick();closeErrBanner();}:closeErrBanner;}
 function closeErrBanner(){document.getElementById('err-banner').style.display='none';}
 if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}
+window.addEventListener('error',function(e){
+  sendClientLog({
+    source:'window.error',
+    severity:'error',
+    message:e.message||'Unhandled frontend error',
+    stack:e.error&&e.error.stack?e.error.stack:null,
+    context:{file:e.filename||null,line:e.lineno||null,column:e.colno||null}
+  });
+});
+window.addEventListener('unhandledrejection',function(e){
+  const reason=e.reason;
+  sendClientLog({
+    source:'window.unhandledrejection',
+    severity:'error',
+    message:reason&&reason.message?reason.message:String(reason||'Unhandled promise rejection'),
+    stack:reason&&reason.stack?reason.stack:null,
+    context:{pane:typeof SM!=='undefined'?SM.active:null}
+  });
+});
 
 /* ================================================================
    OrbRenderer — WebGL glowing orb (ReactBits port to vanilla JS)

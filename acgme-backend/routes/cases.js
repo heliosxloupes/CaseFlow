@@ -4,6 +4,7 @@ const { submitCase } = require('../services/acgmeService');
 const pw = require('../services/playwrightService');
 const sessionCache = require('../services/sessionCache');
 const db = require('../db');
+const { logActivity } = require('../services/logService');
 
 /** One retry after clearing in-memory ACGME cookie cache + forcing refresh (handles flaky / racey sessions). */
 function isRetryableAcgmeSessionError(err) {
@@ -79,6 +80,13 @@ router.post('/submit', async (req, res, next) => {
        VALUES ($1, $2, $3, $4, $5, 'success', NOW())`,
       [req.userId, procedureDate, procedureYear, selectedCodes, codeDescription]
     );
+    await logActivity({
+      userId: req.userId,
+      userEmail: req.userEmail,
+      eventType: 'case.submit.success',
+      message: 'Case submitted to ACGME',
+      context: { procedureDate, selectedCodes, codeDescription },
+    });
 
     res.json(result);
   } catch (err) {
@@ -152,6 +160,13 @@ router.post('/save', async (req, res, next) => {
         role, site, attending, patientType, caseYear, notes, JSON.stringify(procedures),
       ]
     );
+    await logActivity({
+      userId: req.userId,
+      userEmail: req.userEmail,
+      eventType: 'case.save.pending',
+      message: 'Case saved locally',
+      context: { procedureDate, selectedCodes, codeDescription },
+    });
 
     res.json({ success: true, id: rows[0]?.id });
   } catch (err) {

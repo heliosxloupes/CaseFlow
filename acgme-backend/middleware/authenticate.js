@@ -25,6 +25,7 @@ async function authenticate(req, res, next) {
     // Token already has a numeric userId (future flow)
     if (decoded.userId) {
       req.userId = decoded.userId;
+      req.userEmail = decoded.email || null;
       return next();
     }
 
@@ -35,10 +36,13 @@ async function authenticate(req, res, next) {
           `INSERT INTO users (email)
            VALUES ($1)
            ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
-           RETURNING id`,
+           RETURNING id, email, name, is_admin`,
           [decoded.email]
         );
         req.userId = rows[0].id;
+        req.userEmail = rows[0].email;
+        req.userName = rows[0].name || null;
+        req.isAdmin = !!rows[0].is_admin;
         return next();
       } catch (dbErr) {
         console.error('DB error in authenticate:', dbErr.message);
