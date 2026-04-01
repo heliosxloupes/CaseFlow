@@ -207,52 +207,69 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   min-height:100%;
   width:100%;
-  padding:24px;
+  padding:20px 24px 24px;
   position:relative;z-index:1;
 }
-.home-action-dock{
-  position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
-  width:min(92vw,480px);z-index:260;
-  display:flex;align-items:center;gap:10px;
-  padding:10px 12px;
-  background:linear-gradient(180deg,rgba(14,19,29,.88) 0%,rgba(10,14,21,.94) 100%);
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:24px;
-  box-shadow:0 22px 50px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.04);
-  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+.voice-screen.is-home-idle{justify-content:center;padding-top:12px;padding-bottom:138px}
+.voice-screen.is-home-idle .orb-wrap{margin-bottom:0;transform:translateY(-14px)}
+.voice-screen:not(.is-home-idle){justify-content:flex-start;padding-top:28px}
+.voice-screen:not(.is-home-idle) .orb-wrap{margin-bottom:20px}
+.floating-home-tools{
+  position:fixed;left:18px;bottom:26px;z-index:260;
+  display:flex;flex-direction:column;align-items:flex-start;gap:10px;
 }
-.home-dock-status{
-  flex:1;min-width:0;
-  display:flex;align-items:center;gap:10px;
-  padding:10px 12px;border-radius:18px;
-  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+.floating-home-menu{position:relative}
+.floating-home-trigger{
+  width:52px;height:52px;border-radius:999px;border:1px solid rgba(255,255,255,.10);
+  background:linear-gradient(180deg,rgba(17,21,30,.90) 0%,rgba(10,14,21,.96) 100%);
+  color:rgba(236,241,248,.92);box-shadow:0 18px 40px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.04);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:transform .18s ease, border-color .18s ease, background .18s ease;
 }
-.home-dock-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:rgba(255,255,255,.18)}
-.home-dock-dot.ok{background:#34d399;box-shadow:0 0 12px rgba(52,211,153,.4)}
-.home-dock-dot.warn{background:#fbbf24;box-shadow:0 0 10px rgba(251,191,36,.26)}
-.home-dock-copy{min-width:0}
-.home-dock-kicker{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(141,183,255,.72)}
-.home-dock-label{font-size:12px;color:rgba(232,237,244,.82);line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.home-dock-btn{
-  display:flex;align-items:center;justify-content:center;gap:7px;
-  min-width:54px;padding:12px 14px;border-radius:18px;
-  border:1px solid rgba(255,255,255,.08);
-  background:rgba(255,255,255,.028);color:var(--text2);
-  font-family:'Sora',sans-serif;font-size:12px;font-weight:700;cursor:pointer;
-  transition:transform .16s ease, background .16s ease, border-color .16s ease, color .16s ease;
+.floating-home-trigger:active{transform:scale(.97)}
+.floating-home-trigger svg{width:22px;height:22px;stroke:currentColor;stroke-width:2.2;fill:none;transition:transform .28s cubic-bezier(.2,.9,.2,1)}
+.floating-home-trigger.open{border-color:rgba(141,183,255,.22);background:linear-gradient(180deg,rgba(21,29,42,.94) 0%,rgba(13,19,29,.98) 100%)}
+.floating-home-trigger.open svg{transform:rotate(45deg)}
+.floating-home-actions{
+  position:absolute;left:0;bottom:64px;display:flex;flex-direction:column;align-items:flex-start;gap:10px;
+  opacity:0;transform:translateY(10px) scale(.96);pointer-events:none;filter:blur(8px);
+  transition:opacity .22s ease, transform .26s cubic-bezier(.2,.9,.2,1), filter .22s ease;
 }
-.home-dock-btn svg{width:15px;height:15px;stroke:currentColor;stroke-width:2;fill:none}
-.home-dock-btn:active{transform:scale(.98)}
-.home-dock-btn.primary{
-  background:linear-gradient(135deg,rgba(90,152,255,.18) 0%,rgba(79,142,247,.14) 100%);
-  color:var(--blue-soft);border-color:rgba(99,214,255,.18);
+.floating-home-menu.open .floating-home-actions{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;filter:blur(0)}
+.floating-home-action{
+  display:flex;align-items:center;gap:10px;min-width:154px;padding:11px 14px;border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(17,21,30,.88) 0%,rgba(10,14,21,.94) 100%);
+  color:rgba(232,237,244,.84);font-family:'Sora',sans-serif;font-size:12px;font-weight:700;cursor:pointer;
+  box-shadow:0 16px 34px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.03);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  transition:transform .18s ease, border-color .18s ease, color .18s ease;
 }
-.home-dock-btn.secondary{
-  color:rgba(214,221,233,.78)
+.floating-home-action svg{width:15px;height:15px;stroke:currentColor;stroke-width:2;fill:none}
+.floating-home-action:active{transform:scale(.985)}
+.floating-home-action.guide{color:var(--blue-soft);border-color:rgba(99,214,255,.18)}
+.floating-home-status{
+  display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,rgba(17,21,30,.88) 0%,rgba(10,14,21,.94) 100%);
+  color:rgba(218,225,235,.72);font-size:11px;font-weight:600;letter-spacing:.01em;
+  box-shadow:0 16px 34px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.03);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
 }
-.home-dock-btn.status-attn{
-  color:#f9d27c;border-color:rgba(251,191,36,.18);background:rgba(251,191,36,.06)
+.floating-home-status-dot{
+  position:relative;width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.24);flex-shrink:0;
 }
+.floating-home-status-dot::after{
+  content:"";position:absolute;inset:-4px;border-radius:999px;opacity:.36;animation:cfPing 1.8s ease-out infinite;background:currentColor;
+}
+.floating-home-status.online{color:#9df1c9}
+.floating-home-status.online .floating-home-status-dot{background:#34d399}
+.floating-home-status.offline{color:#f3a6a6}
+.floating-home-status.offline .floating-home-status-dot{background:#f87171}
+.floating-home-status.degraded{color:#f3d087}
+.floating-home-status.degraded .floating-home-status-dot{background:#fbbf24}
+.floating-home-status.maintenance{color:#96d8ff}
+.floating-home-status.maintenance .floating-home-status-dot{background:#4f8ef7}
+.floating-home-status-copy{white-space:nowrap}
 .onboard-shell{
   position:fixed;inset:0;z-index:9050;
   background:radial-gradient(circle at 50% 18%, rgba(79,142,247,.10) 0%, rgba(79,142,247,0) 24%), linear-gradient(180deg,rgba(4,7,12,.92) 0%,rgba(4,6,11,.97) 100%);
@@ -397,16 +414,21 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   0%,100%{transform:translate(-50%,-50%) translateY(0)}
   50%{transform:translate(-50%,-50%) translateY(-8px)}
 }
+@keyframes cfPing{
+  0%{transform:scale(.72);opacity:.42}
+  75%{transform:scale(1.9);opacity:0}
+  100%{transform:scale(1.9);opacity:0}
+}
 @media (max-width:920px){
   .onboard-card{grid-template-columns:1fr}
   .onboard-visual{min-height:300px}
 }
 @media (max-width:640px){
-  .home-action-dock{bottom:18px;width:min(94vw,94vw);padding:10px}
-  .home-dock-status{padding:10px 11px}
-  .home-dock-kicker{font-size:9px}
-  .home-dock-label{font-size:11px}
-  .home-dock-btn{padding:11px 12px;min-width:50px}
+  .voice-screen.is-home-idle{padding-bottom:134px}
+  .voice-screen.is-home-idle .orb-wrap{transform:translateY(-8px)}
+  .floating-home-tools{left:14px;bottom:20px}
+  .floating-home-action{min-width:148px}
+  .floating-home-status{padding:9px 11px;font-size:10px}
   .onboard-shell{padding:14px}
   .onboard-copy{padding:26px 22px 22px}
   .onboard-title{font-size:28px}
@@ -633,6 +655,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .hist-date-clear:active{color:#f87171}
 .hist-count{padding:10px 20px 2px;max-width:600px;margin:0 auto;font-size:12px;color:var(--text3)}
 .hist-wrap{position:relative;z-index:2;padding:8px 20px 100px;max-width:600px;margin:0 auto;touch-action:pan-y}
+#pn-history{padding-top:10px}
 .hist-item{background:var(--bg1);border:1px solid var(--line);border-radius:var(--rl);padding:16px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;cursor:pointer;transition:border-color .15s,background .15s;position:relative;z-index:1;touch-action:pan-y;-webkit-user-select:none;user-select:none;pointer-events:auto!important}
 .hist-item:active{background:var(--bg2);border-color:var(--blue-b)}
 .hprocs{font-size:14px;font-weight:500;margin-bottom:5px;line-height:1.4}
@@ -1533,21 +1556,29 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
         <button class="btn-go" id="go-btn" onclick="submitCase()">Submit to ACGME</button>
       </div>
     </div>
-    <div class="home-action-dock" id="home-action-dock" style="display:none">
-      <div class="home-dock-status" id="home-dock-status">
-        <div class="home-dock-dot" id="home-dock-dot"></div>
-        <div class="home-dock-copy">
-          <div class="home-dock-kicker">Quick Actions</div>
-          <div class="home-dock-label" id="home-dock-label">ACGME status loading...</div>
+    <div class="floating-home-tools" id="floating-home-tools" style="display:none">
+      <div class="floating-home-menu" id="floating-home-menu">
+        <button class="floating-home-trigger" id="floating-home-trigger" type="button" onclick="toggleFloatingHomeMenu()" aria-label="Open quick actions" aria-expanded="false">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+        </button>
+        <div class="floating-home-actions" id="floating-home-actions">
+          <button class="floating-home-action" type="button" onclick="openFloatingHomeTarget('milestones')">
+            <svg viewBox="0 0 24 24"><path d="M5 19V9"/><path d="M12 19V5"/><path d="M19 19v-7"/></svg>
+            <span>Milestones</span>
+          </button>
+          <button class="floating-home-action" type="button" onclick="openFloatingHomeTarget('settings')">
+            <svg viewBox="0 0 24 24"><path d="M12 3v3"/><path d="M12 18v3"/><path d="M3 12h3"/><path d="M18 12h3"/><path d="M5.64 5.64l2.12 2.12"/><path d="M16.24 16.24l2.12 2.12"/><path d="M5.64 18.36l2.12-2.12"/><path d="M16.24 7.76l2.12-2.12"/><circle cx="12" cy="12" r="3.2"/></svg>
+            <span>Settings</span>
+          </button>
+          <button class="floating-home-action guide" type="button" onclick="openFloatingHomeTarget('guide')">
+            <svg viewBox="0 0 24 24"><path d="M12 18h.01"/><path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 3-3 3"/></svg>
+            <span>How to Guide</span>
+          </button>
         </div>
       </div>
-      <button class="home-dock-btn primary" id="home-dock-acgme-btn" type="button" onclick="openAcgmeFromDock()">
-        <svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M3 12h18"/></svg>
-        <span id="home-dock-acgme-text">Connect</span>
-      </button>
-      <button class="home-dock-btn secondary" type="button" onclick="goTab('milestones')">
-        <svg viewBox="0 0 24 24"><path d="M5 19V9"/><path d="M12 19V5"/><path d="M19 19v-7"/></svg>
-        <span>Milestones</span>
+      <button class="floating-home-status offline" id="floating-home-status" type="button" onclick="goTab('settings')">
+        <span class="floating-home-status-dot"></span>
+        <span class="floating-home-status-copy" id="floating-home-status-copy">ACGME sync offline</span>
       </button>
     </div>
   </div>
@@ -2310,7 +2341,7 @@ function hideAnswerUI(){
   document.getElementById('srch-results-box').innerHTML='';
   if(fuOn)stopFuRec();
 }
-function hideAll(){stopProcessingBubble();hideAnswerUI();document.getElementById('cpt-found-box').classList.remove('show');document.getElementById('cpt-select-box').classList.remove('show');document.getElementById('add-more-box').classList.remove('show');document.getElementById('summary-card').classList.remove('show');document.getElementById('final-actions').classList.remove('show')}
+function hideAll(){stopProcessingBubble();hideAnswerUI();document.getElementById('cpt-found-box').classList.remove('show');document.getElementById('cpt-select-box').classList.remove('show');document.getElementById('add-more-box').classList.remove('show');document.getElementById('summary-card').classList.remove('show');document.getElementById('final-actions').classList.remove('show');updateHomeFloatingUi()}
 function showChips(opts){const el=document.getElementById('a-chips');el.innerHTML=opts.map(o=>`<div class="chip-opt" onclick="chipPick('${o}',this)">${o}</div>`).join('');el.classList.add('show');}
 /** Site / attending: searchable combo (same data as ACGME profile lists) */
 function showFlowCombo(which){
@@ -3046,9 +3077,7 @@ async function submitCase(){
   const kickerEl=document.getElementById('submit-kicker');
   const duoEl=document.getElementById('submit-duo');
 
-  document.getElementById('cpt-found-box').classList.remove('show');
-  document.getElementById('summary-card').classList.remove('show');
-  document.getElementById('final-actions').classList.remove('show');
+  clearHomeFlowPanels();
 
   btn.disabled=true;
   resetSubmitOverlayUI();
@@ -3120,6 +3149,7 @@ async function submitCase(){
     document.body.classList.remove('submit-active');
     resetSubmitOverlayUI();
     restoreOrbFromSubmitOverlay();
+    clearHomeFlowPanels();
     btn.disabled=false;
   }
   resetFlow();
@@ -3136,14 +3166,10 @@ function resetFlow(){
   stopMic();
   savedMicStream=null;
   txFinal='';txInt='';fuFinal='';fuInt='';addMoreFinal='';addMoreInt='';
-  stopProcessingBubble();
   caseData={description:'',procedures:[],alternatives:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:''};
   pendingQs=[];currentQ=-1;
-  orbState='idle';hideAll();
-  document.getElementById('cpt-found-box').innerHTML='';
-  document.getElementById('cpt-select-box').innerHTML='';
-  document.getElementById('add-more-box').innerHTML='';
-  document.getElementById('summary-card').innerHTML='';
+  orbState='idle';
+  clearHomeFlowPanels();
   const orbWrap = document.getElementById('orb-wrap');
   orbWrap.classList.remove('inactive');
   orbWrap.style.display='';
@@ -3644,7 +3670,7 @@ function loadSettingsUI(){
   } else if(currentUserMeta.isAdmin){
     renderAdminDiagnostics();
   }
-  updateHomeActionDock();
+  updateHomeFloatingUi();
 }
 function toggleAcgmeForm(){
   const form=document.getElementById('s-acgme-form');
@@ -4271,43 +4297,111 @@ function changeOnboardingStep(delta){
   renderOnboarding();
 }
 
-function updateHomeActionDock(){
-  const dock=document.getElementById('home-action-dock');
+function isHomeOrbIdleState(){
   const pane=document.getElementById('pn-log');
-  if(!dock || !pane) return;
-  const visible=!!pane.classList.contains('on');
-  dock.style.display=visible?'flex':'none';
-  if(!visible) return;
-  const dot=document.getElementById('home-dock-dot');
-  const label=document.getElementById('home-dock-label');
-  const actionBtn=document.getElementById('home-dock-acgme-btn');
-  const actionText=document.getElementById('home-dock-acgme-text');
-  const hasVault=!!localStorage.getItem('cf5-vault');
-  let statusClass='warn';
-  let statusText='Connect ACGME in Settings to enable auto-submit.';
-  let actionLabel='Connect';
-  if(hasVault && acgmeServerSessionActive!==false){
-    statusClass='ok';
-    statusText='ACGME connected. You can log a case and submit when ready.';
-    actionLabel='Status';
-  } else if(hasVault && acgmeServerSessionActive===false){
-    statusClass='warn';
-    statusText='ACGME needs attention. Reconnect before your next submission.';
-    actionLabel='Reconnect';
-  }
-  if(dot) dot.className=`home-dock-dot ${statusClass}`;
-  if(label) label.textContent=statusText;
-  if(actionBtn) actionBtn.className=`home-dock-btn primary ${statusClass==='warn'?'status-attn':''}`;
-  if(actionText) actionText.textContent=actionLabel;
+  const orbWrap=document.getElementById('orb-wrap');
+  if(!pane?.classList.contains('on')) return false;
+  if(!orbWrap || orbWrap.style.display==='none') return false;
+  if(document.body.classList.contains('submit-active')) return false;
+  const activeSelectors=[
+    '#q-bubble.show',
+    '#a-chips.show',
+    '#a-combo-wrap.show',
+    '#a-text-wrap.show',
+    '#a-voice-row.show',
+    '#cpt-search-box.show',
+    '#cpt-found-box.show',
+    '#cpt-select-box.show',
+    '#add-more-box.show',
+    '#summary-card.show',
+    '#final-actions.show'
+  ];
+  return !activeSelectors.some(sel=>document.querySelector(sel));
 }
 
-function openAcgmeFromDock(){
-  goTab('settings');
-  const needsForm=!localStorage.getItem('cf5-vault') || acgmeServerSessionActive===false;
-  if(needsForm && !document.getElementById('s-acgme-form')?.classList.contains('open')){
-    toggleAcgmeForm();
+function closeFloatingHomeMenu(){
+  const menu=document.getElementById('floating-home-menu');
+  const trigger=document.getElementById('floating-home-trigger');
+  if(menu) menu.classList.remove('open');
+  if(trigger){
+    trigger.classList.remove('open');
+    trigger.setAttribute('aria-expanded','false');
   }
-  if(needsForm) document.getElementById('s-acgme-user')?.focus();
+}
+
+function toggleFloatingHomeMenu(){
+  const menu=document.getElementById('floating-home-menu');
+  const trigger=document.getElementById('floating-home-trigger');
+  if(!menu || !trigger) return;
+  const open=!menu.classList.contains('open');
+  menu.classList.toggle('open',open);
+  trigger.classList.toggle('open',open);
+  trigger.setAttribute('aria-expanded',String(open));
+}
+
+function openFloatingHomeTarget(target){
+  closeFloatingHomeMenu();
+  if(target==='milestones'){ goTab('milestones'); return; }
+  if(target==='settings'){ goTab('settings'); return; }
+  if(target==='guide'){ openQuickGuide(); }
+}
+
+function updateHomeFloatingUi(){
+  const tools=document.getElementById('floating-home-tools');
+  const status=document.getElementById('floating-home-status');
+  const statusCopy=document.getElementById('floating-home-status-copy');
+  const voiceScreen=document.getElementById('voice-screen');
+  const visible=isHomeOrbIdleState();
+  if(voiceScreen) voiceScreen.classList.toggle('is-home-idle',visible);
+  if(!tools || !status || !statusCopy) return;
+  tools.style.display=visible?'flex':'none';
+  if(!visible){
+    closeFloatingHomeMenu();
+    return;
+  }
+  const hasVault=!!localStorage.getItem('cf5-vault');
+  let statusClass='offline';
+  let text='ACGME sync offline';
+  if(hasVault && acgmeServerSessionActive!==false){
+    statusClass='online';
+    text='ACGME sync live';
+  } else if(hasVault && acgmeServerSessionActive===false){
+    statusClass='degraded';
+    text='ACGME reconnect needed';
+  } else if(!hasVault){
+    statusClass='offline';
+    text='ACGME not connected';
+  }
+  status.className=`floating-home-status ${statusClass}`;
+  statusCopy.textContent=text;
+}
+
+function clearHomeFlowPanels(){
+  hideAll();
+  document.getElementById('cpt-found-box').innerHTML='';
+  document.getElementById('cpt-select-box').innerHTML='';
+  document.getElementById('add-more-box').innerHTML='';
+  document.getElementById('summary-card').innerHTML='';
+  document.getElementById('cpt-search-input').value='';
+  document.getElementById('srch-results-box').innerHTML='';
+  const combo=document.getElementById('a-combo-wrap');
+  if(combo){ combo.classList.remove('show'); combo.innerHTML=''; }
+  setStateLabel('');
+  updateHomeFloatingUi();
+}
+
+function initHomeUiObserver(){
+  const ids=['pn-log','orb-wrap','q-bubble','a-chips','a-combo-wrap','a-text-wrap','a-voice-row','cpt-search-box','cpt-found-box','cpt-select-box','add-more-box','summary-card','final-actions','submit-overlay','voice-screen'];
+  const nodes=ids.map(id=>document.getElementById(id)).filter(Boolean);
+  if(!nodes.length || typeof MutationObserver==='undefined') return;
+  const observer=new MutationObserver(()=>updateHomeFloatingUi());
+  nodes.forEach(node=>observer.observe(node,{attributes:true,attributeFilter:['class','style']}));
+  document.addEventListener('pointerdown',(event)=>{
+    const menu=document.getElementById('floating-home-menu');
+    const tools=document.getElementById('floating-home-tools');
+    if(!menu?.classList.contains('open')) return;
+    if(tools && !tools.contains(event.target)) closeFloatingHomeMenu();
+  });
 }
 
 function openQuickGuide(){
@@ -4566,7 +4660,7 @@ async function launchApp(name,email){
   if(localStorage.getItem('cf5-vault') && ACGME_BACKEND_URL && localStorage.getItem('cf5-token')){
     await fetchAcgmeProfile();
   }
-  updateHomeActionDock();
+  updateHomeFloatingUi();
   if(shouldShowOnboarding(email)){
     requestAnimationFrame(()=>setTimeout(()=>openOnboarding(false),220));
   }
@@ -5051,10 +5145,11 @@ function goTab(n){
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
   const pane=document.getElementById('pn-'+n);if(pane)pane.classList.add('on');
   if(typeof SM!=='undefined')SM.setActive(n);
+  if(pane && n==='history') pane.scrollTop=0;
   if(n==='history')renderHistory();
   if(n==='milestones')loadMilestonesUI();
   if(n==='settings')loadSettingsUI();
-  updateHomeActionDock();
+  updateHomeFloatingUi();
 }
 /** Header “N cases” chip — switches to History and scrolls to the list */
 function chipCasesClick(){
@@ -5158,6 +5253,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   SM.init();
   initPointerBindings();
   initTouchDebug();
+  initHomeUiObserver();
   startOrb();
   document.addEventListener('keydown',(event)=>{
     if(event.key==='Escape' && document.getElementById('onboard-shell')?.classList.contains('on')){
@@ -5186,6 +5282,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   } else {
     localStorage.removeItem('cf5-token');
     if(email) document.getElementById('l-email').value=email;
+    updateHomeFloatingUi();
   }
 });
 function isoToday(){return new Date().toISOString().split('T')[0]}
