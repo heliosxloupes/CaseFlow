@@ -535,10 +535,11 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   border:1px solid var(--line2);
   border-radius:var(--rl);
   padding:4px 4px 4px 16px;
-  display:flex;flex-direction:column;
+  display:none;flex-direction:column;
   margin-bottom:20px;
   transition:border-color .2s;
 }
+.voice-screen.is-home-idle .text-input-box{display:flex}
 .text-input-box:focus-within{border-color:rgba(79,142,247,.35)}
 .text-input-textarea{
   width:100%;resize:none;border:none;background:transparent;
@@ -2385,7 +2386,6 @@ async function submitTextInput(){
   ta.value='';ta.style.height='auto';
   document.getElementById('text-input-send').disabled=true;
   document.getElementById('orb-wrap').style.display='none';
-  document.getElementById('text-input-box').style.display='none';
   document.querySelector('.voice-screen')?.classList.add('is-asking');
   orbState='thinking';
   showProcessingBubble();
@@ -3440,9 +3440,6 @@ function resetFlow(){
   orbState='idle';
   clearHomeFlowPanels();
   document.querySelector('.voice-screen')?.classList.remove('is-asking');
-  // Restore text input box
-  const textInputBox=document.getElementById('text-input-box');
-  if(textInputBox) textInputBox.style.display='';
   hideTextInput();
   const orbWrap = document.getElementById('orb-wrap');
   orbWrap.classList.remove('inactive');
@@ -4643,7 +4640,7 @@ function updateHomeFloatingUi(){
     voiceScreen.classList.toggle('is-home-orb-active',orbVisible && !visible);
   }
   if(bubble) bubble.classList.toggle('home-prompt-slot',orbVisible);
-  if(!visible) hideTextInput();
+  if(!visible) hideTextInput(); // resets textarea value + button, CSS handles visibility
   if(!tools || !status || !statusCopy) return;
   tools.classList.toggle('is-visible',visible);
   if(!visible){
