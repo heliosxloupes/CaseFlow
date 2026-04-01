@@ -278,6 +278,32 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .floating-home-status.maintenance{color:#96d8ff}
 .floating-home-status.maintenance .floating-home-status-dot{background:#4f8ef7}
 .floating-home-status-copy{white-space:nowrap}
+@keyframes acgmeRingPulse{0%{transform:scale(1);opacity:.55}100%{transform:scale(2.1);opacity:0}}
+@keyframes acgmeShake{0%,100%{transform:translateX(0)}15%{transform:translateX(-5px)}30%{transform:translateX(5px)}45%{transform:translateX(-3px)}60%{transform:translateX(3px)}75%{transform:translateX(-2px)}90%{transform:translateX(2px)}}
+.floating-home-status-wrap{position:relative}
+.floating-home-status.needs-attention::before{
+  content:"";position:absolute;inset:-5px;border-radius:999px;pointer-events:none;
+  animation:acgmeRingPulse 1.7s ease-out infinite;
+}
+.floating-home-status.needs-attention.offline::before{background:rgba(248,113,113,.5)}
+.floating-home-status.needs-attention.degraded::before{background:rgba(251,191,36,.4)}
+.floating-home-status.shake{animation:acgmeShake .52s ease-out}
+.acgme-nudge{
+  position:absolute;bottom:calc(100% + 12px);left:0;z-index:270;
+  background:linear-gradient(135deg,rgba(17,21,30,.97) 0%,rgba(10,14,21,.99) 100%);
+  border:1px solid rgba(255,255,255,.11);border-radius:10px;
+  padding:9px 13px;font-size:12px;font-weight:600;
+  color:rgba(218,225,235,.92);white-space:nowrap;
+  box-shadow:0 8px 24px rgba(0,0,0,.45);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  opacity:0;transform:translateY(5px);pointer-events:none;
+  transition:opacity .2s ease,transform .2s ease;
+}
+.acgme-nudge.show{opacity:1;transform:translateY(0);pointer-events:auto;cursor:pointer}
+.acgme-nudge::after{
+  content:"";position:absolute;top:100%;left:16px;
+  border:6px solid transparent;border-top-color:rgba(17,21,30,.97);
+}
 .onboard-shell{
   position:fixed;inset:0;z-index:9050;
   background:radial-gradient(circle at 50% 18%, rgba(79,142,247,.10) 0%, rgba(79,142,247,0) 24%), linear-gradient(180deg,rgba(4,7,12,.92) 0%,rgba(4,6,11,.97) 100%);
@@ -1754,10 +1780,13 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
           </button>
         </div>
       </div>
-      <button class="floating-home-status offline" id="floating-home-status" type="button" onclick="goTab('settings')">
-        <span class="floating-home-status-dot"></span>
-        <span class="floating-home-status-copy" id="floating-home-status-copy">ACGME sync offline</span>
-      </button>
+      <div class="floating-home-status-wrap">
+        <div class="acgme-nudge" id="acgme-nudge" onclick="dismissAcgmeNudge();goTab('settings')">Tap to connect ACGME →</div>
+        <button class="floating-home-status offline" id="floating-home-status" type="button" onclick="dismissAcgmeNudge();goTab('settings')">
+          <span class="floating-home-status-dot"></span>
+          <span class="floating-home-status-copy" id="floating-home-status-copy">ACGME sync offline</span>
+        </button>
+      </div>
     </div>
   </div>
   <div class="pane" id="pn-history">
@@ -4661,8 +4690,46 @@ function updateHomeFloatingUi(){
     statusClass='offline';
     text='ACGME not connected';
   }
+  const needsAttention = statusClass !== 'online';
+  const wasAttention = status.classList.contains('needs-attention');
   status.className=`floating-home-status ${statusClass}`;
   statusCopy.textContent=text;
+  // Nudge copy
+  const nudgeEl=document.getElementById('acgme-nudge');
+  if(nudgeEl) nudgeEl.textContent = statusClass==='degraded' ? 'Tap to reconnect ACGME →' : 'Tap to connect ACGME →';
+  if(needsAttention){
+    status.classList.add('needs-attention');
+    if(!wasAttention){
+      // Shake on entering non-online state
+      status.classList.remove('shake');
+      void status.offsetWidth;
+      status.classList.add('shake');
+      status.addEventListener('animationend',()=>status.classList.remove('shake'),{once:true});
+      // Show nudge after 1.5s if not already dismissed this session
+      if(!sessionStorage.getItem('cf-acgme-nudge-dismissed')){
+        clearTimeout(window._acgmeNudgeTimer);
+        window._acgmeNudgeTimer=setTimeout(showAcgmeNudge,1500);
+      }
+    }
+  } else {
+    status.classList.remove('needs-attention');
+    dismissAcgmeNudge(true);
+  }
+}
+
+function showAcgmeNudge(){
+  const nudge=document.getElementById('acgme-nudge');
+  if(!nudge||nudge.classList.contains('show')) return;
+  nudge.classList.add('show');
+  clearTimeout(window._acgmeNudgeTimer);
+  window._acgmeNudgeTimer=setTimeout(()=>dismissAcgmeNudge(true),6000);
+}
+
+function dismissAcgmeNudge(auto=false){
+  const nudge=document.getElementById('acgme-nudge');
+  if(nudge) nudge.classList.remove('show');
+  clearTimeout(window._acgmeNudgeTimer);
+  if(!auto) sessionStorage.setItem('cf-acgme-nudge-dismissed','1');
 }
 
 function clearHomeFlowPanels(){
