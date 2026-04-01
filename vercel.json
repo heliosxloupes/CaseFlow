@@ -1,5 +1,8 @@
 {
   "functions": {
+    "api/code-lookup.js": {
+      "maxDuration": 20
+    },
     "api/submit-acgme.js": {
       "maxDuration": 300
     },

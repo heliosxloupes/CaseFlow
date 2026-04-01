@@ -817,6 +817,115 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .settings-admin-empty{font-size:12px;color:var(--text3);line-height:1.6}
 .btn-signout{width:100%;padding:13px;background:transparent;border:1px solid var(--line2);border-radius:var(--r);color:var(--text2);font-family:'Sora',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:border-color .15s,color .15s}
 .btn-signout:active{border-color:#f87171;color:#f87171}
+/* Code Lookup */
+.lookup-wrap{padding:0 0 110px;max-width:640px;margin:0 auto;display:flex;flex-direction:column;min-height:100%}
+.lookup-hero{
+  padding:32px 24px 24px;
+  background:
+    radial-gradient(circle at 80% 0%, rgba(79,142,247,.1) 0%, transparent 55%),
+    radial-gradient(circle at 10% 100%, rgba(99,214,255,.07) 0%, transparent 45%);
+  border-bottom:1px solid var(--line);
+  flex-shrink:0;
+}
+.lookup-hero-eyebrow{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);margin-bottom:10px}
+.lookup-hero-title{font-size:26px;font-weight:700;letter-spacing:-.04em;color:var(--text);line-height:1.1;margin-bottom:6px}
+.lookup-hero-sub{font-size:13px;color:var(--text2);line-height:1.5;max-width:34ch}
+.lookup-search-block{padding:20px 20px 0;flex-shrink:0}
+.lookup-mode-row{display:flex;gap:6px;margin-bottom:14px}
+.lookup-mode-btn{
+  padding:5px 14px;border-radius:20px;border:1px solid var(--line2);
+  background:transparent;color:var(--text2);font-size:12px;font-weight:600;
+  letter-spacing:.04em;cursor:pointer;transition:all .15s;font-family:inherit;
+}
+.lookup-mode-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.lookup-input-row{
+  display:flex;gap:10px;align-items:center;
+  background:var(--bg1);border:1px solid var(--line2);border-radius:var(--rl);
+  padding:4px 4px 4px 16px;transition:border-color .2s;
+}
+.lookup-input-row:focus-within{border-color:rgba(79,142,247,.4)}
+.lookup-input{
+  flex:1;background:transparent;border:none;outline:none;
+  font-size:15px;color:var(--text);font-family:inherit;
+  padding:10px 0;min-height:44px;
+}
+.lookup-input::placeholder{color:var(--text3)}
+.lookup-go-btn{
+  width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;flex-shrink:0;
+  background:var(--blue);display:flex;align-items:center;justify-content:center;
+  transition:background .15s,transform .15s,opacity .15s;
+}
+.lookup-go-btn:hover{background:#3a7ef6}
+.lookup-go-btn:active{transform:scale(.92)}
+.lookup-go-btn:disabled{opacity:.4;cursor:default;transform:none}
+.lookup-go-btn svg{width:16px;height:16px;stroke:#fff;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.lookup-body{flex:1;padding:20px 20px 0}
+/* Loading skeleton */
+.lookup-loading{display:flex;flex-direction:column;gap:12px}
+.lookup-skel{
+  height:80px;border-radius:var(--r);
+  background:linear-gradient(90deg,var(--bg1) 25%,var(--bg2) 50%,var(--bg1) 75%);
+  background-size:200% 100%;
+  animation:lookupShimmer 1.4s ease infinite;
+}
+.lookup-skel:nth-child(2){height:68px;opacity:.7}
+.lookup-skel:nth-child(3){height:68px;opacity:.45}
+@keyframes lookupShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* Results */
+.lookup-results-list{display:flex;flex-direction:column;gap:10px}
+.lookup-result-card{
+  background:var(--bg1);border:1px solid var(--line);border-radius:var(--r);
+  padding:16px;transition:border-color .15s;
+}
+.lookup-result-card:hover{border-color:var(--line2)}
+.lookup-result-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:8px}
+.lookup-result-code{
+  font-size:13px;font-weight:700;letter-spacing:.04em;color:var(--blue);
+  background:rgba(79,142,247,.1);border-radius:6px;padding:3px 8px;
+  white-space:nowrap;flex-shrink:0;margin-top:1px;
+}
+.lookup-result-system{
+  font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:3px;
+}
+.lookup-result-paraphrase{font-size:14px;font-weight:500;color:var(--text);line-height:1.35}
+.lookup-result-meta{display:flex;align-items:center;gap:8px}
+.lookup-result-rationale{font-size:12px;color:var(--text2);line-height:1.4;flex:1}
+.lookup-conf{
+  font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  padding:2px 7px;border-radius:10px;white-space:nowrap;flex-shrink:0;
+}
+.lookup-conf.high{background:rgba(52,211,153,.12);color:#34d399}
+.lookup-conf.medium{background:rgba(251,191,36,.12);color:#f9bc2a}
+.lookup-conf.low{background:rgba(248,113,113,.1);color:#f87171}
+/* States */
+.lookup-clarify{
+  background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.18);
+  border-radius:var(--r);padding:14px 16px;margin-bottom:14px;
+}
+.lookup-clarify-label{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#f9bc2a;margin-bottom:4px}
+.lookup-clarify-text{font-size:13px;color:var(--text2);line-height:1.5}
+.lookup-disclaimer{
+  background:rgba(79,142,247,.05);border:1px solid rgba(79,142,247,.12);
+  border-radius:var(--r);padding:12px 14px;margin-top:16px;
+  display:flex;gap:10px;align-items:flex-start;
+}
+.lookup-disclaimer-icon{flex-shrink:0;width:14px;height:14px;margin-top:1px;opacity:.5}
+.lookup-disclaimer-text{font-size:11px;color:var(--text3);line-height:1.55}
+.lookup-empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:48px 24px;gap:12px;color:var(--text3);
+}
+.lookup-empty-icon{width:36px;height:36px;opacity:.3}
+.lookup-empty-title{font-size:15px;font-weight:600;color:var(--text2)}
+.lookup-empty-sub{font-size:13px;line-height:1.5;max-width:28ch}
+.lookup-hint-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;justify-content:center}
+.lookup-hint-pill{
+  font-size:11px;padding:4px 11px;border-radius:20px;
+  background:var(--bg2);border:1px solid var(--line);color:var(--text2);
+  cursor:pointer;transition:border-color .15s,color .15s;
+}
+.lookup-hint-pill:hover{border-color:var(--blue);color:var(--blue)}
 /* Milestones */
 .mile-wrap{padding:20px 20px 110px;max-width:640px;margin:0 auto;position:relative;z-index:2}
 .mile-shell{display:flex;flex-direction:column;gap:16px}
@@ -1633,6 +1742,10 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
             <svg viewBox="0 0 24 24"><path d="M12 3v3"/><path d="M12 18v3"/><path d="M3 12h3"/><path d="M18 12h3"/><path d="M5.64 5.64l2.12 2.12"/><path d="M16.24 16.24l2.12 2.12"/><path d="M5.64 18.36l2.12-2.12"/><path d="M16.24 7.76l2.12-2.12"/><circle cx="12" cy="12" r="3.2"/></svg>
             <span>Settings</span>
           </button>
+          <button class="floating-home-action" type="button" onclick="openFloatingHomeTarget('lookup')" style="color:var(--cyan-soft);border-color:rgba(99,214,255,.18)">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/><path d="M11 8v6"/><path d="M8 11h6"/></svg>
+            <span>Code Lookup</span>
+          </button>
           <button class="floating-home-action guide" type="button" onclick="openFloatingHomeTarget('guide')">
             <svg viewBox="0 0 24 24"><path d="M12 18h.01"/><path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 3-3 3"/></svg>
             <span>How to Guide</span>
@@ -1670,6 +1783,47 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
   <div class="pane" id="pn-milestones">
     <div class="mile-wrap">
       <div class="mile-shell" id="mile-shell"></div>
+    </div>
+  </div>
+
+  <div class="pane" id="pn-lookup">
+    <div class="lookup-wrap">
+      <div class="lookup-hero">
+        <div class="lookup-hero-eyebrow">Code Lookup</div>
+        <div class="lookup-hero-title">CPT &amp; ICD&#8209;10</div>
+        <div class="lookup-hero-sub">Educational reference for procedures and diagnoses. Search by name, code, or plain language.</div>
+      </div>
+      <div class="lookup-search-block">
+        <div class="lookup-mode-row">
+          <button class="lookup-mode-btn active" data-mode="auto" onclick="setLookupMode('auto',this)">Auto</button>
+          <button class="lookup-mode-btn" data-mode="cpt" onclick="setLookupMode('cpt',this)">CPT</button>
+          <button class="lookup-mode-btn" data-mode="icd10" onclick="setLookupMode('icd10',this)">ICD&#8209;10</button>
+        </div>
+        <div class="lookup-input-row">
+          <input class="lookup-input" id="lookup-input" placeholder="rhinoplasty, carpal tunnel release, N65.0…" autocomplete="off" spellcheck="false"
+            oninput="onLookupInput()" onkeydown="if(event.key==='Enter')runLookup()">
+          <button class="lookup-go-btn" id="lookup-go-btn" disabled onclick="runLookup()" aria-label="Search">
+            <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="lookup-body" id="lookup-body">
+        <!-- empty state -->
+        <div class="lookup-empty" id="lookup-empty">
+          <svg class="lookup-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <div class="lookup-empty-title">Search any code</div>
+          <div class="lookup-empty-sub">Try a procedure name, diagnosis, or direct code number</div>
+          <div class="lookup-hint-pills">
+            <span class="lookup-hint-pill" onclick="setLookupQuery('rhinoplasty')">rhinoplasty</span>
+            <span class="lookup-hint-pill" onclick="setLookupQuery('carpal tunnel release')">carpal tunnel</span>
+            <span class="lookup-hint-pill" onclick="setLookupQuery('breast augmentation')">breast augmentation</span>
+            <span class="lookup-hint-pill" onclick="setLookupQuery('trigger finger')">trigger finger</span>
+            <span class="lookup-hint-pill" onclick="setLookupQuery('N65.0')">N65.0</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1827,6 +1981,12 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
         <button class="sm-nav-btn" onclick="smNavigate('settings')" type="button">
           <span class="sm-nav-num">04</span>
           <span class="sm-nav-label">Settings</span>
+        </button>
+      </li>
+      <li class="sm-nav-item" id="sm-item-lookup">
+        <button class="sm-nav-btn" onclick="smNavigate('lookup')" type="button">
+          <span class="sm-nav-num">05</span>
+          <span class="sm-nav-label">Code Lookup</span>
         </button>
       </li>
     </ul>
@@ -4466,6 +4626,7 @@ function openFloatingHomeTarget(target){
   closeFloatingHomeMenu();
   if(target==='milestones'){ goTab('milestones'); return; }
   if(target==='settings'){ goTab('settings'); return; }
+  if(target==='lookup'){ goTab('lookup'); return; }
   if(target==='guide'){ openQuickGuide(); }
 }
 
@@ -5279,6 +5440,7 @@ function goTab(n){
   if(n==='history')renderHistory();
   if(n==='milestones')loadMilestonesUI();
   if(n==='settings')loadSettingsUI();
+  if(n==='lookup')initLookupPane();
   updateHomeFloatingUi();
 }
 /** Header “N cases” chip — switches to History and scrolls to the list */
@@ -6228,6 +6390,126 @@ function smToggle()       { SM.toggle(); }
 function smClose()        { SM.close(); }
 function smNavigate(tab)  { SM.navigate(tab); }
 function goHome()         { try{ SM.close(); }catch(_){} goTab('log'); resetFlow(); if(typeof SM!=='undefined')SM.setActive('log'); }
+
+/* ── CODE LOOKUP ─────────────────────────────────────────────────── */
+let lookupMode='auto';
+let lookupActive=false;
+
+function initLookupPane(){
+  // Focus input when navigating to pane
+  setTimeout(()=>document.getElementById('lookup-input')?.focus(),160);
+}
+
+function setLookupMode(mode, btn){
+  lookupMode=mode;
+  document.querySelectorAll('.lookup-mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function onLookupInput(){
+  const val=document.getElementById('lookup-input')?.value.trim()||'';
+  const btn=document.getElementById('lookup-go-btn');
+  if(btn) btn.disabled=!val;
+}
+
+function setLookupQuery(q){
+  const input=document.getElementById('lookup-input');
+  if(!input) return;
+  input.value=q;
+  onLookupInput();
+  runLookup();
+}
+
+function runLookup(){
+  const query=(document.getElementById('lookup-input')?.value||'').trim();
+  if(!query||lookupActive) return;
+  lookupActive=true;
+  const body=document.getElementById('lookup-body');
+  if(!body) return;
+  // Show shimmer skeleton
+  body.innerHTML=`<div class="lookup-loading">
+    <div class="lookup-skel"></div>
+    <div class="lookup-skel"></div>
+    <div class="lookup-skel"></div>
+  </div>`;
+
+  const token=localStorage.getItem('cf5-jwt')||'';
+  fetch('/api/code-lookup',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body:JSON.stringify({query,system:lookupMode}),
+  })
+  .then(r=>r.json())
+  .then(data=>{
+    lookupActive=false;
+    if(data.error){ renderLookupError(body,data.error); return; }
+    renderLookupResults(body,data);
+  })
+  .catch(()=>{
+    lookupActive=false;
+    renderLookupError(body,'Network error. Check your connection and try again.');
+  });
+}
+
+function renderLookupResults(body, data){
+  const {results=[],normalizedQuery,needsClarification,clarificationNote,disclaimer,system}=data;
+  let html='';
+
+  if(needsClarification && clarificationNote){
+    html+=`<div class="lookup-clarify">
+      <div class="lookup-clarify-label">Needs Clarification</div>
+      <div class="lookup-clarify-text">${esc(clarificationNote)}</div>
+    </div>`;
+  }
+
+  if(!results.length && !needsClarification){
+    html+=`<div class="lookup-empty">
+      <svg class="lookup-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <div class="lookup-empty-title">No results found</div>
+      <div class="lookup-empty-sub">Try rephrasing or check your spelling</div>
+    </div>`;
+    body.innerHTML=html;
+    return;
+  }
+
+  if(results.length){
+    html+=`<div class="lookup-results-list">`;
+    results.forEach(r=>{
+      const sysLabel=(r.system||system||'').toUpperCase().replace('ICD10','ICD-10');
+      html+=`<div class="lookup-result-card">
+        <div class="lookup-result-top">
+          <div class="lookup-result-code">${esc(r.code)}</div>
+          <div style="flex:1;min-width:0">
+            ${sysLabel?`<div class="lookup-result-system">${esc(sysLabel)}</div>`:''}
+            <div class="lookup-result-paraphrase">${esc(r.paraphrase)}</div>
+          </div>
+        </div>
+        <div class="lookup-result-meta">
+          <div class="lookup-result-rationale">${esc(r.rationale)}</div>
+          <div class="lookup-conf ${esc(r.confidence||'low')}">${esc(r.confidence||'?')}</div>
+        </div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  if(disclaimer){
+    html+=`<div class="lookup-disclaimer">
+      <svg class="lookup-disclaimer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+      <div class="lookup-disclaimer-text">${esc(disclaimer)}</div>
+    </div>`;
+  }
+
+  body.innerHTML=html;
+}
+
+function renderLookupError(body, msg){
+  body.innerHTML=`<div class="lookup-empty">
+    <svg class="lookup-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>
+    <div class="lookup-empty-title">Something went wrong</div>
+    <div class="lookup-empty-sub">${esc(msg)}</div>
+  </div>`;
+}
 </script>
 </body>
 </html>
