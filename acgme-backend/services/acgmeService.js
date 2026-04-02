@@ -19,16 +19,14 @@ const ADS_CASE_ID_MAX_LEN = 25;
 
 /**
  * Whether to include CaseId in the Insert POST.
- * ADS returns HTTP 500 when CaseId is only digits or #digits — must contain at least one letter (e.g. C12345, t1t1t1).
- * Digit-only refs are merged into Comments as "Case ID: …" instead.
+ * Any non-empty CaseId should be posted to ADS unless explicitly disabled by env.
  * ACGME_POST_CASE_ID=never|0|false|off → never post CaseId; Comments only.
  */
 function shouldPostCaseIdToAds(raw) {
   const env = String(process.env.ACGME_POST_CASE_ID || '').trim().toLowerCase();
   if (env === '0' || env === 'false' || env === 'off' || env === 'never') return false;
   const s = String(raw || '').trim();
-  if (!s) return false;
-  return /[a-zA-Z]/.test(s);
+  return !!s;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -538,8 +536,8 @@ function caseIdForAdsInsertForm(raw) {
 
 /**
  * ADS `Comments` — clinical / free text from CaseFlow (`comments` or `notes`).
- * When CaseId is not posted (never or digits-only), prepends "Case ID: …" so the ref is not lost.
- * When CaseId is posted to the form, Comments stay as notes only — no duplicate Case ID line.
+ * Preserve the Case ID in comments for traceability while also posting it to the CaseId field.
+ * Avoid duplicating the "Case ID: …" prefix across retries / re-submits.
  */
 function mergeLocalCaseIdIntoComments(caseData) {
   const base0 =
@@ -550,9 +548,6 @@ function mergeLocalCaseIdIntoComments(caseData) {
         : '';
   const raw = String(caseData.caseId || '').trim();
   if (!raw) return base0;
-  if (shouldPostCaseIdToAds(raw)) {
-    return base0;
-  }
   const prefix = `Case ID: ${raw}`;
   const t = base0.trim();
   if (!t) return prefix;
@@ -974,7 +969,7 @@ function logSubmitPayloadDiagnostics(payload, hidden, caseData) {
           const posted = caseIdForAdsInsertForm(caseData.caseId);
           console.warn('[ACGME] CaseId POST: raw %sb → posted %sb', `${cid.length}`, `${String(posted).length}`);
         } else {
-          console.warn('[ACGME] CaseId POST skipped; Comments contain ref; raw %sb', `${cid.length}`);
+          console.warn('[ACGME] CaseId POST disabled by env; Comments contain ref; raw %sb', `${cid.length}`);
         }
       }
       const scLen = String(caseData.selectedCodes || '').length;
