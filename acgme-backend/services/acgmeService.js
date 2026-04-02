@@ -510,11 +510,18 @@ async function getInsertPageData(sessionCookie) {
 }
 
 /**
- * First visible <input> or <textarea> whose name looks like the Case ID field (e.g. CaseId, caseEntry.CaseId).
- * Falls back through known ACGME field name candidates if regex scan finds nothing.
+ * Resolve the Case ID field name from the ACGME Insert page HTML.
+ *
+ * ACGME obfuscates visible input field names as SHA-like hashes (e.g.
+ * "6f362a2da40c…") as an anti-bot measure. The plain-text name approach
+ * (/caseid/i) never matches. We must detect by label association:
+ *   <label for="HASH">Case ID …</label>  +  <input id="HASH" name="HASH">
+ * then fall back to proximity search and known-name candidates.
  */
 function extractCaseIdFieldNameFromInsertHtml(html) {
   if (!html || typeof html !== 'string') return '';
+
+  // 1. Name contains "caseid" — works if portal is not obfuscated
   const tagRe = /<(input|textarea)\b([^>]*)>/gi;
   let m;
   while ((m = tagRe.exec(html)) !== null) {
@@ -524,15 +531,41 @@ function extractCaseIdFieldNameFromInsertHtml(html) {
     const nameM = attrs.match(/\bname\s*=\s*["']([^"']+)["']/i);
     if (!nameM) continue;
     const name = nameM[1];
-    const compact = name.replace(/[\s._-]/g, '');
-    if (/caseid/i.test(compact)) return name;
+    if (/caseid/i.test(name.replace(/[\s._-]/g, ''))) return name;
   }
-  // Second pass: look for any visible input whose name is a known ACGME candidate
-  const candidates = ['CaseId', 'CaseID', 'LocalCaseId', 'ResidentCaseId', 'ResidentCaseID'];
-  for (const candidate of candidates) {
-    const re = new RegExp(`<input\\b[^>]*\\bname\\s*=\\s*["']${candidate}["'][^>]*>`, 'i');
-    if (re.test(html)) return candidate;
+
+  // 2. Label-based: <label for="ID">...Case ID...</label> → input[id="ID"].name
+  const labelRe = /<label\b[^>]*\bfor\s*=\s*["']([^"']+)["'][^>]*>([\s\S]{0,120}?)<\/label>/gi;
+  let lm;
+  while ((lm = labelRe.exec(html)) !== null) {
+    if (!/case\s*id/i.test(lm[2])) continue;
+    const forId = lm[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const inputRe2 = new RegExp(`<input\\b[^>]*\\bid\\s*=\\s*["']${forId}["'][^>]*>`, 'i');
+    const im = inputRe2.exec(html);
+    if (im) {
+      const nm = im[0].match(/\bname\s*=\s*["']([^"']+)["']/i);
+      if (nm) return nm[1];
+    }
   }
+
+  // 3. Proximity: find "Case ID" text node, grab the next visible input's name
+  const idx = html.search(/>[\s]*Case\s+ID[\s\S]{0,10}<\/label>/i);
+  if (idx !== -1) {
+    const snippet = html.slice(idx, idx + 800);
+    const im = snippet.match(/<input\b([^>]*)>/i);
+    if (im && !/type\s*=\s*["']hidden["']/i.test(im[1])) {
+      const nm = im[1].match(/\bname\s*=\s*["']([^"']+)["']/i);
+      if (nm) return nm[1];
+    }
+  }
+
+  // 4. Known candidate fallbacks (non-obfuscated portals)
+  for (const candidate of ['CaseId', 'CaseID', 'LocalCaseId', 'ResidentCaseId']) {
+    if (new RegExp(`<input\\b[^>]*\\bname\\s*=\\s*["']${candidate}["'][^>]*>`, 'i').test(html)) {
+      return candidate;
+    }
+  }
+
   return '';
 }
 
@@ -900,22 +933,8 @@ function buildInsertFormPayload(token, hidden, caseData, insertHtml) {
       ? String(caseData.residentsId).trim()
       : (hidden.Residents || '');
   const postCaseId = shouldPostCaseIdToAds(caseData.caseId);
-  // Log ALL visible input/textarea field names from Insert HTML so we can see what exists
-  if (insertHtml) {
-    const visibleNames = [];
-    const tagRe2 = /<(input|textarea)\b([^>]*)>/gi;
-    let m2;
-    while ((m2 = tagRe2.exec(insertHtml)) !== null) {
-      const tag2 = m2[1].toLowerCase();
-      const attrs2 = m2[2];
-      if (tag2 === 'input' && /type\s*=\s*["']hidden["']/i.test(attrs2)) continue;
-      const nm = attrs2.match(/\bname\s*=\s*["']([^"']+)["']/i);
-      if (nm) visibleNames.push(nm[1]);
-    }
-    console.warn('[ACGME] Insert visible input field names:', visibleNames.join(', ') || '(none found)');
-  }
   const caseIdFieldName = extractCaseIdFieldNameFromInsertHtml(insertHtml || '') || 'CaseId';
-  console.warn('[ACGME] CaseId field name resolved:', caseIdFieldName, '| will post:', postCaseId, '| raw:', String(caseData.caseId || '').slice(0, 8));
+  console.warn('[ACGME] CaseId field name resolved:', caseIdFieldName.slice(0, 20), '| will post:', postCaseId, '| raw:', String(caseData.caseId || '').slice(0, 8));
   const cid = postCaseId ? caseIdForAdsInsertForm(caseData.caseId) : '';
   const hiddenClean = postCaseId ? stripHiddenCaseIdKeys(hidden) : { ...hidden };
   if (!postCaseId && String(caseData.caseId || '').trim()) {
