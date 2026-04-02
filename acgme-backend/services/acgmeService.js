@@ -511,6 +511,7 @@ async function getInsertPageData(sessionCookie) {
 
 /**
  * First visible <input> or <textarea> whose name looks like the Case ID field (e.g. CaseId, caseEntry.CaseId).
+ * Falls back through known ACGME field name candidates if regex scan finds nothing.
  */
 function extractCaseIdFieldNameFromInsertHtml(html) {
   if (!html || typeof html !== 'string') return '';
@@ -526,6 +527,12 @@ function extractCaseIdFieldNameFromInsertHtml(html) {
     const compact = name.replace(/[\s._-]/g, '');
     if (/caseid/i.test(compact)) return name;
   }
+  // Second pass: look for any visible input whose name is a known ACGME candidate
+  const candidates = ['CaseId', 'CaseID', 'LocalCaseId', 'ResidentCaseId', 'ResidentCaseID'];
+  for (const candidate of candidates) {
+    const re = new RegExp(`<input\\b[^>]*\\bname\\s*=\\s*["']${candidate}["'][^>]*>`, 'i');
+    if (re.test(html)) return candidate;
+  }
   return '';
 }
 
@@ -536,23 +543,16 @@ function caseIdForAdsInsertForm(raw) {
 
 /**
  * ADS `Comments` — clinical / free text from CaseFlow (`comments` or `notes`).
- * Preserve the Case ID in comments for traceability while also posting it to the CaseId field.
- * Avoid duplicating the "Case ID: …" prefix across retries / re-submits.
+ * CaseId is now posted directly to the ADS CaseId field; do not duplicate it in Comments.
  */
 function mergeLocalCaseIdIntoComments(caseData) {
-  const base0 =
+  const base =
     caseData.comments != null && String(caseData.comments).trim() !== ''
       ? String(caseData.comments)
       : caseData.notes != null
         ? String(caseData.notes)
         : '';
-  const raw = String(caseData.caseId || '').trim();
-  if (!raw) return base0;
-  const prefix = `Case ID: ${raw}`;
-  const t = base0.trim();
-  if (!t) return prefix;
-  if (t.includes(prefix) || /^case\s*id\s*:/i.test(t)) return base0;
-  return `${prefix}\n\n${base0}`;
+  return base;
 }
 
 /**
@@ -901,6 +901,7 @@ function buildInsertFormPayload(token, hidden, caseData, insertHtml) {
       : (hidden.Residents || '');
   const postCaseId = shouldPostCaseIdToAds(caseData.caseId);
   const caseIdFieldName = extractCaseIdFieldNameFromInsertHtml(insertHtml || '') || 'CaseId';
+  console.warn('[ACGME] CaseId field name resolved from Insert HTML:', caseIdFieldName, '| will post:', postCaseId, '| raw:', String(caseData.caseId || '').slice(0, 8));
   const cid = postCaseId ? caseIdForAdsInsertForm(caseData.caseId) : '';
   const hiddenClean = postCaseId ? stripHiddenCaseIdKeys(hidden) : { ...hidden };
   if (!postCaseId && String(caseData.caseId || '').trim()) {

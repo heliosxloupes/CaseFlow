@@ -3114,7 +3114,7 @@ const SUMMARY_FIELDS = [
   {key:'attending', label:'Attending', type:'combo', combo:'att', get:()=>caseData.attending, set:v=>{caseData.attending=v}},
   {key:'patient',   label:'Patient',   type:'chips', get:()=>caseData.patientType,set:v=>{caseData.patientType=v},options:['Adult','Pediatric']},
   {key:'year',      label:'Year',      type:'chips', get:()=>caseData.caseYear,  set:v=>{caseData.caseYear=v},  options:['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6']},
-  {key:'caseId',    label:'Case ID',   type:'caseid', get:()=>caseData.caseId,    set:v=>{caseData.caseId=v},    placeholder:'Ref (max 25). Use a letter (e.g. C12345) for ADS Case ID; digits-only go in Comments.'},
+  {key:'caseId',    label:'Case ID',   type:'caseid', get:()=>caseData.caseId,    set:v=>{caseData.caseId=v},    placeholder:'Maps to ACGME Case ID field (max 25 chars)'},
 ];
 let summaryEditKey = null;
 
