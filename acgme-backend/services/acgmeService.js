@@ -900,8 +900,22 @@ function buildInsertFormPayload(token, hidden, caseData, insertHtml) {
       ? String(caseData.residentsId).trim()
       : (hidden.Residents || '');
   const postCaseId = shouldPostCaseIdToAds(caseData.caseId);
+  // Log ALL visible input/textarea field names from Insert HTML so we can see what exists
+  if (insertHtml) {
+    const visibleNames = [];
+    const tagRe2 = /<(input|textarea)\b([^>]*)>/gi;
+    let m2;
+    while ((m2 = tagRe2.exec(insertHtml)) !== null) {
+      const tag2 = m2[1].toLowerCase();
+      const attrs2 = m2[2];
+      if (tag2 === 'input' && /type\s*=\s*["']hidden["']/i.test(attrs2)) continue;
+      const nm = attrs2.match(/\bname\s*=\s*["']([^"']+)["']/i);
+      if (nm) visibleNames.push(nm[1]);
+    }
+    console.warn('[ACGME] Insert visible input field names:', visibleNames.join(', ') || '(none found)');
+  }
   const caseIdFieldName = extractCaseIdFieldNameFromInsertHtml(insertHtml || '') || 'CaseId';
-  console.warn('[ACGME] CaseId field name resolved from Insert HTML:', caseIdFieldName, '| will post:', postCaseId, '| raw:', String(caseData.caseId || '').slice(0, 8));
+  console.warn('[ACGME] CaseId field name resolved:', caseIdFieldName, '| will post:', postCaseId, '| raw:', String(caseData.caseId || '').slice(0, 8));
   const cid = postCaseId ? caseIdForAdsInsertForm(caseData.caseId) : '';
   const hiddenClean = postCaseId ? stripHiddenCaseIdKeys(hidden) : { ...hidden };
   if (!postCaseId && String(caseData.caseId || '').trim()) {
