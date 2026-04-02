@@ -9,6 +9,9 @@ const authRoutes = require('./routes/auth');
 const caseRoutes = require('./routes/cases');
 const lookupRoutes = require('./routes/lookups');
 const transcribeRoutes = require('./routes/transcribe');
+const milestonesRoutes = require('./routes/milestones');
+const logsRoutes = require('./routes/logs');
+const adminRoutes = require('./routes/admin');
 const { errorHandler } = require('./middleware/errorHandler');
 const { authenticate } = require('./middleware/authenticate');
 const { migrate } = require('./db/migrate');
@@ -33,6 +36,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/cases', authenticate, caseRoutes);
 app.use('/api/lookups', authenticate, lookupRoutes);
 app.use('/api/transcribe', authenticate, transcribeRoutes);
+app.use('/api/milestones', authenticate, milestonesRoutes);
+app.use('/api/logs', logsRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/health', (req, res) => {
   const dbUrl = process.env.DATABASE_URL || '';

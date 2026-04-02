@@ -19,16 +19,14 @@ const ADS_CASE_ID_MAX_LEN = 25;
 
 /**
  * Whether to include CaseId in the Insert POST.
- * ADS returns HTTP 500 when CaseId is only digits or #digits — must contain at least one letter (e.g. C12345, t1t1t1).
- * Digit-only refs are merged into Comments as "Case ID: …" instead.
+ * Any non-empty CaseId should be posted to ADS unless explicitly disabled by env.
  * ACGME_POST_CASE_ID=never|0|false|off → never post CaseId; Comments only.
  */
 function shouldPostCaseIdToAds(raw) {
   const env = String(process.env.ACGME_POST_CASE_ID || '').trim().toLowerCase();
   if (env === '0' || env === 'false' || env === 'off' || env === 'never') return false;
   const s = String(raw || '').trim();
-  if (!s) return false;
-  return /[a-zA-Z]/.test(s);
+  return !!s;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -512,10 +510,20 @@ async function getInsertPageData(sessionCookie) {
 }
 
 /**
- * First visible <input> or <textarea> whose name looks like the Case ID field (e.g. CaseId, caseEntry.CaseId).
+ * Resolve the Case ID field name from the ACGME Insert page HTML.
+ *
+ * ACGME obfuscates visible input field names as 64-char hex hashes (anti-bot).
+ * The form renders fields in DOM order: Case ID is the FIRST hash-named text input
+ * (before Case Date). We detect by:
+ *   1. Plain name match (/caseid/i) — non-obfuscated portals
+ *   2. Label association (<label for="HASH">Case ID</label>)
+ *   3. First hash-named visible text input (64-char hex) — obfuscated portal
+ *   4. Known name candidates fallback
  */
 function extractCaseIdFieldNameFromInsertHtml(html) {
   if (!html || typeof html !== 'string') return '';
+
+  // 1. Name contains "caseid" — works if portal is not obfuscated
   const tagRe = /<(input|textarea)\b([^>]*)>/gi;
   let m;
   while ((m = tagRe.exec(html)) !== null) {
@@ -525,9 +533,45 @@ function extractCaseIdFieldNameFromInsertHtml(html) {
     const nameM = attrs.match(/\bname\s*=\s*["']([^"']+)["']/i);
     if (!nameM) continue;
     const name = nameM[1];
-    const compact = name.replace(/[\s._-]/g, '');
-    if (/caseid/i.test(compact)) return name;
+    if (/caseid/i.test(name.replace(/[\s._-]/g, ''))) return name;
   }
+
+  // 2. Label-based: <label for="ID">...Case ID...</label> → input[id="ID"].name
+  const labelRe = /<label\b[^>]*\bfor\s*=\s*["']([^"']+)["'][^>]*>([\s\S]{0,200}?)<\/label>/gi;
+  let lm;
+  while ((lm = labelRe.exec(html)) !== null) {
+    const labelText = lm[2].replace(/<[^>]+>/g, ''); // strip inner tags
+    if (!/case\s*id/i.test(labelText)) continue;
+    const forId = lm[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const inputRe2 = new RegExp(`<input\\b[^>]*\\bid\\s*=\\s*["']${forId}["'][^>]*>`, 'i');
+    const im = inputRe2.exec(html);
+    if (im) {
+      const nm = im[0].match(/\bname\s*=\s*["']([^"']+)["']/i);
+      if (nm) return nm[1];
+    }
+  }
+
+  // 3. First hash-named visible text input (ACGME obfuscated portal).
+  // ACGME uses 64-char lowercase hex as field names. Case ID is the first such
+  // field in DOM order (confirmed from Insert page field list: hash1=CaseId, hash2=CaseDate).
+  const hashRe = /<input\b([^>]*)>/gi;
+  let hm;
+  while ((hm = hashRe.exec(html)) !== null) {
+    const attrs = hm[1];
+    if (/type\s*=\s*["']hidden["']/i.test(attrs)) continue;
+    const nm = attrs.match(/\bname\s*=\s*["']([^"']+)["']/i);
+    if (!nm) continue;
+    const name = nm[1];
+    if (/^[0-9a-f]{32,}$/i.test(name)) return name;
+  }
+
+  // 4. Known candidate fallbacks
+  for (const candidate of ['CaseId', 'CaseID', 'LocalCaseId', 'ResidentCaseId']) {
+    if (new RegExp(`<input\\b[^>]*\\bname\\s*=\\s*["']${candidate}["'][^>]*>`, 'i').test(html)) {
+      return candidate;
+    }
+  }
+
   return '';
 }
 
@@ -538,26 +582,16 @@ function caseIdForAdsInsertForm(raw) {
 
 /**
  * ADS `Comments` — clinical / free text from CaseFlow (`comments` or `notes`).
- * When CaseId is not posted (never or digits-only), prepends "Case ID: …" so the ref is not lost.
- * When CaseId is posted to the form, Comments stay as notes only — no duplicate Case ID line.
+ * CaseId is now posted directly to the ADS CaseId field; do not duplicate it in Comments.
  */
 function mergeLocalCaseIdIntoComments(caseData) {
-  const base0 =
+  const base =
     caseData.comments != null && String(caseData.comments).trim() !== ''
       ? String(caseData.comments)
       : caseData.notes != null
         ? String(caseData.notes)
         : '';
-  const raw = String(caseData.caseId || '').trim();
-  if (!raw) return base0;
-  if (shouldPostCaseIdToAds(raw)) {
-    return base0;
-  }
-  const prefix = `Case ID: ${raw}`;
-  const t = base0.trim();
-  if (!t) return prefix;
-  if (t.includes(prefix) || /^case\s*id\s*:/i.test(t)) return base0;
-  return `${prefix}\n\n${base0}`;
+  return base;
 }
 
 /**
@@ -906,6 +940,7 @@ function buildInsertFormPayload(token, hidden, caseData, insertHtml) {
       : (hidden.Residents || '');
   const postCaseId = shouldPostCaseIdToAds(caseData.caseId);
   const caseIdFieldName = extractCaseIdFieldNameFromInsertHtml(insertHtml || '') || 'CaseId';
+  console.warn('[ACGME] CaseId field name resolved:', caseIdFieldName.slice(0, 20), '| will post:', postCaseId, '| raw:', String(caseData.caseId || '').slice(0, 8));
   const cid = postCaseId ? caseIdForAdsInsertForm(caseData.caseId) : '';
   const hiddenClean = postCaseId ? stripHiddenCaseIdKeys(hidden) : { ...hidden };
   if (!postCaseId && String(caseData.caseId || '').trim()) {
@@ -974,7 +1009,7 @@ function logSubmitPayloadDiagnostics(payload, hidden, caseData) {
           const posted = caseIdForAdsInsertForm(caseData.caseId);
           console.warn('[ACGME] CaseId POST: raw %sb → posted %sb', `${cid.length}`, `${String(posted).length}`);
         } else {
-          console.warn('[ACGME] CaseId POST skipped; Comments contain ref; raw %sb', `${cid.length}`);
+          console.warn('[ACGME] CaseId POST disabled by env; Comments contain ref; raw %sb', `${cid.length}`);
         }
       }
       const scLen = String(caseData.selectedCodes || '').length;

@@ -7,7 +7,8 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test:getcodes": "node test/getCodesPayload.test.js",
-    "generate-key": "node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+    "generate-key": "node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+    "seed:beta": "node scripts/seedBetaInvites.js 10"
   },
   "dependencies": {
     "abort-controller": "^3.0.0",
@@ -21,7 +22,8 @@
     "multer": "^1.4.5-lts.1",
     "node-fetch": "^2.7.0",
     "pg": "^8.11.5",
-    "playwright": "^1.44.0"
+    "playwright": "^1.44.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
