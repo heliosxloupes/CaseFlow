@@ -512,11 +512,13 @@ async function getInsertPageData(sessionCookie) {
 /**
  * Resolve the Case ID field name from the ACGME Insert page HTML.
  *
- * ACGME obfuscates visible input field names as SHA-like hashes (e.g.
- * "6f362a2da40c…") as an anti-bot measure. The plain-text name approach
- * (/caseid/i) never matches. We must detect by label association:
- *   <label for="HASH">Case ID …</label>  +  <input id="HASH" name="HASH">
- * then fall back to proximity search and known-name candidates.
+ * ACGME obfuscates visible input field names as 64-char hex hashes (anti-bot).
+ * The form renders fields in DOM order: Case ID is the FIRST hash-named text input
+ * (before Case Date). We detect by:
+ *   1. Plain name match (/caseid/i) — non-obfuscated portals
+ *   2. Label association (<label for="HASH">Case ID</label>)
+ *   3. First hash-named visible text input (64-char hex) — obfuscated portal
+ *   4. Known name candidates fallback
  */
 function extractCaseIdFieldNameFromInsertHtml(html) {
   if (!html || typeof html !== 'string') return '';
@@ -535,10 +537,11 @@ function extractCaseIdFieldNameFromInsertHtml(html) {
   }
 
   // 2. Label-based: <label for="ID">...Case ID...</label> → input[id="ID"].name
-  const labelRe = /<label\b[^>]*\bfor\s*=\s*["']([^"']+)["'][^>]*>([\s\S]{0,120}?)<\/label>/gi;
+  const labelRe = /<label\b[^>]*\bfor\s*=\s*["']([^"']+)["'][^>]*>([\s\S]{0,200}?)<\/label>/gi;
   let lm;
   while ((lm = labelRe.exec(html)) !== null) {
-    if (!/case\s*id/i.test(lm[2])) continue;
+    const labelText = lm[2].replace(/<[^>]+>/g, ''); // strip inner tags
+    if (!/case\s*id/i.test(labelText)) continue;
     const forId = lm[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const inputRe2 = new RegExp(`<input\\b[^>]*\\bid\\s*=\\s*["']${forId}["'][^>]*>`, 'i');
     const im = inputRe2.exec(html);
@@ -548,18 +551,21 @@ function extractCaseIdFieldNameFromInsertHtml(html) {
     }
   }
 
-  // 3. Proximity: find "Case ID" text node, grab the next visible input's name
-  const idx = html.search(/>[\s]*Case\s+ID[\s\S]{0,10}<\/label>/i);
-  if (idx !== -1) {
-    const snippet = html.slice(idx, idx + 800);
-    const im = snippet.match(/<input\b([^>]*)>/i);
-    if (im && !/type\s*=\s*["']hidden["']/i.test(im[1])) {
-      const nm = im[1].match(/\bname\s*=\s*["']([^"']+)["']/i);
-      if (nm) return nm[1];
-    }
+  // 3. First hash-named visible text input (ACGME obfuscated portal).
+  // ACGME uses 64-char lowercase hex as field names. Case ID is the first such
+  // field in DOM order (confirmed from Insert page field list: hash1=CaseId, hash2=CaseDate).
+  const hashRe = /<input\b([^>]*)>/gi;
+  let hm;
+  while ((hm = hashRe.exec(html)) !== null) {
+    const attrs = hm[1];
+    if (/type\s*=\s*["']hidden["']/i.test(attrs)) continue;
+    const nm = attrs.match(/\bname\s*=\s*["']([^"']+)["']/i);
+    if (!nm) continue;
+    const name = nm[1];
+    if (/^[0-9a-f]{32,}$/i.test(name)) return name;
   }
 
-  // 4. Known candidate fallbacks (non-obfuscated portals)
+  // 4. Known candidate fallbacks
   for (const candidate of ['CaseId', 'CaseID', 'LocalCaseId', 'ResidentCaseId']) {
     if (new RegExp(`<input\\b[^>]*\\bname\\s*=\\s*["']${candidate}["'][^>]*>`, 'i').test(html)) {
       return candidate;
