@@ -4364,7 +4364,7 @@ async function doLogin(){
     _onAuthSuccess(data,pass);
   }catch(e){
     clearAuthButtonLoading(btn);
-    errEl.textContent='Network error — check your connection.';
+    errEl.textContent='Network error: ' + (e.message || e.toString());
     sendClientLog({source:'auth.login',severity:'error',message:e.message||'Login request failed'});
   }
 }
