@@ -3153,7 +3153,7 @@ function renderSummaryCard(){
     if(isEditing){
       if(f.type==='date'){
         html += `<div class="sum-edit-panel" onclick="event.stopPropagation()">
-          <input type="date" class="sum-date-input" value="${val||''}" onchange="saveSummaryDate(this.value)">
+          <input type="date" class="sum-date-input" value="${val||''}" oninput="saveSummaryDate(this.value)" onchange="saveSummaryDate(this.value)">
         </div>`;
       } else if(f.type==='combo'){
         const w=f.combo;
@@ -3703,7 +3703,7 @@ function renderCaseEditModal(){
   document.getElementById('case-edit-scroll').innerHTML=`
     <div class="ce-field">
       <div class="ce-label">Date</div>
-      <input type="date" class="ce-date-input" id="ce-date" value="${c.date||''}" onchange="editingCase.date=this.value">
+      <input type="date" class="ce-date-input" id="ce-date" value="${c.date||''}" oninput="editingCase.date=this.value" onchange="editingCase.date=this.value">
     </div>
     <div class="ce-field">
       <div class="ce-label">Case ID</div>
