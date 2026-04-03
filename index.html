@@ -2489,7 +2489,7 @@ async function processDescription(text){
   caseData.description=text;caseData.date=isoToday();buildIndex();
   let extracted=null;
   try{
-    const res=await fetch('/api/parse-case',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:'plastic-surgery',sites:getSitesForEdit(),attendings:getAttendingsForEdit()})});
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:'plastic-surgery',sites:getSitesForEdit(),attendings:getAttendingsForEdit()})});
     if(!res.ok)throw new Error();extracted=await res.json()
   }
   catch(e){extracted=localExtract(text)}
@@ -3034,7 +3034,7 @@ async function stopAddMoreVoice(){
 
   let extracted = null;
   try {
-    const res = await fetch('/api/parse-case',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:'plastic-surgery'})});
+    const res = await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:'plastic-surgery'})});
     if(!res.ok) throw new Error();
     extracted = await res.json();
   } catch(e) {
@@ -4357,7 +4357,7 @@ async function doLogin(){
   const btn=document.getElementById('l-btn');
   setAuthButtonLoading(btn,'Signing In');
   try{
-    const res=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/auth`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
     const data=await res.json();
     clearAuthButtonLoading(btn);
     if(!res.ok){errEl.textContent=data.error||'Sign in failed.';return;}
@@ -4387,7 +4387,7 @@ async function doRegister(){
   const btn=document.getElementById('r-btn');
   setAuthButtonLoading(btn,'Creating Account');
   try{
-    const res=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pass,betaKey,tosAccepted})});
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pass,betaKey,tosAccepted})});
     const data=await res.json();
     clearAuthButtonLoading(btn);
     if(!res.ok){errEl.textContent=data.error||'Registration failed.';return;}
@@ -6496,7 +6496,7 @@ function runLookup(){
   </div>`;
 
   const token=localStorage.getItem('cf5-jwt')||'';
-  fetch('/api/code-lookup',{
+  fetch(`${ACGME_BACKEND_URL}/api/code-lookup`,{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
     body:JSON.stringify({query,system:lookupMode}),
