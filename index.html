@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="CaseFlow">
+<meta name="apple-mobile-web-app-title" content="CaseArc">
 <meta name="theme-color" content="#07090f">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<title>CaseFlow</title>
+<title>CaseArc</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <style>
@@ -1517,6 +1517,8 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
   border:1px solid rgba(255,255,255,0.06);
   border-radius:22px;padding:22px 18px 22px;
   box-shadow:none;
+  padding-bottom:max(22px,var(--keyboard-height,0px));
+  transition:padding-bottom 0.25s ease;
 }
 .login-footer-text{
   position:relative;z-index:10;
@@ -1883,7 +1885,7 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
           </div>
           <div class="acgme-how-step">
             <div class="acgme-step-num">2</div>
-            <div class="acgme-step-text">When you submit a case, CaseFlow logs into ACGME on your behalf automatically.</div>
+            <div class="acgme-step-text">When you submit a case, CaseArc logs into ACGME on your behalf automatically.</div>
           </div>
           <div class="acgme-how-step">
             <div class="acgme-step-num">3</div>
@@ -2041,9 +2043,9 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
     </div>
     <div class="onboard-copy">
       <div>
-        <div class="onboard-topline">Welcome to CaseFlow</div>
+        <div class="onboard-topline">Welcome to CaseArc</div>
         <div class="onboard-title" id="onboard-title">Log cases with the voice orb</div>
-        <div class="onboard-desc" id="onboard-desc">Tap the orb, describe the case naturally, and CaseFlow turns your dictation into a structured case draft you can review before submitting.</div>
+        <div class="onboard-desc" id="onboard-desc">Tap the orb, describe the case naturally, and CaseArc turns your dictation into a structured case draft you can review before submitting.</div>
         <div class="onboard-progress" id="onboard-progress">
           <div class="onboard-progress-dot active"></div>
           <div class="onboard-progress-dot"></div>
@@ -2088,7 +2090,7 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
     <div class="submit-threads" id="submit-threads"></div>
   </div>
   <div class="submit-status-shell">
-    <div class="submit-kicker" id="submit-kicker">CaseFlow Submission</div>
+    <div class="submit-kicker" id="submit-kicker">CaseArc Submission</div>
     <div class="submit-label" id="submit-label">Submitting to ACGME…</div>
     <div class="submit-progress" id="submit-progress"></div>
     <div class="submit-success-panel" id="submit-success-panel">
@@ -2108,20 +2110,20 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
 <div class="modal-shell" id="tos-modal" onclick="if(event.target===this)closeTosModal()">
   <div class="modal-card">
     <div class="modal-head">
-      <div class="modal-title">CaseFlow Terms of Service</div>
+      <div class="modal-title">CaseArc Terms of Service</div>
       <button class="modal-close" type="button" onclick="closeTosModal()">&#x2715;</button>
     </div>
     <div class="modal-copy">
-      <p>CaseFlow is a limited beta tool for assisting surgical residents with case capture, review, and ACGME submission workflows. It is provided for internal testing and evaluation only.</p>
+      <p>CaseArc is a limited beta tool for assisting surgical residents with case capture, review, and ACGME submission workflows. It is provided for internal testing and evaluation only.</p>
       <h4>Use of the beta</h4>
       <ul>
         <li>You are responsible for verifying all case data before submission to ACGME.</li>
         <li>You agree not to share your beta key or allow anyone else to use your account.</li>
-        <li>CaseFlow may log errors, submission failures, and beta feedback tied to your account for debugging and support.</li>
+        <li>CaseArc may log errors, submission failures, and beta feedback tied to your account for debugging and support.</li>
       </ul>
       <h4>Privacy and security</h4>
       <ul>
-        <li>CaseFlow stores account and beta usage data needed to operate the service.</li>
+        <li>CaseArc stores account and beta usage data needed to operate the service.</li>
         <li>ACGME credential workflows and beta diagnostics may include operational metadata for troubleshooting.</li>
         <li>Do not enter protected information that your institution does not permit in this beta environment.</li>
       </ul>
@@ -2342,19 +2344,19 @@ const APP_ONBOARDING_VERSION='2026-04-02';
 const ONBOARDING_STEPS=[
   {
     title:'Connect ACGME once, then stay fast',
-    description:'Open Settings, add your ACGME credentials, and complete any verification prompt. CaseFlow will submit cases on your behalf and alert you if the connection needs attention.',
+    description:'Open Settings, add your ACGME credentials, and complete any verification prompt. CaseArc will submit cases on your behalf and alert you if the connection needs attention.',
     label:'Step 1 of 4',
     visual:'settings',
   },
   {
     title:'Log cases with the voice orb',
-    description:'Tap the orb and say what you did, where you did it, who your attending was, and the date. CaseFlow structures everything and asks about anything it missed.',
+    description:'Tap the orb and say what you did, where you did it, who your attending was, and the date. CaseArc structures everything and asks about anything it missed.',
     label:'Step 2 of 4',
     visual:'orb',
   },
   {
     title:'Review and confirm before you submit',
-    description:'CaseFlow suggests CPT codes, lets you confirm the right ones, and builds a clean case summary so you can save or submit with confidence.',
+    description:'CaseArc suggests CPT codes, lets you confirm the right ones, and builds a clean case summary so you can save or submit with confidence.',
     label:'Step 3 of 4',
     visual:'cards',
   },
@@ -2609,7 +2611,7 @@ function showProcessingBubble(startIndex=0){
     '<div class="q-process">'+
       '<div class="q-process-wheel" aria-hidden="true"></div>'+
       '<div class="q-process-copy">'+
-        '<div class="q-process-kicker">CaseFlow is reviewing</div>'+
+        '<div class="q-process-kicker">CaseArc is reviewing</div>'+
         '<div class="q-process-phrase" id="q-process-phrase"></div>'+
         '<div class="q-process-dots" aria-hidden="true"><span></span><span></span><span></span></div>'+
       '</div>'+
@@ -3328,7 +3330,7 @@ function resetSubmitOverlayUI(){
   overlay.classList.remove('success-show');
   succPanel.style.display='';
   labelEl.style.display='';
-  kickerEl.textContent='CaseFlow Submission';
+  kickerEl.textContent='CaseArc Submission';
   labelEl.textContent='Submitting to ACGME…';
   duoEl.classList.remove('on');
 }
@@ -3339,7 +3341,7 @@ function showSubmitOverlaySuccess(title, subtitle){
   const succTitle=document.getElementById('submit-success-title');
   const succSub=document.getElementById('submit-success-sub');
   if(!overlay||!kickerEl||!labelEl||!succTitle||!succSub) return;
-  kickerEl.textContent='CaseFlow Submission';
+  kickerEl.textContent='CaseArc Submission';
   labelEl.textContent='Submitting to ACGME...';
   succTitle.textContent=title;
   succSub.textContent=subtitle;
@@ -3412,7 +3414,7 @@ async function submitCase(){
         showErrBanner('Case saved. ACGME session expired — tap to go to Settings and reconnect.', ()=>{goTab('settings');toggleAcgmeForm();});
       } else {
         const hint2=/session expired|not authenticated|reconnect/i.test(e.message||'')
-          ? '\n\nTip: CaseFlow login is not the same as ACGME. Use Settings → ACGME to reconnect.'
+          ? '\n\nTip: CaseArc login is not the same as ACGME. Use Settings → ACGME to reconnect.'
           : '';
         showErrBanner('Case saved locally. ACGME submission failed:\n\n'+e.message+'\n\nYou can re-submit from Case History. Tap to dismiss.'+hint2);
       }
@@ -3422,7 +3424,7 @@ async function submitCase(){
 
     clearTimeout(waitHintTimer);
     duoEl.classList.remove('on');
-    kickerEl.textContent='CaseFlow Submission';
+    kickerEl.textContent='CaseArc Submission';
     labelEl.textContent='Submitting to ACGME…';
     const localId='cf-'+Date.now();
     const c={id:localId,...payload,yr:payload.yr,cid:caseData.caseId,status,ts:new Date().toISOString()};
@@ -3850,7 +3852,7 @@ async function resubmitCase(){
     } catch(e){
       newStatus='pending';
       const hint=/session expired|not authenticated|reconnect/i.test(e.message||'')
-        ? '\n\nTip: Signing into CaseFlow is separate from your ACGME browser session. Open Settings → ACGME and reconnect if this keeps happening.'
+        ? '\n\nTip: Signing into CaseArc is separate from your ACGME browser session. Open Settings → ACGME and reconnect if this keeps happening.'
         : '';
       showErrBanner('Re-submission failed. ACGME error:\n\n'+e.message+'\n\nCase status set to pending. Tap to dismiss.'+hint);
       console.warn('ACGME resubmit error:',e);
@@ -3859,7 +3861,7 @@ async function resubmitCase(){
 
     clearTimeout(waitHintTimer2);
     duoEl2.classList.remove('on');
-    kickerEl2.textContent='CaseFlow Submission';
+    kickerEl2.textContent='CaseArc Submission';
     labelEl2.textContent='Submitting to ACGME…';
     const idx=cases.findIndex(c=>c.id===editingCase.id);
     if(idx>-1){
@@ -5097,7 +5099,7 @@ function renderMilestonesPane(){
       <div class="mile-kicker">Milestones</div>
       <div class="mile-title">See exactly where your <em>case minimums</em> are lagging.</div>
       <div class="mile-copy">
-        Generate your latest Integrated-Plastic Surgery Minimum report on demand from your active ACGME session. CaseFlow will download the spreadsheet, extract your counts, and turn it into a deficiency-first analytics view.
+        Generate your latest Integrated-Plastic Surgery Minimum report on demand from your active ACGME session. CaseArc will download the spreadsheet, extract your counts, and turn it into a deficiency-first analytics view.
       </div>
       <div class="mile-callout">
         <div class="mile-callout-item">
