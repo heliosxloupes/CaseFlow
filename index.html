@@ -4357,14 +4357,14 @@ async function doLogin(){
   const btn=document.getElementById('l-btn');
   setAuthButtonLoading(btn,'Signing In');
   try{
-    const res=await fetch(`${ACGME_BACKEND_URL}/api/auth`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
     const data=await res.json();
     clearAuthButtonLoading(btn);
     if(!res.ok){errEl.textContent=data.error||'Sign in failed.';return;}
     _onAuthSuccess(data,pass);
   }catch(e){
     clearAuthButtonLoading(btn);
-    errEl.textContent='Network error: ' + (e.message || e.toString());
+    errEl.textContent='Network error — check your connection.';
     sendClientLog({source:'auth.login',severity:'error',message:e.message||'Login request failed'});
   }
 }
