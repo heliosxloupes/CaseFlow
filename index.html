@@ -2480,13 +2480,14 @@ function stopInitialListening(){
   // Keep mic stream alive — stopMic() only in resetFlow() to avoid iOS audio session cooldown
   const wsText=(txFinal+' '+txInt).trim();
   AudioFX.confirmStop();
-  if(!wsText){
+  const hasAudio=mainMediaRec&&mainAudioChunks.length>0;
+  if(!wsText&&!hasAudio){
     if(mainMediaRec){try{mainMediaRec.stop();}catch(_){} mainMediaRec=null;mainAudioChunks=[];}
     orbState='idle';document.getElementById('orb-hint').classList.remove('hide');showBubble('');setStateLabel('');return;
   }
   orbState='thinking';showProcessingBubble();setStateLabel('');
   AudioFX.startThink();
-  // Get Groq transcript (falls back to Web Speech text if Groq fails)
+  // Get Groq transcript (falls back to Web Speech text if Groq fails; works even if wsText is empty)
   const recSnap=mainMediaRec,chunksSnap=mainAudioChunks;
   mainMediaRec=null;mainAudioChunks=[];
   getGroqTranscript(recSnap,chunksSnap,wsText).then(transcript=>processDescription(transcript));
@@ -5004,6 +5005,7 @@ async function launchApp(name,email){
   const menuName = document.getElementById('sm-hdr-u');
   if(menuName) menuName.textContent = firstName;
   showPage('pg-app');
+  requestAnimationFrame(syncAppBarHeight);
   ensureBackgroundRenderers();
   startOrb();
   // Re-bind tap/click handlers after app is visible (guards against partial reloads)
