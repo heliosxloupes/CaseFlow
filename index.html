@@ -5662,6 +5662,16 @@ function syncAppBarHeight(){
   const h=document.querySelector('.app-bar')?.offsetHeight||56;
   document.documentElement.style.setProperty('--app-bar-h',h+'px');
 }
+// Release mic when app goes to background — clears iOS mic indicator
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden'){
+    if(window.__nativeSpeechRec?._active) window.__nativeSpeechRec.stop();
+    if(typeof savedMicStream!=='undefined'&&savedMicStream){
+      savedMicStream.getTracks().forEach(t=>t.stop());
+      savedMicStream=null;
+    }
+  }
+});
 document.addEventListener('DOMContentLoaded',()=>{
   syncAppBarHeight();
   window.addEventListener('resize',syncAppBarHeight);
