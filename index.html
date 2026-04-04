@@ -2438,38 +2438,69 @@ async function handleOrbTap(){
   else if(orbState==='listening') stopInitialListening();
 }
 async function startInitialListening(){
-  // Build speech recognition first (synchronous, preserves iOS gesture context)
   buildIndex();
+  // Native iOS WKWebView permanently blocks SpeechRecognition (service-not-allowed).
+  // Detect and skip it entirely — record via MediaRecorder then transcribe via Groq Whisper.
+  const isNativeIOS = !!(window.Capacitor?.isNativePlatform?.());
+  if(isNativeIOS){
+    txFinal='';txInt='';recOn=true;
+    AudioFX.startListen();
+    orbState='listening';document.getElementById('orb-hint').classList.add('hide');
+    showBubble('Describe your case…');setStateLabel('Tap orb to stop');hideAll();
+    document.getElementById('q-bubble').classList.add('show');
+    document.getElementById('new-case-btn').style.display='flex';
+    const needNewStream=!savedMicStream||savedMicStream.getTracks().some(t=>t.readyState==='ended');
+    if(needNewStream){
+      try{
+        const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+        savedMicStream=stream;
+      }catch(e){
+        if(e&&(e.name==='NotAllowedError'||e.name==='PermissionDeniedError')){
+          showBubble('Microphone access is blocked — allow mic in Settings then try again.');
+          document.getElementById('q-bubble').classList.add('show');
+          setStateLabel('Mic permission required');
+          recOn=false;orbState='idle';document.getElementById('orb-hint').classList.remove('hide');
+          return;
+        }
+        console.warn('getUserMedia failed:',e);
+      }
+    }
+    if(savedMicStream){
+      startMic(savedMicStream);
+      mainAudioChunks=[];
+      if(mainMediaRec){try{mainMediaRec.stop();}catch(_){} mainMediaRec=null;}
+      mainMediaRec=startMediaRecorder(savedMicStream,mainAudioChunks);
+    }
+    return;
+  }
+  // Web path — use SpeechRecognition with MediaRecorder as parallel backup
   if(!recObj)recObj=makeRec(e=>{txInt='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)txFinal+=' '+e.results[i][0].transcript;else txInt+=e.results[i][0].transcript}showBubble((txFinal+' '+txInt).trim()||'Listening…')},()=>{if(recOn){try{recObj.start();}catch(e){console.warn('rec restart:',e)}}});
   if(!recObj){showBubble('Speech recognition not supported in this browser — try Chrome on Android or Safari on iOS.');document.getElementById('q-bubble').classList.add('show');return}
   txFinal='';txInt='';recOn=true;
   AudioFX.startListen();
-  // Start recognition synchronously while still in gesture context
   try{recObj.start();}catch(e){console.error('recObj.start error:',e);showBubble('Mic start error: '+e.message);document.getElementById('q-bubble').classList.add('show');return;}
   orbState='listening';document.getElementById('orb-hint').classList.add('hide');
   showBubble('Describe your case…');setStateLabel('Tap orb to stop');hideAll();
   document.getElementById('q-bubble').classList.add('show');
   document.getElementById('new-case-btn').style.display='flex';
-  // Start visualizer async after (does not need gesture context)
-  const needNewStream = !savedMicStream || savedMicStream.getTracks().some(t=>t.readyState==='ended');
+  const needNewStream=!savedMicStream||savedMicStream.getTracks().some(t=>t.readyState==='ended');
   if(needNewStream){
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:true});
       savedMicStream=stream;
-    } catch(e){
-      if(e && (e.name==='NotAllowedError'||e.name==='PermissionDeniedError')){
+    }catch(e){
+      if(e&&(e.name==='NotAllowedError'||e.name==='PermissionDeniedError')){
         showBubble('Microphone access is blocked. Allow mic in Safari settings then refresh.');
         document.getElementById('q-bubble').classList.add('show');
         setStateLabel('Mic permission required');
         recOn=false;try{recObj.abort();}catch(_){} recObj=null;
         return;
       }
-      console.warn('getUserMedia failed (visualizer disabled):', e);
+      console.warn('getUserMedia failed (visualizer disabled):',e);
     }
   }
   if(savedMicStream){
-    startMic(savedMicStream); // fire-and-forget, visualizer only
-    // Start MediaRecorder for Groq transcription
+    startMic(savedMicStream);
     mainAudioChunks=[];
     if(mainMediaRec){try{mainMediaRec.stop();}catch(_){} mainMediaRec=null;}
     mainMediaRec=startMediaRecorder(savedMicStream,mainAudioChunks);
