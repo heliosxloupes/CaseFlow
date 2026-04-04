@@ -77,8 +77,8 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
     radial-gradient(circle at 82% 78%, rgba(155,140,255,.035) 0%, rgba(155,140,255,0) 20%);
   pointer-events:none;z-index:0;
 }
-.app-bar{display:flex;align-items:center;justify-content:space-between;padding:max(16px, env(safe-area-inset-top)) 20px 14px;border-bottom:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(8,12,20,.74) 0%,rgba(8,12,20,.58) 100%);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);position:sticky;top:0;z-index:400}
-.app-logo{font-size:20px;font-weight:700;letter-spacing:-1px}
+.app-bar{display:flex;align-items:center;justify-content:space-between;padding:max(16px, env(safe-area-inset-top)) 20px 18px;border-bottom:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(8,12,20,.74) 0%,rgba(8,12,20,.58) 100%);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);position:sticky;top:0;z-index:400}
+.app-logo{font-size:22px;font-weight:700;letter-spacing:-1px}
 .app-logo em{font-style:normal;background:linear-gradient(135deg,var(--blue-soft) 0%,var(--violet-soft) 55%,var(--cyan-soft) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .bar-right{display:flex;align-items:center;gap:10px;position:relative;z-index:450;flex-shrink:0}
 .chip{background:linear-gradient(180deg,rgba(20,27,39,.92) 0%,rgba(14,20,31,.92) 100%);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--text2);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
@@ -112,7 +112,7 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 .sm-toggle-text{font-size:12px;letter-spacing:.07em;opacity:.7}
 /* Closed: stack below .pane so history/voice receive taps; open: above pane (see body.sm-menu-open) */
 .sm-backdrop{
-  position:fixed;top:56px;left:0;right:0;bottom:0;
+  position:fixed;top:var(--app-bar-h,56px);left:0;right:0;bottom:0;
   background:rgba(0,0,0,.55);z-index:100;
   opacity:0;pointer-events:none!important;
   backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
@@ -121,15 +121,15 @@ body{height:100%;font-family:'Sora',sans-serif;color:var(--text);background:var(
 /* Pointer-events + visibility when open/closed are set inline in JS (beats iOS ghost hit-testing) */
 .sm-prelayer{pointer-events:none!important}
 .sm-prelayer{
-  position:fixed;top:56px;left:0;
-  width:min(78vw,360px);height:calc(100% - 56px);
+  position:fixed;top:var(--app-bar-h,56px);left:0;
+  width:min(78vw,360px);height:calc(100% - var(--app-bar-h,56px));
   will-change:transform;
 }
 .sm-prelayer-1{background:#0a1322;z-index:101}
 .sm-prelayer-2{background:#1a3560;z-index:102}
 .sm-panel-wrap{
-  position:fixed;top:56px;left:0;
-  width:min(78vw,360px);height:calc(100% - 56px);
+  position:fixed;top:var(--app-bar-h,56px);left:0;
+  width:min(78vw,360px);height:calc(100% - var(--app-bar-h,56px));
   background:#0b1628;
   border-right:1px solid rgba(79,142,247,0.12);
   z-index:103;will-change:transform;
@@ -1353,9 +1353,9 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
 .toast.err{border-color:rgba(248,113,113,.28);color:var(--red)}
 .new-case-btn{display:flex;align-items:center;gap:5px;background:linear-gradient(180deg,rgba(79,142,247,.16) 0%,rgba(79,142,247,.10) 100%);border:1px solid rgba(99,214,255,.18);border-radius:20px;padding:6px 13px;font-size:12px;color:var(--blue-soft);font-family:'Sora',sans-serif;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s}
 @media (max-width:560px){
-  .app-bar{padding:max(15px, env(safe-area-inset-top)) 14px 13px}
+  .app-bar{padding:max(15px, env(safe-area-inset-top)) 14px 16px}
   .app-bar-left{gap:10px}
-  .app-logo{font-size:19px}
+  .app-logo{font-size:21px}
   .sm-toggle-text{font-size:11px}
   .bar-right{gap:8px}
   .chip{padding:5px 11px;border-radius:18px;font-size:11px}
@@ -2328,6 +2328,7 @@ function makeRec(onResult,onEnd){
     } else if(e.error==='no-speech'||e.error==='aborted'){
       // normal
     } else if(e.error==='service-not-allowed'){
+      recOn=false;
       showBubble('Speech service unavailable — speak and tap orb when done.');
       document.getElementById('q-bubble').classList.add('show');
     } else {
@@ -5608,7 +5609,13 @@ function initTouchDebug(){
   document.addEventListener('touchend', show, true);
 }
 
+function syncAppBarHeight(){
+  const h=document.querySelector('.app-bar')?.offsetHeight||56;
+  document.documentElement.style.setProperty('--app-bar-h',h+'px');
+}
 document.addEventListener('DOMContentLoaded',()=>{
+  syncAppBarHeight();
+  window.addEventListener('resize',syncAppBarHeight);
   SM.init();
   initPointerBindings();
   initTouchDebug();
