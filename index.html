@@ -751,6 +751,12 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .settings-wrap{padding:20px 20px 100px;max-width:500px;margin:0 auto}
 .settings-section{background:var(--bg1);border:1px solid var(--line);border-radius:var(--rl);padding:20px;margin-bottom:16px}
 .settings-section-title{font-size:13px;font-weight:700;color:var(--text);letter-spacing:.03em;margin-bottom:6px}
+.settings-collapse-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;margin-bottom:0}
+.settings-collapse-toggle .settings-section-title{margin-bottom:0}
+.settings-collapse-chevron{width:16px;height:16px;color:var(--text3);transition:transform .28s cubic-bezier(.4,0,.2,1);flex-shrink:0}
+.settings-collapse-toggle.open .settings-collapse-chevron{transform:rotate(180deg)}
+.settings-collapse-body{overflow:hidden;max-height:0;opacity:0;transition:max-height .32s cubic-bezier(.4,0,.2,1),opacity .25s ease;margin-top:0}
+.settings-collapse-body.open{max-height:600px;opacity:1;margin-top:14px}
 .settings-section-desc{font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:16px}
 .settings-field{margin-bottom:14px}
 .settings-label{display:block;font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
@@ -812,14 +818,23 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .acgme-connect-icon{width:36px;height:36px;border-radius:10px;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.25);display:flex;align-items:center;justify-content:center;margin-bottom:12px}
 .acgme-connect-title{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.3px;margin-bottom:4px}
 .acgme-connect-sub{font-size:12px;color:var(--text3);line-height:1.55;margin-bottom:16px}
+/* ── ACGME connect button glow ── */
+@keyframes acgmeGlow{0%,100%{box-shadow:0 0 10px rgba(168,85,247,.35),0 0 24px rgba(168,85,247,.18)}50%{box-shadow:0 0 18px rgba(168,85,247,.6),0 0 40px rgba(168,85,247,.28),0 0 60px rgba(99,102,241,.12)}}
+.acgme-connect-card .acgme-continue-btn{animation:acgmeGlow 2.4s ease-in-out infinite}
 /* ── ACGME step flow ── */
-.acgme-step-wrap{overflow:hidden;transition:max-height .38s cubic-bezier(.4,0,.2,1),opacity .3s ease;max-height:0;opacity:0}
-.acgme-step-wrap.open{max-height:800px;opacity:1}
-.acgme-step-card{background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:16px;padding:18px 16px;margin-bottom:14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.acgme-step-wrap{overflow:hidden;max-height:0;opacity:0;transition:max-height .38s cubic-bezier(.4,0,.2,1),opacity .3s ease}
+.acgme-step-wrap.open{max-height:900px;opacity:1}
+/* step card slide transitions */
+.acgme-step-card{background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:16px;padding:18px 16px;margin-bottom:14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:transform .36s cubic-bezier(.4,0,.2,1),opacity .3s ease}
+.acgme-step-card.slide-out-left{transform:translateX(-110%);opacity:0;pointer-events:none;position:absolute;width:100%}
+.acgme-step-card.slide-in-right{transform:translateX(110%);opacity:0}
+.acgme-step-card.slide-in-right.visible{transform:translateX(0);opacity:1}
+/* step card container needs position relative for absolute during transition */
+#s-acgme-form{position:relative}
 .acgme-step-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .acgme-step-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase}
 .acgme-step-dots{display:flex;gap:5px}
-.acgme-step-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.15);transition:background .2s}
+.acgme-step-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.15);transition:background .3s}
 .acgme-step-dot.active{background:var(--purple)}
 .acgme-step-dot.done{background:#34d399}
 .acgme-step-title{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-.4px;margin-bottom:4px}
@@ -832,6 +847,14 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .acgme-continue-btn.busy{opacity:.6;pointer-events:none}
 .acgme-back-link{font-size:12px;color:var(--text3);text-align:center;margin-top:10px;cursor:pointer;background:none;border:none;font-family:'Sora',sans-serif;width:100%}
 .acgme-back-link:active{color:var(--text2)}
+/* verify loading ribbon — scaled from milestones ribbon */
+.acgme-verify-ribbon{height:36px;border-radius:10px;position:relative;overflow:hidden;margin-bottom:14px;
+  background:linear-gradient(90deg,rgba(168,85,247,0) 0%,rgba(168,85,247,.14) 18%,rgba(191,161,255,.44) 50%,rgba(168,85,247,.14) 82%,rgba(168,85,247,0) 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.acgme-verify-ribbon::after{content:"";position:absolute;inset:0 auto 0 -42%;width:42%;
+  background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(221,180,255,.22) 26%,rgba(255,255,255,.5) 50%,rgba(221,180,255,.14) 74%,rgba(255,255,255,0) 100%);
+  animation:submitLoad 1.5s ease-in-out infinite}
+.acgme-verify-status{font-size:11px;color:var(--text3);text-align:center;letter-spacing:.04em}
 /* legacy compat */
 .acgme-form-collapse{overflow:hidden;transition:max-height .35s ease,opacity .3s ease;max-height:0;opacity:0}
 .acgme-form-collapse.open{max-height:700px;opacity:1}
@@ -1938,9 +1961,9 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
             <button class="acgme-back-link" onclick="toggleAcgmeForm()">Cancel</button>
           </div>
 
-          <!-- Step 2: MFA — shown when backend requires it -->
+          <!-- Step 2: MFA — animated in from right -->
           <div id="s-mfa-section" style="display:none">
-            <div class="acgme-step-card">
+            <div class="acgme-step-card slide-in-right" id="s-step2-card">
               <div class="acgme-step-header">
                 <span class="acgme-step-label">Step 2 of 2</span>
                 <div class="acgme-step-dots">
@@ -1953,7 +1976,10 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
               <div class="acgme-otp-wrap">
                 <input class="acgme-otp-input" id="s-mfa-code" type="text" placeholder="· · · · · ·" autocomplete="one-time-code" inputmode="numeric" maxlength="10">
               </div>
-              <button class="acgme-continue-btn" onclick="completeMfaLogin()">Verify</button>
+              <!-- Loading ribbon — shown while verifying -->
+              <div class="acgme-verify-ribbon" id="s-verify-ribbon" style="display:none"></div>
+              <div class="acgme-verify-status" id="s-verify-status" style="display:none">Verifying with ACGME…</div>
+              <button class="acgme-continue-btn" onclick="completeMfaLogin()" id="s-verify-btn">Verify</button>
               <button class="acgme-back-link" onclick="toggleAcgmeForm()">Start over</button>
             </div>
           </div>
@@ -1962,25 +1988,30 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
       </div>
 
       <div class="settings-section settings-danger-zone">
-        <div class="settings-section-title">Beta Program</div>
-        <div class="settings-note-card">
-          <div id="beta-build-label" class="settings-badge" style="margin-bottom:12px">Beta Build</div>
-          <div class="settings-meta-list">
-            <div class="settings-meta-row">
-              <div class="settings-meta-label">Beta Key</div>
-              <div class="settings-meta-value" id="beta-key-label">&#8212;</div>
+        <div class="settings-collapse-toggle" id="beta-toggle" onclick="toggleBetaSection()">
+          <div class="settings-section-title">Beta Program</div>
+          <svg class="settings-collapse-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="settings-collapse-body" id="beta-body">
+          <div class="settings-note-card">
+            <div id="beta-build-label" class="settings-badge" style="margin-bottom:12px">Beta Build</div>
+            <div class="settings-meta-list">
+              <div class="settings-meta-row">
+                <div class="settings-meta-label">Beta Key</div>
+                <div class="settings-meta-value" id="beta-key-label">&#8212;</div>
+              </div>
+              <div class="settings-meta-row">
+                <div class="settings-meta-label">Terms</div>
+                <div class="settings-meta-value" id="beta-tos-status">&#8212;</div>
+              </div>
+              <div class="settings-meta-row">
+                <div class="settings-meta-label">Account</div>
+                <div class="settings-meta-value" id="beta-account-created">&#8212;</div>
+              </div>
             </div>
-            <div class="settings-meta-row">
-              <div class="settings-meta-label">Terms</div>
-              <div class="settings-meta-value" id="beta-tos-status">&#8212;</div>
-            </div>
-          <div class="settings-meta-row">
-            <div class="settings-meta-label">Account</div>
-            <div class="settings-meta-value" id="beta-account-created">&#8212;</div>
+            <button class="settings-quiet-btn" style="margin-top:14px" onclick="openQuickGuide()">View Quick Guide</button>
+            <button class="settings-quiet-btn" style="margin-top:14px" onclick="openTosModal()">View Terms of Service</button>
           </div>
-          </div>
-          <button class="settings-quiet-btn" style="margin-top:14px" onclick="openQuickGuide()">View Quick Guide</button>
-          <button class="settings-quiet-btn" style="margin-top:14px" onclick="openTosModal()">View Terms of Service</button>
         </div>
       </div>
 
@@ -4068,13 +4099,23 @@ function toggleAcgmeForm(){
   const isOpen=form.classList.toggle('open');
   // Hide/show the connect card when form opens/closes
   if(connectCard) connectCard.style.display=isOpen?'none':'';
-  // Reset MFA step when closing
+  // Reset both steps when closing so reopening is always fresh
   if(!isOpen){
     const mfa=document.getElementById('s-mfa-section');
     if(mfa) mfa.style.display='none';
+    const step1=document.getElementById('s-step1-card');
+    if(step1){step1.style.display='';step1.classList.remove('slide-out-left');}
+    const step2=document.getElementById('s-step2-card');
+    if(step2){step2.classList.remove('visible');}
+    const ribbon=document.getElementById('s-verify-ribbon');
+    if(ribbon) ribbon.style.display='none';
+    const vs=document.getElementById('s-verify-status');
+    if(vs) vs.style.display='none';
+    const vb=document.getElementById('s-verify-btn');
+    if(vb){vb.style.display='block';vb.textContent='Verify';}
     const cred=document.getElementById('s-cred-status');
     if(cred){cred.textContent='';cred.className='settings-cred-status';}
-    loadSettingsUI(); // re-evaluate connect card visibility
+    loadSettingsUI();
   }
 }
 // Stores the MFA sessionId while we wait for the user's OTP code
@@ -4133,12 +4174,26 @@ async function saveAcgmeCredentials(){
       if(!resp.ok) throw new Error(data.error||'ACGME verification failed');
 
       if(data.mfaRequired && data.sessionId){
-        // MFA needed — show the OTP input
+        // MFA needed — animate step 1 out, step 2 in
         _pendingMfaSessionId = data.sessionId;
         statusEl.textContent = '';
         statusEl.className = 'settings-cred-status';
-        document.getElementById('s-mfa-section').style.display = 'block';
-        document.getElementById('s-mfa-code').focus();
+        const step1 = document.getElementById('s-step1-card');
+        const mfaWrap = document.getElementById('s-mfa-section');
+        const step2 = document.getElementById('s-step2-card');
+        // Slide step1 out to the left
+        if(step1) step1.classList.add('slide-out-left');
+        // Show step2 off-screen right, then slide in
+        mfaWrap.style.display = 'block';
+        requestAnimationFrame(()=>{
+          requestAnimationFrame(()=>{
+            if(step2) step2.classList.add('visible');
+          });
+        });
+        setTimeout(()=>{
+          if(step1) step1.style.display = 'none';
+          document.getElementById('s-mfa-code').focus();
+        }, 380);
         toast('Check your email/phone for a verification code','');
         return;
       }
@@ -4166,13 +4221,17 @@ async function completeMfaLogin(){
   const statusEl = document.getElementById('s-cred-status');
   if(!code){ setAcgmeStatusError('Enter the verification code.'); return; }
   if(!_pendingMfaSessionId){ setAcgmeStatusError('No pending MFA session. Please start over.'); return; }
+  // Show loading ribbon
+  const ribbon = document.getElementById('s-verify-ribbon');
+  const verifyStatus = document.getElementById('s-verify-status');
+  const verifyBtn = document.getElementById('s-verify-btn');
+  if(ribbon) ribbon.style.display = 'block';
+  if(verifyStatus) verifyStatus.style.display = 'block';
+  if(verifyBtn) verifyBtn.style.display = 'none';
   try{
-    statusEl.textContent = 'Verifying code…';
+    statusEl.textContent = '';
     statusEl.className = 'settings-cred-status';
-    setAcgmeLoadingStatus('Verification in progress', 'Verifying your ACGME access...');
-    const mfaBtn = document.querySelector('#s-mfa-section .btn-main');
-    if(mfaBtn){ mfaBtn.classList.add('busy'); mfaBtn.textContent = 'Verifying…'; }
-    setBusyButtonState(mfaBtn, 'Verifying...');
+    const mfaBtn = document.getElementById('s-verify-btn');
     const token = localStorage.getItem('cf5-token');
     const resp = await fetch(`${ACGME_BACKEND_URL}/api/auth/complete-mfa`,{
       method:'POST',
@@ -4186,11 +4245,12 @@ async function completeMfaLogin(){
     _pendingMfaSessionId = null;
     _finishAcgmeConnect();
   } catch(e){
-    const mfaBtn = document.querySelector('#s-mfa-section .btn-main');
-    if(mfaBtn){ mfaBtn.classList.remove('busy'); mfaBtn.textContent = 'Verify Code'; }
+    // Hide ribbon, restore button
+    if(ribbon) ribbon.style.display = 'none';
+    if(verifyStatus) verifyStatus.style.display = 'none';
+    if(verifyBtn){ verifyBtn.style.display = 'block'; verifyBtn.classList.remove('busy'); verifyBtn.textContent = 'Verify'; }
     document.getElementById('s-cred-status').textContent = e.message;
     document.getElementById('s-cred-status').className = 'settings-cred-status err';
-    clearBusyButtonState(mfaBtn, 'Verify Code');
     sendClientLog({source:'acgme.mfa',severity:'error',message:e.message||'ACGME MFA verification failed'});
   }
 }
@@ -4843,6 +4903,13 @@ function initHomeUiObserver(){
   });
 }
 
+function toggleBetaSection(){
+  const toggle=document.getElementById('beta-toggle');
+  const body=document.getElementById('beta-body');
+  if(!toggle||!body) return;
+  const isOpen=body.classList.toggle('open');
+  toggle.classList.toggle('open',isOpen);
+}
 function openQuickGuide(){
   openOnboarding(true);
 }
