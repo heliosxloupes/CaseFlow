@@ -2439,16 +2439,21 @@ async function handleOrbTap(){
 }
 async function startInitialListening(){
   buildIndex();
-  // Native iOS WKWebView permanently blocks SpeechRecognition (service-not-allowed).
-  // Detect and skip it entirely — record via MediaRecorder then transcribe via Groq Whisper.
-  const isNativeIOS = !!(window.Capacitor?.isNativePlatform?.());
-  if(isNativeIOS){
+  // Native iOS: use SFSpeechRecognizer plugin for live word-by-word display
+  // + MediaRecorder → Groq Whisper for final medical-accurate transcript
+  if(window.__nativeSpeechRec){
     txFinal='';txInt='';recOn=true;
     AudioFX.startListen();
     orbState='listening';document.getElementById('orb-hint').classList.add('hide');
     showBubble('Describe your case…');setStateLabel('Tap orb to stop');hideAll();
     document.getElementById('q-bubble').classList.add('show');
     document.getElementById('new-case-btn').style.display='flex';
+    // Start native SR for live display
+    await window.__nativeSpeechRec.start(text=>{
+      txFinal=text;showBubble(text);
+      document.getElementById('q-bubble').classList.add('show');
+    });
+    // Also run MediaRecorder for Groq Whisper final accuracy
     const needNewStream=!savedMicStream||savedMicStream.getTracks().some(t=>t.readyState==='ended');
     if(needNewStream){
       try{
@@ -2460,6 +2465,7 @@ async function startInitialListening(){
           document.getElementById('q-bubble').classList.add('show');
           setStateLabel('Mic permission required');
           recOn=false;orbState='idle';document.getElementById('orb-hint').classList.remove('hide');
+          await window.__nativeSpeechRec.stop();
           return;
         }
         console.warn('getUserMedia failed:',e);
@@ -2507,6 +2513,8 @@ async function startInitialListening(){
   }
 }
 function stopInitialListening(){
+  // Stop native SR first (no-op on web)
+  if(window.__nativeSpeechRec?._active) window.__nativeSpeechRec.stop();
   recOn=false;if(recObj){try{recObj.abort();}catch(e){} recObj=null;}
   // Keep mic stream alive — stopMic() only in resetFlow() to avoid iOS audio session cooldown
   const wsText=(txFinal+' '+txInt).trim();
@@ -2521,7 +2529,15 @@ function stopInitialListening(){
   // Get Groq transcript (falls back to Web Speech text if Groq fails; works even if wsText is empty)
   const recSnap=mainMediaRec,chunksSnap=mainAudioChunks;
   mainMediaRec=null;mainAudioChunks=[];
-  getGroqTranscript(recSnap,chunksSnap,wsText).then(transcript=>processDescription(transcript));
+  getGroqTranscript(recSnap,chunksSnap,wsText).then(transcript=>{
+    if(!transcript?.trim()){
+      orbState='idle';document.getElementById('orb-hint').classList.remove('hide');
+      showBubble('Nothing captured — tap to try again.');
+      document.getElementById('q-bubble').classList.add('show');
+      setStateLabel('');return;
+    }
+    processDescription(transcript);
+  });
 }
 async function processDescription(text){
   caseData.description=text;caseData.date=isoToday();buildIndex();
