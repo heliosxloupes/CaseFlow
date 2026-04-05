@@ -187,6 +187,8 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .sm-account-mini .udot{width:6px;height:6px;opacity:.9}
 .sm-account-name{color:rgba(232,237,244,.74);font-weight:600}
 .sm-footer-note{font-size:11px;color:var(--text3);line-height:1.6;margin-bottom:14px}
+.sm-specialty-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25);font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.4px;text-transform:uppercase;margin-bottom:14px}
+.sm-specialty-badge::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--purple);flex-shrink:0}
 .sm-logout-btn{
   width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
   padding:13px 14px;border-radius:14px;
@@ -1918,7 +1920,7 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
             <div class="acgme-status-title" id="s-status-title">Not connected</div>
             <div class="acgme-status-sub" id="s-status-sub">Connect your ACGME account to enable auto-submit</div>
           </div>
-          <button class="acgme-status-edit" id="s-edit-btn" onclick="toggleAcgmeForm()" style="display:none">Edit</button>
+          <button class="acgme-status-edit" id="s-edit-btn" onclick="toggleAcgmeForm()" style="display:none">Connect</button>
         </div>
 
         <!-- Connect CTA — shown when not set up -->
@@ -1980,7 +1982,6 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
               <div class="acgme-verify-ribbon" id="s-verify-ribbon" style="display:none"></div>
               <div class="acgme-verify-status" id="s-verify-status" style="display:none">Verifying with ACGME…</div>
               <button class="acgme-continue-btn" onclick="completeMfaLogin()" id="s-verify-btn">Verify</button>
-              <button class="acgme-back-link" onclick="toggleAcgmeForm()">Start over</button>
             </div>
           </div>
 
@@ -2087,7 +2088,7 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
         <div class="udot"></div>
         <span class="sm-account-name" id="sm-hdr-u">&#8212;</span>
       </div>
-      <div class="sm-footer-note" id="sm-specialty-label">ACGME Case Logging</div>
+      <div class="sm-specialty-badge" id="sm-specialty-label">Plastic Surgery</div>
       <button class="sm-logout-btn" onclick="doLogout()" type="button">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
         <span>Log Out</span>
@@ -4107,10 +4108,15 @@ function loadSettingsUI(){
     } else {
       dot.className='acgme-status-dot ok';
       title.textContent='Connected';
-      const syncStr=currentUserMeta.cptSyncedAt
-        ? `${currentUserMeta.cptCodes?.length||'?'} codes synced · ${fmtStamp(currentUserMeta.cptSyncedAt)}`
-        : 'Auto-submit enabled';
-      sub.textContent=syncStr;
+      const _row=(ok,okTxt,errTxt)=>`<div style="margin-top:3px;font-size:11px"><span style="color:${ok?'#34d399':'#f87171'};font-size:9px;margin-right:4px">●</span>${ok?okTxt:errTxt}</div>`;
+      const _cptOk=!!currentUserMeta.cptSyncedAt;
+      let _atts=[],_sites=[];
+      try{_atts=JSON.parse(localStorage.getItem('cf5-attendings')||'[]');}catch(_){}
+      try{_sites=JSON.parse(localStorage.getItem('cf5-sites')||'[]');}catch(_){}
+      sub.innerHTML=
+        _row(_cptOk,`${currentUserMeta.cptCodes?.length||'?'} CPT codes synced`,'Codes not synced — reconnect to sync')+
+        _row(_atts.length>0,`${_atts.length} attendings`,'No attendings found')+
+        _row(_sites.length>0,`${_sites.length} sites`,'No sites found');
       statusCard.classList.remove('clickable');
       statusCard.onclick=null;
     }
@@ -4320,6 +4326,8 @@ function _finishAcgmeConnect(){
   toast('ACGME account connected ✓','ok');
   acgmeServerSessionActive = true;
   fetchAcgmeProfile({ afterNewLogin: true });
+  // Refresh user meta (specialty, cptSyncedAt) then re-render status card with live data
+  syncUserMetaFromServer().then(() => loadSettingsUI()).catch(() => {});
 }
 
 /**
