@@ -805,16 +805,35 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .settings-save-btn{width:100%;padding:13px;font-size:14px}
 .settings-value{font-size:13px;color:var(--text2);padding:4px 0}
 /* ── ACGME status card ── */
-.acgme-status-card{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:14px;padding:14px 16px;margin-bottom:16px;transition:border-color .2s,background .2s}
+.acgme-status-card{background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:16px;padding:14px 16px;margin-bottom:16px;transition:border-color .2s,background .2s}
+.acgme-status-card.ok{border-color:rgba(52,211,153,.2)}
+.acgme-status-card.warn{border-color:rgba(251,191,36,.2)}
 .acgme-status-card.clickable{cursor:pointer}
-.acgme-status-card.clickable:active{background:rgba(255,255,255,.07)}
-.acgme-status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:rgba(255,255,255,.2)}
-.acgme-status-dot.ok{background:#34d399;box-shadow:0 0 8px rgba(52,211,153,.5)}
-.acgme-status-dot.warn{background:#fbbf24;box-shadow:0 0 8px rgba(251,191,36,.4)}
-.acgme-status-info{flex:1}
-.acgme-status-title{font-size:13px;font-weight:600;color:var(--text);line-height:1}
-.acgme-status-sub{font-size:11px;color:var(--text3);margin-top:3px}
-.acgme-status-edit{font-size:12px;font-weight:600;color:var(--purple);padding:5px 10px;background:rgba(168,85,247,.1);border-radius:8px;border:none;cursor:pointer;font-family:'Sora',sans-serif;white-space:nowrap}
+.acgme-status-card.clickable:active{background:rgba(255,255,255,.06)}
+.acgme-sc-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+/* Status badge pill */
+.acgme-sc-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 8px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.01em;border:1px solid transparent;transition:background .2s,border-color .2s,color .2s}
+.acgme-sc-badge.ok{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.25);color:#34d399}
+.acgme-sc-badge.warn{background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.25);color:#fbbf24}
+.acgme-sc-badge.idle{background:rgba(255,255,255,.04);border-color:var(--line2);color:var(--text3)}
+.acgme-sc-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:currentColor;opacity:.8}
+.acgme-sc-badge.ok .acgme-sc-dot{box-shadow:0 0 6px rgba(52,211,153,.6)}
+.acgme-sc-badge.warn .acgme-sc-dot{box-shadow:0 0 6px rgba(251,191,36,.5)}
+/* Sub text */
+.acgme-status-sub{font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5}
+/* Manage button */
+.acgme-status-edit{font-size:12px;font-weight:600;color:rgba(168,85,247,.9);padding:5px 12px;background:rgba(168,85,247,.1);border-radius:8px;border:1px solid rgba(168,85,247,.18);cursor:pointer;font-family:'Sora',sans-serif;white-space:nowrap;transition:background .15s,border-color .15s}
+.acgme-status-edit:active{background:rgba(168,85,247,.18)}
+/* Stats grid */
+.acgme-sc-stats{display:flex;align-items:stretch;margin-top:12px;background:rgba(255,255,255,.025);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.acgme-sc-stat{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 8px;gap:2px;transition:background .15s}
+.acgme-sc-divider{width:1px;background:var(--line);flex-shrink:0}
+.acgme-sc-stat-icon{display:flex;align-items:center;justify-content:center;margin-bottom:3px;opacity:.45}
+.acgme-sc-stat.ok .acgme-sc-stat-icon{opacity:.65;color:#34d399}
+.acgme-sc-stat.err .acgme-sc-stat-icon{opacity:.5;color:#f87171}
+.acgme-sc-stat-val{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-.5px;line-height:1}
+.acgme-sc-stat.err .acgme-sc-stat-val{color:var(--red);opacity:.7}
+.acgme-sc-stat-lbl{font-size:10px;color:var(--text3);letter-spacing:.02em;margin-top:1px}
 /* ── ACGME connect card (not set up) ── */
 .acgme-connect-card{background:linear-gradient(135deg,rgba(168,85,247,.08) 0%,rgba(99,102,241,.06) 100%);border:1px solid rgba(168,85,247,.25);border-radius:16px;padding:20px 18px;margin-bottom:16px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .acgme-connect-icon{width:36px;height:36px;border-radius:10px;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.25);display:flex;align-items:center;justify-content:center;margin-bottom:12px}
@@ -1915,12 +1934,39 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
 
         <!-- Status card — updated by loadSettingsUI() -->
         <div class="acgme-status-card" id="s-status-card">
-          <div class="acgme-status-dot" id="s-status-dot"></div>
-          <div class="acgme-status-info">
-            <div class="acgme-status-title" id="s-status-title">Not connected</div>
-            <div class="acgme-status-sub" id="s-status-sub">Connect your ACGME account to enable auto-submit</div>
+          <div class="acgme-sc-head">
+            <div class="acgme-sc-badge idle" id="s-status-badge">
+              <span class="acgme-sc-dot" id="s-status-dot"></span>
+              <span id="s-status-title">Not connected</span>
+            </div>
+            <button class="acgme-status-edit" id="s-edit-btn" onclick="toggleAcgmeForm()" style="display:none">Manage</button>
           </div>
-          <button class="acgme-status-edit" id="s-edit-btn" onclick="toggleAcgmeForm()" style="display:none">Connect</button>
+          <div class="acgme-status-sub" id="s-status-sub" style="display:none">Connect your ACGME account to enable auto-submit</div>
+          <div class="acgme-sc-stats" id="s-sc-stats" style="display:none">
+            <div class="acgme-sc-stat" id="s-stat-cpt">
+              <div class="acgme-sc-stat-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17 14v6m-3-3h6"/></svg>
+              </div>
+              <div class="acgme-sc-stat-val" id="s-stat-cpt-val">—</div>
+              <div class="acgme-sc-stat-lbl">CPT codes</div>
+            </div>
+            <div class="acgme-sc-divider"></div>
+            <div class="acgme-sc-stat" id="s-stat-att">
+              <div class="acgme-sc-stat-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <div class="acgme-sc-stat-val" id="s-stat-att-val">—</div>
+              <div class="acgme-sc-stat-lbl">Attendings</div>
+            </div>
+            <div class="acgme-sc-divider"></div>
+            <div class="acgme-sc-stat" id="s-stat-sites">
+              <div class="acgme-sc-stat-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </div>
+              <div class="acgme-sc-stat-val" id="s-stat-sites-val">—</div>
+              <div class="acgme-sc-stat-lbl">Sites</div>
+            </div>
+          </div>
         </div>
 
         <!-- Connect CTA — shown when not set up -->
@@ -4098,37 +4144,53 @@ function loadSettingsUI(){
   const formEl = document.getElementById('s-acgme-form');
   const statusCard=document.getElementById('s-status-card');
   const connectCard=document.getElementById('s-connect-card');
+  const badge=document.getElementById('s-status-badge');
+  const statsEl=document.getElementById('s-sc-stats');
   if(blob){
     if(acgmeServerSessionActive === false){
-      dot.className='acgme-status-dot warn';
-      title.textContent='Tap to Connect ACGME';
-      sub.textContent='Session expired — tap to reconnect';
-      statusCard.classList.add('clickable');
+      badge.className='acgme-sc-badge warn';
+      title.textContent='Session Expired';
+      sub.textContent='Tap to reconnect your ACGME account';
+      sub.style.display='block';
+      if(statsEl) statsEl.style.display='none';
+      statusCard.className='acgme-status-card warn clickable';
       statusCard.onclick=toggleAcgmeForm;
     } else {
-      dot.className='acgme-status-dot ok';
+      badge.className='acgme-sc-badge ok';
       title.textContent='Connected';
-      const _row=(ok,okTxt,errTxt)=>`<div style="margin-top:3px;font-size:11px"><span style="color:${ok?'#34d399':'#f87171'};font-size:9px;margin-right:4px">●</span>${ok?okTxt:errTxt}</div>`;
+      sub.style.display='none';
       const _cptOk=!!currentUserMeta.cptSyncedAt;
       let _atts=[],_sites=[];
       try{_atts=JSON.parse(localStorage.getItem('cf5-attendings')||'[]');}catch(_){}
       try{_sites=JSON.parse(localStorage.getItem('cf5-sites')||'[]');}catch(_){}
-      sub.innerHTML=
-        _row(_cptOk,`${currentUserMeta.cptCodes?.length||'?'} CPT codes synced`,'Codes not synced — reconnect to sync')+
-        _row(_atts.length>0,`${_atts.length} attendings`,'No attendings found')+
-        _row(_sites.length>0,`${_sites.length} sites`,'No sites found');
-      statusCard.classList.remove('clickable');
+      const cptVal=document.getElementById('s-stat-cpt-val');
+      const attVal=document.getElementById('s-stat-att-val');
+      const sitesVal=document.getElementById('s-stat-sites-val');
+      const cptStat=document.getElementById('s-stat-cpt');
+      const attStat=document.getElementById('s-stat-att');
+      const sitesStat=document.getElementById('s-stat-sites');
+      if(cptVal) cptVal.textContent=_cptOk?(currentUserMeta.cptCodes?.length||'?'):'—';
+      if(attVal) attVal.textContent=_atts.length>0?_atts.length:'0';
+      if(sitesVal) sitesVal.textContent=_sites.length>0?_sites.length:'0';
+      if(cptStat) cptStat.className=`acgme-sc-stat ${_cptOk?'ok':'err'}`;
+      if(attStat) attStat.className=`acgme-sc-stat ${_atts.length>0?'ok':'err'}`;
+      if(sitesStat) sitesStat.className=`acgme-sc-stat ${_sites.length>0?'ok':'err'}`;
+      if(statsEl) statsEl.style.display='flex';
+      statusCard.className='acgme-status-card ok';
       statusCard.onclick=null;
     }
     editBtn.style.display='block';
+    editBtn.textContent='Manage';
     if(connectCard) connectCard.style.display='none';
     if(!formEl.classList.contains('open')) formEl.classList.remove('open');
   } else {
-    dot.className='acgme-status-dot warn';
+    badge.className='acgme-sc-badge idle';
     title.textContent='Not connected';
     sub.textContent='Connect ACGME to enable auto-submit';
+    sub.style.display='block';
+    if(statsEl) statsEl.style.display='none';
     editBtn.style.display='none';
-    statusCard.classList.remove('clickable');
+    statusCard.className='acgme-status-card';
     statusCard.onclick=null;
     if(connectCard) connectCard.style.display='block';
   }
