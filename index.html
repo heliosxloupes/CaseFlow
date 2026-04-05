@@ -2087,7 +2087,7 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
         <div class="udot"></div>
         <span class="sm-account-name" id="sm-hdr-u">&#8212;</span>
       </div>
-      <div class="sm-footer-note">ACGME Case Logging</div>
+      <div class="sm-footer-note" id="sm-specialty-label">ACGME Case Logging</div>
       <button class="sm-logout-btn" onclick="doLogout()" type="button">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
         <span>Log Out</span>
@@ -2357,6 +2357,7 @@ function getGroqTranscript(mr, chunks, fallback){
         fd.append('audio',blob,`recording.${ext}`);
         fd.append('sites',JSON.stringify(getSitesForEdit()));
         fd.append('attendings',JSON.stringify(getAttendingsForEdit()));
+        fd.append('specialty',currentUserMeta.specialty||'plastic-surgery');
         const resp=await fetch(`${ACGME_BACKEND_URL}/api/transcribe`,{
           method:'POST',
           headers:{'Authorization':`Bearer ${token}`},
@@ -2440,7 +2441,20 @@ let currentUserMeta={
   tosVersion:APP_TOS_VERSION,
   createdAt:null,
   lastLoginAt:null,
+  specialty:'plastic-surgery',
+  cptSyncedAt:null,
+  cptCodes:null,
 };
+const SPECIALTY_LABELS={
+  'plastic-surgery':'Plastic Surgery',
+  'general-surgery':'General Surgery',
+  'orthopaedic-surgery':'Orthopaedic Surgery',
+  'neurosurgery':'Neurosurgery',
+  'otolaryngology':'Otolaryngology',
+  'urology':'Urology',
+  'vascular-surgery':'Vascular Surgery',
+};
+function getSpecialtyLabel(slug){return SPECIALTY_LABELS[slug]||'Residency';}
 let adminDiagnostics=null;
 let onboardingStep=0;
 let pendingQs=[],currentQ=-1;
@@ -2602,7 +2616,7 @@ async function processDescription(text){
   caseData.description=text;caseData.date=isoToday();buildIndex();
   let extracted=null;
   try{
-    const res=await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:'plastic-surgery',sites:getSitesForEdit(),attendings:getAttendingsForEdit()})});
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:currentUserMeta.specialty||'plastic-surgery',sites:getSitesForEdit(),attendings:getAttendingsForEdit()})});
     if(!res.ok)throw new Error();extracted=await res.json()
   }
   catch(e){extracted=localExtract(text)}
@@ -2637,8 +2651,24 @@ function localExtract(text){
   const lo=text.toLowerCase();
   const role=lo.includes('assist')?'Assistant':lo.includes('observer')?'Observer':'Surgeon';
   const pt=(lo.includes('pediatric')||lo.includes('child')||lo.includes('infant'))?'Pediatric':'Adult';
-  const matched=kwMatch(lo);
-  return{role,patientType:pt,caseYear:4,suggestedCodes:matched.map(e=>({code:e.c,desc:e.d,area:e.a}))};
+  // Use user's ACGME-synced codes if available, else fall back to built-in plastic surgery index
+  let suggestedCodes=[];
+  if(currentUserMeta.cptCodes?.length){
+    const words=lo.split(/\W+/).filter(w=>w.length>3);
+    const scored=[];
+    for(const entry of currentUserMeta.cptCodes){
+      const d=(entry.description||'').toLowerCase();
+      let score=0;
+      for(const w of words){if(d.includes(w))score+=2;}
+      if(score>0)scored.push({score,...entry});
+    }
+    scored.sort((a,b)=>b.score-a.score);
+    suggestedCodes=scored.slice(0,6).map(e=>({code:e.code,desc:e.description,area:e.area||''}));
+  } else {
+    const matched=kwMatch(lo);
+    suggestedCodes=matched.map(e=>({code:e.c,desc:e.d,area:e.a}));
+  }
+  return{role,patientType:pt,caseYear:4,suggestedCodes};
 }
 function nextQuestion(){
   AudioFX.stopThink();
@@ -2672,7 +2702,18 @@ function showCptSearchPanel(){
 function liveSearch(q){
   const box=document.getElementById('srch-results-box');
   if(!q.trim()){box.innerHTML='';return}
-  const hits=searchCPT(q,12);
+  let hits;
+  if(currentUserMeta.cptCodes?.length){
+    // Search user's ACGME-synced codes
+    const lo=q.toLowerCase();
+    const scored=currentUserMeta.cptCodes
+      .filter(e=>(e.code+' '+e.description).toLowerCase().includes(lo))
+      .slice(0,12)
+      .map(e=>({c:e.code,d:e.description,a:e.area||''}));
+    hits=scored;
+  } else {
+    hits=searchCPT(q,12);
+  }
   if(!hits.length){box.innerHTML='<div class="no-results">No results — try a different term</div>';return}
   box.innerHTML=`<div class="srch-count">${hits.length} result${hits.length!==1?'s':''} — tap to add</div>`
     +hits.map(h=>`<div class="srch-row" onclick="addCptFromSearch('${h.c}','${esc(h.d)}','${esc(h.a)}')"><div class="srch-code">${h.c}</div><div class="srch-info"><div class="srch-desc">${h.d}</div><div class="srch-area">${h.a}</div></div><div class="srch-add">+</div></div>`).join('');
@@ -3040,7 +3081,16 @@ function startAddMoreSearch(){
 function modalSearch(q){
   const res = document.getElementById('search-modal-results');
   if(!q.trim()){res.innerHTML='';return}
-  const hits = searchCPT(q, 10);
+  let hits;
+  if(currentUserMeta.cptCodes?.length){
+    const lo=q.toLowerCase();
+    hits=currentUserMeta.cptCodes
+      .filter(e=>(e.code+' '+e.description).toLowerCase().includes(lo))
+      .slice(0,10)
+      .map(e=>({c:e.code,d:e.description,a:e.area||''}));
+  } else {
+    hits=searchCPT(q, 10);
+  }
   if(!hits.length){res.innerHTML='<div class="no-results">No results</div>';return}
   res.innerHTML = hits.map(h => `
     <div class="srch-row" onclick="addMoreCode('${h.c}','${esc(h.d)}','${esc(h.a)}')">
@@ -3147,7 +3197,7 @@ async function stopAddMoreVoice(){
 
   let extracted = null;
   try {
-    const res = await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:'plastic-surgery'})});
+    const res = await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:currentUserMeta.specialty||'plastic-surgery'})});
     if(!res.ok) throw new Error();
     extracted = await res.json();
   } catch(e) {
@@ -4057,7 +4107,10 @@ function loadSettingsUI(){
     } else {
       dot.className='acgme-status-dot ok';
       title.textContent='Connected';
-      sub.textContent='Auto-submit enabled';
+      const syncStr=currentUserMeta.cptSyncedAt
+        ? `${currentUserMeta.cptCodes?.length||'?'} codes synced · ${fmtStamp(currentUserMeta.cptSyncedAt)}`
+        : 'Auto-submit enabled';
+      sub.textContent=syncStr;
       statusCard.classList.remove('clickable');
       statusCard.onclick=null;
     }
@@ -4566,7 +4619,7 @@ function doLogout(skipConfirm){
   if(!skipConfirm && !confirm('Sign out?'))return;
   sessionPassword='';
   adminDiagnostics=null;
-  currentUserMeta={id:null,email:'',name:'',isAdmin:false,betaKeyLabel:'',tosAcceptedAt:null,tosVersion:APP_TOS_VERSION,createdAt:null,lastLoginAt:null};
+  currentUserMeta={id:null,email:'',name:'',isAdmin:false,betaKeyLabel:'',tosAcceptedAt:null,tosVersion:APP_TOS_VERSION,createdAt:null,lastLoginAt:null,specialty:'plastic-surgery',cptSyncedAt:null,cptCodes:null};
   localStorage.removeItem('cf5-token');
   localStorage.removeItem('cf5-name');
   localStorage.removeItem('cf5-vault');
@@ -4956,6 +5009,8 @@ function applyUserMeta(meta){
   localStorage.setItem('cf5-user-meta',JSON.stringify(stored));
   const tosVersionEl=document.getElementById('tos-version-label');
   if(tosVersionEl) tosVersionEl.textContent=currentUserMeta.tosVersion||APP_TOS_VERSION;
+  const specialtyEl=document.getElementById('sm-specialty-label');
+  if(specialtyEl) specialtyEl.textContent=getSpecialtyLabel(currentUserMeta.specialty);
 }
 
 async function syncUserMetaFromServer(){
@@ -4979,12 +5034,35 @@ async function syncUserMetaFromServer(){
         tosVersion:payload.user.tosVersion||APP_TOS_VERSION,
         createdAt:payload.user.createdAt||null,
         lastLoginAt:payload.user.lastLoginAt||null,
+        specialty:payload.user.specialty||'plastic-surgery',
+        cptSyncedAt:payload.user.cptSyncedAt||null,
       });
+      // Load cached CPT codes from server (non-blocking)
+      loadUserCptCodes();
     }
     return payload;
   }catch(e){
     console.warn('syncUserMetaFromServer:',e.message);
     return null;
+  }
+}
+
+async function loadUserCptCodes(){
+  if(!ACGME_BACKEND_URL) return;
+  const token=localStorage.getItem('cf5-token');
+  if(!token) return;
+  try{
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/lookups/user-cpt-codes`,{
+      headers:{'Authorization':`Bearer ${token}`}
+    });
+    if(!res.ok) return;
+    const data=await res.json();
+    if(data.codes?.length){
+      currentUserMeta.cptCodes=data.codes;
+      console.log(`[CPT] Loaded ${data.codes.length} user-synced codes`);
+    }
+  }catch(e){
+    console.warn('loadUserCptCodes:',e.message);
   }
 }
 

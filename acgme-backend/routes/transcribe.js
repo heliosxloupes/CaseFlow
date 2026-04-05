@@ -4,22 +4,12 @@ const multer = require('multer');
 const Groq = require('groq-sdk');
 const { toFile } = require('groq-sdk');
 const { logActivity } = require('../services/logService');
+const { getSpecialty } = require('../config/specialties');
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB — Groq limit
 });
-
-// Plastic surgery vocabulary hint seeded into every transcription.
-// Whisper uses this as a prior — dramatically improves accuracy for
-// procedure names, attendings, and hospital names.
-const BASE_PROMPT = [
-  'Plastic surgery case log.',
-  'Procedures: rhinoplasty, mastopexy, abdominoplasty, augmentation mammoplasty,',
-  'reduction mammaplasty, blepharoplasty, rhytidectomy, liposuction, brachioplasty,',
-  'tissue expander, TRAM flap, DIEP flap, cleft lip, cleft palate,',
-  'carpal tunnel release, brow lift, neck lift, skin graft, free flap.',
-].join(' ');
 
 /**
  * POST /api/transcribe
@@ -45,6 +35,10 @@ router.post('/', upload.single('audio'), async (req, res, next) => {
     let attendings = [];
     try { sites = JSON.parse(req.body.sites || '[]'); } catch (_) {}
     try { attendings = JSON.parse(req.body.attendings || '[]'); } catch (_) {}
+
+    // Specialty-aware Whisper vocabulary hint
+    const specialty = req.body.specialty || req.userSpecialty || 'plastic-surgery';
+    const BASE_PROMPT = getSpecialty(specialty).whisperHint;
 
     // Build prompt under Groq's 896-char hard limit
     const promptParts = [BASE_PROMPT];

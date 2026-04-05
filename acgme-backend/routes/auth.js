@@ -9,9 +9,65 @@ const pw = require('../services/playwrightService');
 const db = require('../db');
 const { getAdminEmails } = require('../middleware/requireAdmin');
 const { logActivity, logError } = require('../services/logService');
+const { getUserProfile } = require('../services/acgmeService');
+const { generateTrackedCodes } = require('../services/trackedCodesService');
+const { ACGME_ID_TO_SLUG } = require('../config/specialties');
 
 const TOS_VERSION = '2026-03-31';
 const APP_VERSION = 'beta-2026.03.31';
+
+/**
+ * After ACGME session cookies are stored, scrape specialty + sync CPT codes.
+ * Non-blocking — errors are logged but do not fail the connect response.
+ */
+async function postConnectSync(userId, userEmail) {
+  try {
+    const cookieHeader = await pw.getValidCookieHeader(userId);
+    if (!cookieHeader) return;
+
+    // 1. Scrape specialty from Insert page
+    let specialty = null;
+    try {
+      const profile = await getUserProfile(cookieHeader);
+      if (profile.specialtyId) {
+        specialty = ACGME_ID_TO_SLUG[String(profile.specialtyId)] || null;
+        if (specialty) {
+          await db.query('UPDATE users SET specialty = $1 WHERE id = $2', [specialty, userId]);
+          console.log(`[postConnectSync] user=${userId} specialty=${specialty}`);
+        } else {
+          console.warn(`[postConnectSync] Unknown ACGME specialty ID: ${profile.specialtyId} — keeping existing`);
+        }
+      }
+    } catch (err) {
+      console.warn(`[postConnectSync] specialty scrape failed:`, err.message);
+    }
+
+    // 2. Download & cache tracked CPT codes
+    try {
+      const codes = await generateTrackedCodes(cookieHeader);
+      if (codes.length) {
+        await db.query(
+          `INSERT INTO user_cpt_codes (user_id, codes, synced_at)
+           VALUES ($1, $2, NOW())
+           ON CONFLICT (user_id) DO UPDATE SET codes = $2, synced_at = NOW()`,
+          [userId, JSON.stringify(codes)]
+        );
+        console.log(`[postConnectSync] user=${userId} cpt_codes=${codes.length}`);
+        await logActivity({
+          userId,
+          userEmail,
+          eventType: 'acgme.cpt_sync',
+          message: `Synced ${codes.length} tracked CPT codes`,
+          context: { count: codes.length, specialty },
+        });
+      }
+    } catch (err) {
+      console.warn(`[postConnectSync] CPT sync failed:`, err.message);
+    }
+  } catch (err) {
+    console.warn(`[postConnectSync] outer error:`, err.message);
+  }
+}
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
@@ -242,17 +298,26 @@ router.post('/login', async (req, res, next) => {
 
 router.get('/me', authenticate, async (req, res, next) => {
   try {
-    const { rows } = await db.query(
-      `SELECT id, name, email, is_admin, beta_key_label, tos_accepted_at, tos_version, created_at, last_login_at
-         FROM users
-        WHERE id = $1
-        LIMIT 1`,
-      [req.userId]
-    );
-    if (!rows.length) return res.status(404).json({ error: 'User not found' });
+    const [userRes, cptRes] = await Promise.all([
+      db.query(
+        `SELECT id, name, email, is_admin, beta_key_label, tos_accepted_at, tos_version, created_at, last_login_at, specialty
+           FROM users
+          WHERE id = $1
+          LIMIT 1`,
+        [req.userId]
+      ),
+      db.query(
+        `SELECT synced_at FROM user_cpt_codes WHERE user_id = $1`,
+        [req.userId]
+      ),
+    ]);
 
-    const user = rows[0];
+    if (!userRes.rows.length) return res.status(404).json({ error: 'User not found' });
+
+    const user = userRes.rows[0];
     const isAdmin = !!user.is_admin || adminByEmail(user.email);
+    const cptSyncedAt = cptRes.rows[0]?.synced_at || null;
+
     return res.json({
       user: {
         id: user.id,
@@ -264,6 +329,8 @@ router.get('/me', authenticate, async (req, res, next) => {
         tosVersion: user.tos_version || null,
         createdAt: user.created_at,
         lastLoginAt: user.last_login_at,
+        specialty: user.specialty || 'plastic-surgery',
+        cptSyncedAt,
       },
       app: {
         version: APP_VERSION,
@@ -312,6 +379,8 @@ router.post('/save-credentials', authenticate, async (req, res, next) => {
         eventType: 'acgme.connect',
         message: 'ACGME account connected successfully',
       });
+      // Non-blocking: scrape specialty + sync CPT codes in background
+      postConnectSync(req.userId, req.userEmail).catch(() => {});
       return res.json({ success: true, message: 'ACGME account connected successfully' });
     }
 
@@ -361,6 +430,8 @@ router.post('/complete-mfa', authenticate, async (req, res, next) => {
         eventType: 'acgme.mfa_complete',
         message: 'ACGME MFA completed',
       });
+      // Non-blocking: scrape specialty + sync CPT codes in background
+      postConnectSync(req.userId, req.userEmail).catch(() => {});
       return res.json({ success: true, message: 'MFA verified. ACGME account connected!' });
     }
 

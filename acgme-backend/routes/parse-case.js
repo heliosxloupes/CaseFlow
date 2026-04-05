@@ -1,4 +1,6 @@
 const router = require('express').Router();
+const db = require('../db');
+const { getSpecialty } = require('../config/specialties');
 
 // api/parse-case.js
 // Vercel serverless function — works at any scale
@@ -84,6 +86,35 @@ function findCodes(procedureNames, topPerProc = 3) {
   return results;
 }
 
+/**
+ * Match procedure names against a user's ACGME-synced code set.
+ * Same scoring approach as findCodes() but operates on the user's own codes.
+ */
+function findCodesFromUserSet(procedureNames, userCodes) {
+  if (!procedureNames.length || !userCodes.length) return [];
+  const results = [];
+  for (const name of procedureNames) {
+    const words = name.toLowerCase().split(/\W+/).filter(w => w.length > 2 && !STOPWORDS.has(w));
+    if (!words.length) continue;
+    const scored = [];
+    for (const entry of userCodes) {
+      const desc = entry.description.toLowerCase();
+      let score = 0;
+      for (const w of words) {
+        if (desc.includes(w)) score += 2;
+      }
+      if (score > 0) scored.push({ ...entry, score });
+    }
+    scored.sort((a, b) => b.score - a.score);
+    for (const c of scored.slice(0, 3)) {
+      if (!results.find(r => r.code === c.code)) {
+        results.push({ code: c.code, description: c.description, area: c.area || '' });
+      }
+    }
+  }
+  return results.slice(0, 10);
+}
+
 async function handler(req, res) {
 
   const { transcript, specialty = 'plastic-surgery', year = '4', sites = [], attendings = [] } = req.body;
@@ -92,9 +123,14 @@ async function handler(req, res) {
   const siteList = sites.length ? sites : ['Larkin Community Hospital', 'Larkin Palm Springs', 'Affiliated Site'];
   const attendingList = attendings.length ? attendings : ['Dr. Smith', 'Dr. Johnson', 'Dr. Williams', 'Dr. Brown'];
 
-  // TODO: When adding new specialties, load specialty-specific CODES/INDEX here
-  // e.g. const { CODES, INDEX } = DB[specialty] || DB['plastic-surgery'];
-  // For now all specialties use the Plastic Surgery PDF until others are uploaded
+  // Load user's ACGME-synced CPT codes if available (multi-specialty support)
+  let userCodes = null;
+  if (req.userId) {
+    try {
+      const { rows } = await db.query('SELECT codes FROM user_cpt_codes WHERE user_id = $1', [req.userId]);
+      if (rows[0]?.codes?.length) userCodes = rows[0].codes;
+    } catch (_) {}
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
@@ -111,7 +147,7 @@ async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 400,
-        system: `You are a medical coding assistant for a Plastic Surgery residency.
+        system: `You are a medical coding assistant for a ${getSpecialty(specialty).label} residency.
 Extract case details from the resident's spoken description.
 
 Available attendings (use FUZZY matching — partial last name like "Castrellon" or "Dr. Castrellon" should match the correct full name from this list):
@@ -134,19 +170,8 @@ Return ONLY valid JSON, no markdown:
 For attending and site: return the EXACT string from the list above. Use fuzzy/partial matching — if the resident says a last name or partial name, find the best match. Only return null if the attending/site was genuinely not mentioned or cannot be matched.
 
 CRITICAL for procedures: Use SHORT, specific CPT-style names (2-5 words). Match the exact clinical terminology used in CPT code descriptions. Do NOT write verbose sentences.
-Good examples:
-- "debridement subcutaneous tissue" (for wound debridement / washout)
-- "debridement muscle fascia" (if deep tissue debridement mentioned)
-- "breast augmentation implant"
-- "capsulectomy peri-implant complete"
-- "abdominoplasty"
-- "rhinoplasty primary"
-- "blepharoplasty upper eyelid"
-- "skin graft split thickness"
-- "tendon repair flexor"
-- "carpal tunnel release"
-- "liposuction trunk"
-- "mastopexy"
+Good examples for ${getSpecialty(specialty).label}:
+${getSpecialty(specialty).parseCaseExamples.map(e => `- "${e}"`).join('\n')}
 Bad: "debridement and wound washout of upper extremity" → use "debridement subcutaneous tissue" instead
 List each procedure separately.`,
         messages: [{ role: 'user', content: `Extract case details: "${transcript}"` }]
@@ -162,9 +187,11 @@ List each procedure separately.`,
     const rawText = aiData.content.filter(b => b.type === 'text').map(b => b.text).join('');
     const parsed = JSON.parse(rawText.replace(/```json|```/g, '').trim());
 
-    // Map procedure names → CPT codes using local index
-    // Only codes from your ACGME PDF can ever appear here
-    const suggestedCodes = findCodes(parsed.procedures || []);
+    // Map procedure names → CPT codes
+    // Uses user's ACGME-synced codes if available; falls back to built-in plastic surgery index
+    const suggestedCodes = userCodes
+      ? findCodesFromUserSet(parsed.procedures || [], userCodes)
+      : findCodes(parsed.procedures || []);
 
     return res.status(200).json({
       role: parsed.role || 'Surgeon',

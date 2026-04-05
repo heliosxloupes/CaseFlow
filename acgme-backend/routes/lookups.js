@@ -46,6 +46,19 @@ router.get('/user-profile', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/lookups/user-cpt-codes
+// Returns the cached tracked CPT codes for the current user (DB read only, no ACGME call).
+router.get('/user-cpt-codes', async (req, res, next) => {
+  try {
+    const { rows } = await require('../db').query(
+      'SELECT codes, synced_at FROM user_cpt_codes WHERE user_id = $1',
+      [req.userId]
+    );
+    if (!rows.length) return res.json({ codes: null, syncedAt: null });
+    return res.json({ codes: rows[0].codes, syncedAt: rows[0].synced_at });
+  } catch (err) { next(err); }
+});
+
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
 /**
