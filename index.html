@@ -751,6 +751,12 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .settings-wrap{padding:20px 20px 100px;max-width:500px;margin:0 auto}
 .settings-section{background:var(--bg1);border:1px solid var(--line);border-radius:var(--rl);padding:20px;margin-bottom:16px}
 .settings-section-title{font-size:13px;font-weight:700;color:var(--text);letter-spacing:.03em;margin-bottom:6px}
+.settings-collapse-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;margin-bottom:0}
+.settings-collapse-toggle .settings-section-title{margin-bottom:0}
+.settings-collapse-chevron{width:16px;height:16px;color:var(--text3);transition:transform .28s cubic-bezier(.4,0,.2,1);flex-shrink:0}
+.settings-collapse-toggle.open .settings-collapse-chevron{transform:rotate(180deg)}
+.settings-collapse-body{overflow:hidden;max-height:0;opacity:0;transition:max-height .32s cubic-bezier(.4,0,.2,1),opacity .25s ease;margin-top:0}
+.settings-collapse-body.open{max-height:600px;opacity:1;margin-top:14px}
 .settings-section-desc{font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:16px}
 .settings-field{margin-bottom:14px}
 .settings-label{display:block;font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
@@ -796,24 +802,63 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .settings-cred-status.err{color:#f87171}
 .settings-save-btn{width:100%;padding:13px;font-size:14px}
 .settings-value{font-size:13px;color:var(--text2);padding:4px 0}
-.acgme-status-card{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--line2);border-radius:12px;padding:14px 16px;margin-bottom:16px}
-.acgme-status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:rgba(255,255,255,.2)}
+/* ── ACGME status card ── */
+.acgme-status-card{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:14px;padding:14px 16px;margin-bottom:16px;transition:border-color .2s,background .2s}
+.acgme-status-card.clickable{cursor:pointer}
+.acgme-status-card.clickable:active{background:rgba(255,255,255,.07)}
+.acgme-status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:rgba(255,255,255,.2)}
 .acgme-status-dot.ok{background:#34d399;box-shadow:0 0 8px rgba(52,211,153,.5)}
-.acgme-status-dot.warn{background:#fbbf24}
+.acgme-status-dot.warn{background:#fbbf24;box-shadow:0 0 8px rgba(251,191,36,.4)}
 .acgme-status-info{flex:1}
 .acgme-status-title{font-size:13px;font-weight:600;color:var(--text);line-height:1}
 .acgme-status-sub{font-size:11px;color:var(--text3);margin-top:3px}
-.acgme-status-edit{font-size:12px;font-weight:600;color:var(--purple);padding:5px 10px;background:rgba(168,85,247,.1);border-radius:8px;border:none;cursor:pointer;font-family:'Sora',sans-serif}
-.acgme-how-it-works{background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:12px;padding:14px 16px;margin-bottom:16px}
-.acgme-how-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
-.acgme-how-step{display:flex;align-items:flex-start;gap:10px;margin-bottom:9px}
-.acgme-how-step:last-child{margin-bottom:0}
-.acgme-step-num{width:20px;height:20px;border-radius:50%;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--purple);flex-shrink:0;margin-top:1px}
-.acgme-step-text{font-size:12px;color:var(--text3);line-height:1.55}
+.acgme-status-edit{font-size:12px;font-weight:600;color:var(--purple);padding:5px 10px;background:rgba(168,85,247,.1);border-radius:8px;border:none;cursor:pointer;font-family:'Sora',sans-serif;white-space:nowrap}
+/* ── ACGME connect card (not set up) ── */
+.acgme-connect-card{background:linear-gradient(135deg,rgba(168,85,247,.08) 0%,rgba(99,102,241,.06) 100%);border:1px solid rgba(168,85,247,.25);border-radius:16px;padding:20px 18px;margin-bottom:16px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.acgme-connect-icon{width:36px;height:36px;border-radius:10px;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.25);display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.acgme-connect-title{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.3px;margin-bottom:4px}
+.acgme-connect-sub{font-size:12px;color:var(--text3);line-height:1.55;margin-bottom:16px}
+/* ── ACGME connect button glow ── */
+@keyframes acgmeGlow{0%,100%{box-shadow:0 0 10px rgba(168,85,247,.35),0 0 24px rgba(168,85,247,.18)}50%{box-shadow:0 0 18px rgba(168,85,247,.6),0 0 40px rgba(168,85,247,.28),0 0 60px rgba(99,102,241,.12)}}
+.acgme-connect-card .acgme-continue-btn{animation:acgmeGlow 2.4s ease-in-out infinite}
+/* ── ACGME step flow ── */
+.acgme-step-wrap{overflow:hidden;max-height:0;opacity:0;transition:max-height .38s cubic-bezier(.4,0,.2,1),opacity .3s ease}
+.acgme-step-wrap.open{max-height:900px;opacity:1}
+/* step card slide transitions */
+.acgme-step-card{background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:16px;padding:18px 16px;margin-bottom:14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:transform .36s cubic-bezier(.4,0,.2,1),opacity .3s ease}
+.acgme-step-card.slide-out-left{transform:translateX(-110%);opacity:0;pointer-events:none;position:absolute;width:100%}
+.acgme-step-card.slide-in-right{transform:translateX(110%);opacity:0}
+.acgme-step-card.slide-in-right.visible{transform:translateX(0);opacity:1}
+/* step card container needs position relative for absolute during transition */
+#s-acgme-form{position:relative}
+.acgme-step-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.acgme-step-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase}
+.acgme-step-dots{display:flex;gap:5px}
+.acgme-step-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.15);transition:background .3s}
+.acgme-step-dot.active{background:var(--purple)}
+.acgme-step-dot.done{background:#34d399}
+.acgme-step-title{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-.4px;margin-bottom:4px}
+.acgme-step-desc{font-size:12px;color:var(--text3);margin-bottom:16px;line-height:1.5}
+.acgme-otp-wrap{display:flex;justify-content:center;margin-bottom:16px}
+.acgme-otp-input{width:100%;text-align:center;font-size:28px;font-weight:700;letter-spacing:8px;padding:14px;background:rgba(255,255,255,.05);border:1px solid var(--line2);border-radius:12px;color:var(--text);font-family:'Sora',sans-serif}
+.acgme-otp-input:focus{border-color:rgba(168,85,247,.5);outline:none;background:rgba(168,85,247,.06)}
+.acgme-continue-btn{width:100%;padding:13px;font-size:14px;font-weight:600;background:linear-gradient(135deg,rgba(168,85,247,.9),rgba(99,102,241,.9));border:none;border-radius:12px;color:#fff;cursor:pointer;font-family:'Sora',sans-serif;letter-spacing:-.1px;transition:opacity .2s}
+.acgme-continue-btn:active{opacity:.8}
+.acgme-continue-btn.busy{opacity:.6;pointer-events:none}
+.acgme-back-link{font-size:12px;color:var(--text3);text-align:center;margin-top:10px;cursor:pointer;background:none;border:none;font-family:'Sora',sans-serif;width:100%}
+.acgme-back-link:active{color:var(--text2)}
+/* verify loading ribbon — scaled from milestones ribbon */
+.acgme-verify-ribbon{height:36px;border-radius:10px;position:relative;overflow:hidden;margin-bottom:14px;
+  background:linear-gradient(90deg,rgba(168,85,247,0) 0%,rgba(168,85,247,.14) 18%,rgba(191,161,255,.44) 50%,rgba(168,85,247,.14) 82%,rgba(168,85,247,0) 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.acgme-verify-ribbon::after{content:"";position:absolute;inset:0 auto 0 -42%;width:42%;
+  background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(221,180,255,.22) 26%,rgba(255,255,255,.5) 50%,rgba(221,180,255,.14) 74%,rgba(255,255,255,0) 100%);
+  animation:submitLoad 1.5s ease-in-out infinite}
+.acgme-verify-status{font-size:11px;color:var(--text3);text-align:center;letter-spacing:.04em}
+/* legacy compat */
 .acgme-form-collapse{overflow:hidden;transition:max-height .35s ease,opacity .3s ease;max-height:0;opacity:0}
 .acgme-form-collapse.open{max-height:700px;opacity:1}
-.settings-setup-btn{width:100%;padding:13px;font-size:14px;margin-bottom:0;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:var(--purple)}
-.settings-setup-btn:hover{background:rgba(168,85,247,.2)}
+.settings-setup-btn{display:none}
 .settings-danger-zone{}
 .settings-note-card{background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:12px;padding:14px 16px;font-size:12px;color:var(--text2);line-height:1.65}
 .settings-meta-list{display:grid;gap:10px}
@@ -1607,7 +1652,7 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
     <div class="login-shell">
     <!-- Brand -->
     <div class="login-logo-wrap">
-      <div class="login-logo-name">Case<em>Flow</em></div>
+      <div class="login-logo-name">Case<em>Arc</em></div>
       <div class="login-logo-tag">ACGME Case Logging</div>
       <div class="login-hero-copy">A calmer way to review, capture, and submit operative cases without leaving your flow.</div>
     </div>
@@ -1700,7 +1745,7 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
         </div>
         <span class="sm-toggle-text" id="sm-toggle-text">Menu</span>
       </button>
-      <div class="app-logo" onclick="goHome()" style="cursor:pointer">Case<em>Flow</em></div>
+      <div class="app-logo" onclick="goHome()" style="cursor:pointer">Case<em>Arc</em></div>
     </div>
     <div class="bar-right">
       <div class="chip chip-cases" id="hdr-chip-cases" title="Open case history" role="button" tabindex="0"><b id="hdr-n">0</b> cases</div>
@@ -1870,89 +1915,103 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
         <div class="acgme-status-card" id="s-status-card">
           <div class="acgme-status-dot" id="s-status-dot"></div>
           <div class="acgme-status-info">
-            <div class="acgme-status-title" id="s-status-title">Not set up</div>
-            <div class="acgme-status-sub" id="s-status-sub">Add your ACGME credentials to enable auto-submit</div>
+            <div class="acgme-status-title" id="s-status-title">Not connected</div>
+            <div class="acgme-status-sub" id="s-status-sub">Connect your ACGME account to enable auto-submit</div>
           </div>
           <button class="acgme-status-edit" id="s-edit-btn" onclick="toggleAcgmeForm()" style="display:none">Edit</button>
         </div>
 
-        <!-- How it works -->
-        <div class="acgme-how-it-works">
-          <div class="acgme-how-title">How Auto-Submit Works</div>
-          <div class="acgme-how-step">
-            <div class="acgme-step-num">1</div>
-            <div class="acgme-step-text">Save your ACGME username and password here — encrypted on this device only.</div>
+        <!-- Connect CTA — shown when not set up -->
+        <div class="acgme-connect-card" id="s-connect-card">
+          <div class="acgme-connect-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(168,85,247,.9)" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           </div>
-          <div class="acgme-how-step">
-            <div class="acgme-step-num">2</div>
-            <div class="acgme-step-text">When you submit a case, CaseArc logs into ACGME on your behalf automatically.</div>
-          </div>
-          <div class="acgme-how-step">
-            <div class="acgme-step-num">3</div>
-            <div class="acgme-step-text">If ACGME asks for a <strong style="color:var(--text2)">Duo push</strong>, a prompt will appear here — just approve it on your phone and the case submits itself.</div>
-          </div>
-          <div class="acgme-how-step">
-            <div class="acgme-step-num">4</div>
-            <div class="acgme-step-text">If submission fails for any reason, the case is saved locally and you can re-submit from Case History.</div>
-          </div>
+          <div class="acgme-connect-title">Connect ACGME</div>
+          <div class="acgme-connect-sub">Auto-submit cases directly — no more logging into the ACGME website.</div>
+          <button class="acgme-continue-btn" onclick="toggleAcgmeForm()" id="s-setup-btn">Connect Account</button>
         </div>
 
-        <!-- Credential form — collapsed by default if already saved -->
-        <div class="acgme-form-collapse" id="s-acgme-form">
-          <div class="settings-field">
-            <label class="settings-label">ACGME Username / Email</label>
-            <input class="settings-input" id="s-acgme-user" type="text" placeholder="e.g. jsmith@email.com" autocomplete="username" autocapitalize="none">
-          </div>
-          <div class="settings-field">
-            <label class="settings-label">ACGME Password</label>
-            <div class="settings-pass-wrap">
-              <input class="settings-input" id="s-acgme-pass" type="password" placeholder="••••••••" autocomplete="current-password">
-              <button class="settings-pass-toggle" onclick="togglePassVis()" id="s-pass-toggle" type="button">
-                <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              </button>
-            </div>
-          </div>
-          <div class="settings-cred-status" id="s-cred-status"></div>
-          <button class="btn-main settings-save-btn" onclick="saveAcgmeCredentials()" style="margin-bottom:16px">Save Credentials</button>
+        <!-- Step-wise form — hidden until Connect is tapped -->
+        <div class="acgme-step-wrap" id="s-acgme-form">
 
-          <!-- MFA section — shown only when backend requires MFA -->
-          <div id="s-mfa-section" style="display:none;margin-bottom:16px">
-            <div style="background:var(--bg3);border:1px solid var(--blue-b);border-radius:var(--r);padding:14px 16px;margin-bottom:12px">
-              <div style="font-size:13px;font-weight:600;color:var(--blue);margin-bottom:6px">Verification Required</div>
-              <div style="font-size:12px;color:var(--text2);line-height:1.6">Check your email or phone for the ACGME verification code and enter it below.</div>
+          <!-- Step 1: Credentials -->
+          <div class="acgme-step-card" id="s-step1-card">
+            <div class="acgme-step-header">
+              <span class="acgme-step-label">Step 1 of 2</span>
+              <div class="acgme-step-dots">
+                <div class="acgme-step-dot active" id="sdot-1"></div>
+                <div class="acgme-step-dot" id="sdot-2"></div>
+              </div>
             </div>
+            <div class="acgme-step-title">ACGME Login</div>
+            <div class="acgme-step-desc">Your credentials are encrypted and stored only on this device.</div>
             <div class="settings-field">
-              <label class="settings-label">Verification Code</label>
-              <input class="settings-input" id="s-mfa-code" type="text" placeholder="Enter 6-digit code" autocomplete="one-time-code" inputmode="numeric" maxlength="10">
+              <input class="settings-input" id="s-acgme-user" type="text" placeholder="Username or email" autocomplete="username" autocapitalize="none">
             </div>
-            <button class="btn-main settings-save-btn" onclick="completeMfaLogin()" style="margin-bottom:8px">Verify Code</button>
+            <div class="settings-field" style="margin-bottom:14px">
+              <div class="settings-pass-wrap">
+                <input class="settings-input" id="s-acgme-pass" type="password" placeholder="Password" autocomplete="current-password">
+                <button class="settings-pass-toggle" onclick="togglePassVis()" id="s-pass-toggle" type="button">
+                  <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="settings-cred-status" id="s-cred-status"></div>
+            <button class="acgme-continue-btn" onclick="saveAcgmeCredentials()" id="s-continue-btn">Continue →</button>
+            <button class="acgme-back-link" onclick="toggleAcgmeForm()">Cancel</button>
           </div>
-        </div>
 
-        <!-- Primary CTA when not set up -->
-        <button class="btn-main settings-setup-btn" id="s-setup-btn" onclick="toggleAcgmeForm()">Set Up ACGME Auto-Submit</button>
+          <!-- Step 2: MFA — animated in from right -->
+          <div id="s-mfa-section" style="display:none">
+            <div class="acgme-step-card slide-in-right" id="s-step2-card">
+              <div class="acgme-step-header">
+                <span class="acgme-step-label">Step 2 of 2</span>
+                <div class="acgme-step-dots">
+                  <div class="acgme-step-dot done"></div>
+                  <div class="acgme-step-dot active"></div>
+                </div>
+              </div>
+              <div class="acgme-step-title">Verify Identity</div>
+              <div class="acgme-step-desc">Check your email or phone for the ACGME verification code.</div>
+              <div class="acgme-otp-wrap">
+                <input class="acgme-otp-input" id="s-mfa-code" type="text" placeholder="· · · · · ·" autocomplete="one-time-code" inputmode="numeric" maxlength="10">
+              </div>
+              <!-- Loading ribbon — shown while verifying -->
+              <div class="acgme-verify-ribbon" id="s-verify-ribbon" style="display:none"></div>
+              <div class="acgme-verify-status" id="s-verify-status" style="display:none">Verifying with ACGME…</div>
+              <button class="acgme-continue-btn" onclick="completeMfaLogin()" id="s-verify-btn">Verify</button>
+              <button class="acgme-back-link" onclick="toggleAcgmeForm()">Start over</button>
+            </div>
+          </div>
+
+        </div>
       </div>
 
       <div class="settings-section settings-danger-zone">
-        <div class="settings-section-title">Beta Program</div>
-        <div class="settings-note-card">
-          <div id="beta-build-label" class="settings-badge" style="margin-bottom:12px">Beta Build</div>
-          <div class="settings-meta-list">
-            <div class="settings-meta-row">
-              <div class="settings-meta-label">Beta Key</div>
-              <div class="settings-meta-value" id="beta-key-label">&#8212;</div>
+        <div class="settings-collapse-toggle" id="beta-toggle" onclick="toggleBetaSection()">
+          <div class="settings-section-title">Beta Program</div>
+          <svg class="settings-collapse-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="settings-collapse-body" id="beta-body">
+          <div class="settings-note-card">
+            <div id="beta-build-label" class="settings-badge" style="margin-bottom:12px">Beta Build</div>
+            <div class="settings-meta-list">
+              <div class="settings-meta-row">
+                <div class="settings-meta-label">Beta Key</div>
+                <div class="settings-meta-value" id="beta-key-label">&#8212;</div>
+              </div>
+              <div class="settings-meta-row">
+                <div class="settings-meta-label">Terms</div>
+                <div class="settings-meta-value" id="beta-tos-status">&#8212;</div>
+              </div>
+              <div class="settings-meta-row">
+                <div class="settings-meta-label">Account</div>
+                <div class="settings-meta-value" id="beta-account-created">&#8212;</div>
+              </div>
             </div>
-            <div class="settings-meta-row">
-              <div class="settings-meta-label">Terms</div>
-              <div class="settings-meta-value" id="beta-tos-status">&#8212;</div>
-            </div>
-          <div class="settings-meta-row">
-            <div class="settings-meta-label">Account</div>
-            <div class="settings-meta-value" id="beta-account-created">&#8212;</div>
+            <button class="settings-quiet-btn" style="margin-top:14px" onclick="openQuickGuide()">View Quick Guide</button>
+            <button class="settings-quiet-btn" style="margin-top:14px" onclick="openTosModal()">View Terms of Service</button>
           </div>
-          </div>
-          <button class="settings-quiet-btn" style="margin-top:14px" onclick="openQuickGuide()">View Quick Guide</button>
-          <button class="settings-quiet-btn" style="margin-top:14px" onclick="openTosModal()">View Terms of Service</button>
         </div>
       </div>
 
@@ -2028,7 +2087,7 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
         <div class="udot"></div>
         <span class="sm-account-name" id="sm-hdr-u">&#8212;</span>
       </div>
-      <div class="sm-footer-note">ACGME Case Logging</div>
+      <div class="sm-footer-note" id="sm-specialty-label">ACGME Case Logging</div>
       <button class="sm-logout-btn" onclick="doLogout()" type="button">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
         <span>Log Out</span>
@@ -2298,6 +2357,7 @@ function getGroqTranscript(mr, chunks, fallback){
         fd.append('audio',blob,`recording.${ext}`);
         fd.append('sites',JSON.stringify(getSitesForEdit()));
         fd.append('attendings',JSON.stringify(getAttendingsForEdit()));
+        fd.append('specialty',currentUserMeta.specialty||'plastic-surgery');
         const resp=await fetch(`${ACGME_BACKEND_URL}/api/transcribe`,{
           method:'POST',
           headers:{'Authorization':`Bearer ${token}`},
@@ -2381,7 +2441,20 @@ let currentUserMeta={
   tosVersion:APP_TOS_VERSION,
   createdAt:null,
   lastLoginAt:null,
+  specialty:'plastic-surgery',
+  cptSyncedAt:null,
+  cptCodes:null,
 };
+const SPECIALTY_LABELS={
+  'plastic-surgery':'Plastic Surgery',
+  'general-surgery':'General Surgery',
+  'orthopaedic-surgery':'Orthopaedic Surgery',
+  'neurosurgery':'Neurosurgery',
+  'otolaryngology':'Otolaryngology',
+  'urology':'Urology',
+  'vascular-surgery':'Vascular Surgery',
+};
+function getSpecialtyLabel(slug){return SPECIALTY_LABELS[slug]||'Residency';}
 let adminDiagnostics=null;
 let onboardingStep=0;
 let pendingQs=[],currentQ=-1;
@@ -2438,44 +2511,83 @@ async function handleOrbTap(){
   else if(orbState==='listening') stopInitialListening();
 }
 async function startInitialListening(){
-  // Build speech recognition first (synchronous, preserves iOS gesture context)
   buildIndex();
+  // Native iOS: use SFSpeechRecognizer plugin for live word-by-word display
+  // + MediaRecorder → Groq Whisper for final medical-accurate transcript
+  if(window.__nativeSpeechRec){
+    txFinal='';txInt='';recOn=true;
+    AudioFX.startListen();
+    orbState='listening';document.getElementById('orb-hint').classList.add('hide');
+    showBubble('Describe your case…');setStateLabel('Tap orb to stop');hideAll();
+    document.getElementById('q-bubble').classList.add('show');
+    document.getElementById('new-case-btn').style.display='flex';
+    // Start native SR for live display
+    await window.__nativeSpeechRec.start(text=>{
+      txFinal=text;showBubble(text);
+      document.getElementById('q-bubble').classList.add('show');
+    });
+    // Also run MediaRecorder for Groq Whisper final accuracy
+    const needNewStream=!savedMicStream||savedMicStream.getTracks().some(t=>t.readyState==='ended');
+    if(needNewStream){
+      try{
+        const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+        savedMicStream=stream;
+      }catch(e){
+        if(e&&(e.name==='NotAllowedError'||e.name==='PermissionDeniedError')){
+          showBubble('Microphone access is blocked — allow mic in Settings then try again.');
+          document.getElementById('q-bubble').classList.add('show');
+          setStateLabel('Mic permission required');
+          recOn=false;orbState='idle';document.getElementById('orb-hint').classList.remove('hide');
+          await window.__nativeSpeechRec.stop();
+          return;
+        }
+        console.warn('getUserMedia failed:',e);
+      }
+    }
+    if(savedMicStream){
+      startMic(savedMicStream);
+      mainAudioChunks=[];
+      if(mainMediaRec){try{mainMediaRec.stop();}catch(_){} mainMediaRec=null;}
+      mainMediaRec=startMediaRecorder(savedMicStream,mainAudioChunks);
+    }
+    return;
+  }
+  // Web path — use SpeechRecognition with MediaRecorder as parallel backup
   if(!recObj)recObj=makeRec(e=>{txInt='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)txFinal+=' '+e.results[i][0].transcript;else txInt+=e.results[i][0].transcript}showBubble((txFinal+' '+txInt).trim()||'Listening…')},()=>{if(recOn){try{recObj.start();}catch(e){console.warn('rec restart:',e)}}});
   if(!recObj){showBubble('Speech recognition not supported in this browser — try Chrome on Android or Safari on iOS.');document.getElementById('q-bubble').classList.add('show');return}
   txFinal='';txInt='';recOn=true;
   AudioFX.startListen();
-  // Start recognition synchronously while still in gesture context
   try{recObj.start();}catch(e){console.error('recObj.start error:',e);showBubble('Mic start error: '+e.message);document.getElementById('q-bubble').classList.add('show');return;}
   orbState='listening';document.getElementById('orb-hint').classList.add('hide');
   showBubble('Describe your case…');setStateLabel('Tap orb to stop');hideAll();
   document.getElementById('q-bubble').classList.add('show');
   document.getElementById('new-case-btn').style.display='flex';
-  // Start visualizer async after (does not need gesture context)
-  const needNewStream = !savedMicStream || savedMicStream.getTracks().some(t=>t.readyState==='ended');
+  const needNewStream=!savedMicStream||savedMicStream.getTracks().some(t=>t.readyState==='ended');
   if(needNewStream){
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:true});
       savedMicStream=stream;
-    } catch(e){
-      if(e && (e.name==='NotAllowedError'||e.name==='PermissionDeniedError')){
+    }catch(e){
+      if(e&&(e.name==='NotAllowedError'||e.name==='PermissionDeniedError')){
         showBubble('Microphone access is blocked. Allow mic in Safari settings then refresh.');
         document.getElementById('q-bubble').classList.add('show');
         setStateLabel('Mic permission required');
         recOn=false;try{recObj.abort();}catch(_){} recObj=null;
         return;
       }
-      console.warn('getUserMedia failed (visualizer disabled):', e);
+      console.warn('getUserMedia failed (visualizer disabled):',e);
     }
   }
   if(savedMicStream){
-    startMic(savedMicStream); // fire-and-forget, visualizer only
-    // Start MediaRecorder for Groq transcription
+    startMic(savedMicStream);
     mainAudioChunks=[];
     if(mainMediaRec){try{mainMediaRec.stop();}catch(_){} mainMediaRec=null;}
     mainMediaRec=startMediaRecorder(savedMicStream,mainAudioChunks);
   }
 }
 function stopInitialListening(){
+  // Stop native SR first (no-op on web)
+  if(window.__nativeSpeechRec?._active) window.__nativeSpeechRec.stop();
   recOn=false;if(recObj){try{recObj.abort();}catch(e){} recObj=null;}
   // Keep mic stream alive — stopMic() only in resetFlow() to avoid iOS audio session cooldown
   const wsText=(txFinal+' '+txInt).trim();
@@ -2490,13 +2602,21 @@ function stopInitialListening(){
   // Get Groq transcript (falls back to Web Speech text if Groq fails; works even if wsText is empty)
   const recSnap=mainMediaRec,chunksSnap=mainAudioChunks;
   mainMediaRec=null;mainAudioChunks=[];
-  getGroqTranscript(recSnap,chunksSnap,wsText).then(transcript=>processDescription(transcript));
+  getGroqTranscript(recSnap,chunksSnap,wsText).then(transcript=>{
+    if(!transcript?.trim()){
+      orbState='idle';document.getElementById('orb-hint').classList.remove('hide');
+      showBubble('Nothing captured — tap to try again.');
+      document.getElementById('q-bubble').classList.add('show');
+      setStateLabel('');return;
+    }
+    processDescription(transcript);
+  });
 }
 async function processDescription(text){
   caseData.description=text;caseData.date=isoToday();buildIndex();
   let extracted=null;
   try{
-    const res=await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:'plastic-surgery',sites:getSitesForEdit(),attendings:getAttendingsForEdit()})});
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:currentUserMeta.specialty||'plastic-surgery',sites:getSitesForEdit(),attendings:getAttendingsForEdit()})});
     if(!res.ok)throw new Error();extracted=await res.json()
   }
   catch(e){extracted=localExtract(text)}
@@ -2531,8 +2651,24 @@ function localExtract(text){
   const lo=text.toLowerCase();
   const role=lo.includes('assist')?'Assistant':lo.includes('observer')?'Observer':'Surgeon';
   const pt=(lo.includes('pediatric')||lo.includes('child')||lo.includes('infant'))?'Pediatric':'Adult';
-  const matched=kwMatch(lo);
-  return{role,patientType:pt,caseYear:4,suggestedCodes:matched.map(e=>({code:e.c,desc:e.d,area:e.a}))};
+  // Use user's ACGME-synced codes if available, else fall back to built-in plastic surgery index
+  let suggestedCodes=[];
+  if(currentUserMeta.cptCodes?.length){
+    const words=lo.split(/\W+/).filter(w=>w.length>3);
+    const scored=[];
+    for(const entry of currentUserMeta.cptCodes){
+      const d=(entry.description||'').toLowerCase();
+      let score=0;
+      for(const w of words){if(d.includes(w))score+=2;}
+      if(score>0)scored.push({score,...entry});
+    }
+    scored.sort((a,b)=>b.score-a.score);
+    suggestedCodes=scored.slice(0,6).map(e=>({code:e.code,desc:e.description,area:e.area||''}));
+  } else {
+    const matched=kwMatch(lo);
+    suggestedCodes=matched.map(e=>({code:e.c,desc:e.d,area:e.a}));
+  }
+  return{role,patientType:pt,caseYear:4,suggestedCodes};
 }
 function nextQuestion(){
   AudioFX.stopThink();
@@ -2566,7 +2702,18 @@ function showCptSearchPanel(){
 function liveSearch(q){
   const box=document.getElementById('srch-results-box');
   if(!q.trim()){box.innerHTML='';return}
-  const hits=searchCPT(q,12);
+  let hits;
+  if(currentUserMeta.cptCodes?.length){
+    // Search user's ACGME-synced codes
+    const lo=q.toLowerCase();
+    const scored=currentUserMeta.cptCodes
+      .filter(e=>(e.code+' '+e.description).toLowerCase().includes(lo))
+      .slice(0,12)
+      .map(e=>({c:e.code,d:e.description,a:e.area||''}));
+    hits=scored;
+  } else {
+    hits=searchCPT(q,12);
+  }
   if(!hits.length){box.innerHTML='<div class="no-results">No results — try a different term</div>';return}
   box.innerHTML=`<div class="srch-count">${hits.length} result${hits.length!==1?'s':''} — tap to add</div>`
     +hits.map(h=>`<div class="srch-row" onclick="addCptFromSearch('${h.c}','${esc(h.d)}','${esc(h.a)}')"><div class="srch-code">${h.c}</div><div class="srch-info"><div class="srch-desc">${h.d}</div><div class="srch-area">${h.a}</div></div><div class="srch-add">+</div></div>`).join('');
@@ -2934,7 +3081,16 @@ function startAddMoreSearch(){
 function modalSearch(q){
   const res = document.getElementById('search-modal-results');
   if(!q.trim()){res.innerHTML='';return}
-  const hits = searchCPT(q, 10);
+  let hits;
+  if(currentUserMeta.cptCodes?.length){
+    const lo=q.toLowerCase();
+    hits=currentUserMeta.cptCodes
+      .filter(e=>(e.code+' '+e.description).toLowerCase().includes(lo))
+      .slice(0,10)
+      .map(e=>({c:e.code,d:e.description,a:e.area||''}));
+  } else {
+    hits=searchCPT(q, 10);
+  }
   if(!hits.length){res.innerHTML='<div class="no-results">No results</div>';return}
   res.innerHTML = hits.map(h => `
     <div class="srch-row" onclick="addMoreCode('${h.c}','${esc(h.d)}','${esc(h.a)}')">
@@ -3041,7 +3197,7 @@ async function stopAddMoreVoice(){
 
   let extracted = null;
   try {
-    const res = await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:'plastic-surgery'})});
+    const res = await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:currentUserMeta.specialty||'plastic-surgery'})});
     if(!res.ok) throw new Error();
     extracted = await res.json();
   } catch(e) {
@@ -3939,26 +4095,36 @@ function loadSettingsUI(){
   const editBtn = document.getElementById('s-edit-btn');
   const setupBtn = document.getElementById('s-setup-btn');
   const formEl = document.getElementById('s-acgme-form');
+  const statusCard=document.getElementById('s-status-card');
+  const connectCard=document.getElementById('s-connect-card');
   if(blob){
     if(acgmeServerSessionActive === false){
       dot.className='acgme-status-dot warn';
-      title.textContent='ACGME session inactive';
-      sub.textContent='Sites and attendings cannot sync until you reconnect. Tap Edit, re-enter credentials, and Save.';
+      title.textContent='Tap to Connect ACGME';
+      sub.textContent='Session expired — tap to reconnect';
+      statusCard.classList.add('clickable');
+      statusCard.onclick=toggleAcgmeForm;
     } else {
       dot.className='acgme-status-dot ok';
       title.textContent='Connected';
-      sub.textContent='Credentials saved — auto-submit enabled';
+      const syncStr=currentUserMeta.cptSyncedAt
+        ? `${currentUserMeta.cptCodes?.length||'?'} codes synced · ${fmtStamp(currentUserMeta.cptSyncedAt)}`
+        : 'Auto-submit enabled';
+      sub.textContent=syncStr;
+      statusCard.classList.remove('clickable');
+      statusCard.onclick=null;
     }
     editBtn.style.display='block';
-    setupBtn.style.display='none';
-    // Collapse form when credentials already saved (unless user clicked edit)
+    if(connectCard) connectCard.style.display='none';
     if(!formEl.classList.contains('open')) formEl.classList.remove('open');
   } else {
     dot.className='acgme-status-dot warn';
-    title.textContent='Not set up';
-    sub.textContent='Add your ACGME credentials to enable auto-submit';
+    title.textContent='Not connected';
+    sub.textContent='Connect ACGME to enable auto-submit';
     editBtn.style.display='none';
-    setupBtn.style.display='block';
+    statusCard.classList.remove('clickable');
+    statusCard.onclick=null;
+    if(connectCard) connectCard.style.display='block';
   }
 
   const betaKeyEl=document.getElementById('beta-key-label');
@@ -3982,21 +4148,27 @@ function loadSettingsUI(){
 }
 function toggleAcgmeForm(){
   const form=document.getElementById('s-acgme-form');
-  form.classList.toggle('open');
-  const setupBtn=document.getElementById('s-setup-btn');
-  if(form.classList.contains('open')){
-    setupBtn.textContent='Cancel';
-    setupBtn.style.background='rgba(255,255,255,.05)';
-    setupBtn.style.borderColor='rgba(255,255,255,.1)';
-    setupBtn.style.color='var(--text3)';
-  } else {
-    const blob=JSON.parse(localStorage.getItem('cf5-vault')||'null');
-    if(!blob){
-      setupBtn.textContent='Set Up ACGME Auto-Submit';
-      setupBtn.style.background='';setupBtn.style.borderColor='';setupBtn.style.color='';
-    } else {
-      setupBtn.style.display='none';
-    }
+  const connectCard=document.getElementById('s-connect-card');
+  const isOpen=form.classList.toggle('open');
+  // Hide/show the connect card when form opens/closes
+  if(connectCard) connectCard.style.display=isOpen?'none':'';
+  // Reset both steps when closing so reopening is always fresh
+  if(!isOpen){
+    const mfa=document.getElementById('s-mfa-section');
+    if(mfa) mfa.style.display='none';
+    const step1=document.getElementById('s-step1-card');
+    if(step1){step1.style.display='';step1.classList.remove('slide-out-left');}
+    const step2=document.getElementById('s-step2-card');
+    if(step2){step2.classList.remove('visible');}
+    const ribbon=document.getElementById('s-verify-ribbon');
+    if(ribbon) ribbon.style.display='none';
+    const vs=document.getElementById('s-verify-status');
+    if(vs) vs.style.display='none';
+    const vb=document.getElementById('s-verify-btn');
+    if(vb){vb.style.display='block';vb.textContent='Verify';}
+    const cred=document.getElementById('s-cred-status');
+    if(cred){cred.textContent='';cred.className='settings-cred-status';}
+    loadSettingsUI();
   }
 }
 // Stores the MFA sessionId while we wait for the user's OTP code
@@ -4042,9 +4214,8 @@ async function saveAcgmeCredentials(){
       statusEl.textContent = 'Opening ACGME login…';
       statusEl.className = 'settings-cred-status';
       setAcgmeLoadingStatus('Secure connection in progress', 'Opening ACGME login...');
-      const saveBtn = document.querySelector('#s-acgme-form .settings-save-btn');
-      if(saveBtn){ saveBtn.classList.add('busy'); saveBtn.textContent = 'Connecting…'; }
-      setBusyButtonState(saveBtn, 'Connecting...');
+      const saveBtn = document.getElementById('s-continue-btn');
+      setBusyButtonState(saveBtn, 'Connecting…');
       const token = localStorage.getItem('cf5-token');
       const resp = await fetch(`${ACGME_BACKEND_URL}/api/auth/save-credentials`,{
         method:'POST',
@@ -4052,17 +4223,30 @@ async function saveAcgmeCredentials(){
         body:JSON.stringify({acgmeUsername:user, acgmePassword:pass}),
       });
       const data = await resp.json();
-      if(saveBtn){ saveBtn.classList.remove('busy'); saveBtn.textContent = 'Save Credentials'; }
-      clearBusyButtonState(saveBtn, 'Save Credentials');
+      clearBusyButtonState(saveBtn, 'Continue →');
       if(!resp.ok) throw new Error(data.error||'ACGME verification failed');
 
       if(data.mfaRequired && data.sessionId){
-        // MFA needed — show the OTP input
+        // MFA needed — animate step 1 out, step 2 in
         _pendingMfaSessionId = data.sessionId;
         statusEl.textContent = '';
         statusEl.className = 'settings-cred-status';
-        document.getElementById('s-mfa-section').style.display = 'block';
-        document.getElementById('s-mfa-code').focus();
+        const step1 = document.getElementById('s-step1-card');
+        const mfaWrap = document.getElementById('s-mfa-section');
+        const step2 = document.getElementById('s-step2-card');
+        // Slide step1 out to the left
+        if(step1) step1.classList.add('slide-out-left');
+        // Show step2 off-screen right, then slide in
+        mfaWrap.style.display = 'block';
+        requestAnimationFrame(()=>{
+          requestAnimationFrame(()=>{
+            if(step2) step2.classList.add('visible');
+          });
+        });
+        setTimeout(()=>{
+          if(step1) step1.style.display = 'none';
+          document.getElementById('s-mfa-code').focus();
+        }, 380);
         toast('Check your email/phone for a verification code','');
         return;
       }
@@ -4080,7 +4264,7 @@ async function saveAcgmeCredentials(){
   } catch(e){
     statusEl.textContent = e.message;
     statusEl.className = 'settings-cred-status err';
-    clearBusyButtonState(document.querySelector('#s-acgme-form .settings-save-btn'), 'Save Credentials');
+    clearBusyButtonState(document.getElementById('s-continue-btn'), 'Continue →');
     sendClientLog({source:'acgme.connect',severity:'error',message:e.message||'ACGME credential save failed'});
   }
 }
@@ -4090,13 +4274,17 @@ async function completeMfaLogin(){
   const statusEl = document.getElementById('s-cred-status');
   if(!code){ setAcgmeStatusError('Enter the verification code.'); return; }
   if(!_pendingMfaSessionId){ setAcgmeStatusError('No pending MFA session. Please start over.'); return; }
+  // Show loading ribbon
+  const ribbon = document.getElementById('s-verify-ribbon');
+  const verifyStatus = document.getElementById('s-verify-status');
+  const verifyBtn = document.getElementById('s-verify-btn');
+  if(ribbon) ribbon.style.display = 'block';
+  if(verifyStatus) verifyStatus.style.display = 'block';
+  if(verifyBtn) verifyBtn.style.display = 'none';
   try{
-    statusEl.textContent = 'Verifying code…';
+    statusEl.textContent = '';
     statusEl.className = 'settings-cred-status';
-    setAcgmeLoadingStatus('Verification in progress', 'Verifying your ACGME access...');
-    const mfaBtn = document.querySelector('#s-mfa-section .btn-main');
-    if(mfaBtn){ mfaBtn.classList.add('busy'); mfaBtn.textContent = 'Verifying…'; }
-    setBusyButtonState(mfaBtn, 'Verifying...');
+    const mfaBtn = document.getElementById('s-verify-btn');
     const token = localStorage.getItem('cf5-token');
     const resp = await fetch(`${ACGME_BACKEND_URL}/api/auth/complete-mfa`,{
       method:'POST',
@@ -4110,11 +4298,12 @@ async function completeMfaLogin(){
     _pendingMfaSessionId = null;
     _finishAcgmeConnect();
   } catch(e){
-    const mfaBtn = document.querySelector('#s-mfa-section .btn-main');
-    if(mfaBtn){ mfaBtn.classList.remove('busy'); mfaBtn.textContent = 'Verify Code'; }
+    // Hide ribbon, restore button
+    if(ribbon) ribbon.style.display = 'none';
+    if(verifyStatus) verifyStatus.style.display = 'none';
+    if(verifyBtn){ verifyBtn.style.display = 'block'; verifyBtn.classList.remove('busy'); verifyBtn.textContent = 'Verify'; }
     document.getElementById('s-cred-status').textContent = e.message;
     document.getElementById('s-cred-status').className = 'settings-cred-status err';
-    clearBusyButtonState(mfaBtn, 'Verify Code');
     sendClientLog({source:'acgme.mfa',severity:'error',message:e.message||'ACGME MFA verification failed'});
   }
 }
@@ -4430,7 +4619,7 @@ function doLogout(skipConfirm){
   if(!skipConfirm && !confirm('Sign out?'))return;
   sessionPassword='';
   adminDiagnostics=null;
-  currentUserMeta={id:null,email:'',name:'',isAdmin:false,betaKeyLabel:'',tosAcceptedAt:null,tosVersion:APP_TOS_VERSION,createdAt:null,lastLoginAt:null};
+  currentUserMeta={id:null,email:'',name:'',isAdmin:false,betaKeyLabel:'',tosAcceptedAt:null,tosVersion:APP_TOS_VERSION,createdAt:null,lastLoginAt:null,specialty:'plastic-surgery',cptSyncedAt:null,cptCodes:null};
   localStorage.removeItem('cf5-token');
   localStorage.removeItem('cf5-name');
   localStorage.removeItem('cf5-vault');
@@ -4767,6 +4956,13 @@ function initHomeUiObserver(){
   });
 }
 
+function toggleBetaSection(){
+  const toggle=document.getElementById('beta-toggle');
+  const body=document.getElementById('beta-body');
+  if(!toggle||!body) return;
+  const isOpen=body.classList.toggle('open');
+  toggle.classList.toggle('open',isOpen);
+}
 function openQuickGuide(){
   openOnboarding(true);
 }
@@ -4813,6 +5009,8 @@ function applyUserMeta(meta){
   localStorage.setItem('cf5-user-meta',JSON.stringify(stored));
   const tosVersionEl=document.getElementById('tos-version-label');
   if(tosVersionEl) tosVersionEl.textContent=currentUserMeta.tosVersion||APP_TOS_VERSION;
+  const specialtyEl=document.getElementById('sm-specialty-label');
+  if(specialtyEl) specialtyEl.textContent=getSpecialtyLabel(currentUserMeta.specialty);
 }
 
 async function syncUserMetaFromServer(){
@@ -4836,12 +5034,35 @@ async function syncUserMetaFromServer(){
         tosVersion:payload.user.tosVersion||APP_TOS_VERSION,
         createdAt:payload.user.createdAt||null,
         lastLoginAt:payload.user.lastLoginAt||null,
+        specialty:payload.user.specialty||'plastic-surgery',
+        cptSyncedAt:payload.user.cptSyncedAt||null,
       });
+      // Load cached CPT codes from server (non-blocking)
+      loadUserCptCodes();
     }
     return payload;
   }catch(e){
     console.warn('syncUserMetaFromServer:',e.message);
     return null;
+  }
+}
+
+async function loadUserCptCodes(){
+  if(!ACGME_BACKEND_URL) return;
+  const token=localStorage.getItem('cf5-token');
+  if(!token) return;
+  try{
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/lookups/user-cpt-codes`,{
+      headers:{'Authorization':`Bearer ${token}`}
+    });
+    if(!res.ok) return;
+    const data=await res.json();
+    if(data.codes?.length){
+      currentUserMeta.cptCodes=data.codes;
+      console.log(`[CPT] Loaded ${data.codes.length} user-synced codes`);
+    }
+  }catch(e){
+    console.warn('loadUserCptCodes:',e.message);
   }
 }
 
@@ -5615,6 +5836,16 @@ function syncAppBarHeight(){
   const h=document.querySelector('.app-bar')?.offsetHeight||56;
   document.documentElement.style.setProperty('--app-bar-h',h+'px');
 }
+// Release mic when app goes to background — clears iOS mic indicator
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden'){
+    if(window.__nativeSpeechRec?._active) window.__nativeSpeechRec.stop();
+    if(typeof savedMicStream!=='undefined'&&savedMicStream){
+      savedMicStream.getTracks().forEach(t=>t.stop());
+      savedMicStream=null;
+    }
+  }
+});
 document.addEventListener('DOMContentLoaded',()=>{
   syncAppBarHeight();
   window.addEventListener('resize',syncAppBarHeight);

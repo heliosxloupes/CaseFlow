@@ -167,6 +167,13 @@ const alterStatements = [
   `ALTER TABLE beta_invites ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`,
   `ALTER TABLE beta_invites ADD COLUMN IF NOT EXISTS notes TEXT`,
   `ALTER TABLE beta_invites ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`,
+  // v4 — multi-specialty support
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS specialty VARCHAR(60) DEFAULT 'plastic-surgery'`,
+  `CREATE TABLE IF NOT EXISTS user_cpt_codes (
+      user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      codes      JSONB NOT NULL DEFAULT '[]',
+      synced_at  TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
 ];
 
 async function migrate() {

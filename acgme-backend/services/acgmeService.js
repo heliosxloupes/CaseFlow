@@ -616,7 +616,36 @@ function specialtyIdFromInsertHidden(hidden) {
   }
   const env = process.env.ACGME_SPECIALTY_ID;
   if (env && String(env).trim() !== '') return String(env).trim();
-  return '158';
+  return null;
+}
+
+/**
+ * Scrape specialty ID from Insert page HTML directly.
+ * Checks hidden inputs + select options for any field that looks like a specialty/program ID.
+ */
+function scrapeSpecialtyIdFromHtml(html) {
+  // Try hidden inputs first
+  const hiddenRe = /<input\b([^>]*)>/gi;
+  let m;
+  while ((m = hiddenRe.exec(html))) {
+    const attrs = m[1];
+    const type = (attrs.match(/\btype="([^"]+)"/i)?.[1] || '').toLowerCase();
+    if (type !== 'hidden') continue;
+    const name = attrs.match(/\bname="([^"]+)"/i)?.[1] || '';
+    if (/specialty|rrclass|program/i.test(name)) {
+      const value = attrs.match(/\bvalue="([^"]*)"/i)?.[1] || '';
+      if (value && /^\d+$/.test(value.trim())) return value.trim();
+    }
+  }
+  // Try select options — look for a select named like Specialty, RRClass, etc.
+  const selectRe = /<select\b([^>]*)>([\s\S]*?)<\/select>/gi;
+  while ((m = selectRe.exec(html))) {
+    const name = m[1].match(/\bname="([^"]+)"/i)?.[1] || '';
+    if (!/specialty|rrclass/i.test(name)) continue;
+    const selectedOpt = m[2].match(/<option\b[^>]*\bselected(?:="selected")?\b[^>]*\bvalue="(\d+)"/i);
+    if (selectedOpt) return selectedOpt[1];
+  }
+  return null;
 }
 
 /**
@@ -1266,17 +1295,23 @@ async function getUserProfile(sessionCookie) {
   if (!patientTypes.length) patientTypes = parseSelectOptions(html, 'patientTypes');
 
   const residentsId = parseSelectSelectedValue(html, 'Residents');
+
+  // Scrape specialty ID from Insert page (used for multi-specialty support)
+  const hidden = scrapeHiddenFields(html);
+  const specialtyId = specialtyIdFromInsertHidden(hidden) || scrapeSpecialtyIdFromHtml(html);
+
   console.log(
     `[profile] sites: ${sites.length}, attendings: ${attendings.length}, roles: ${roles.length}, patientTypes: ${patientTypes.length}` +
-      (residentsId ? `, residentsId: set` : `, residentsId: (none)`)
+      (residentsId ? `, residentsId: set` : `, residentsId: (none)`) +
+      (specialtyId ? `, specialtyId: ${specialtyId}` : `, specialtyId: (not found)`)
   );
-  return { sites, attendings, roles, patientTypes, residentsId };
+  return { sites, attendings, roles, patientTypes, residentsId, specialtyId };
 }
 
 async function getLookupData(sessionCookie, type, params = {}) {
   if (type === 'codes') {
     const specialtyId =
-      params.specialtyId || params.specialtyid || specialtyIdFromInsertHidden({}) || '158';
+      params.specialtyId || params.specialtyid || specialtyIdFromInsertHidden({}) || '158'; // fallback to plastic surgery
     const codeDesc =
       params.codeDesc || params.codedesc || params.searchTerm || params.searchterm || '';
     const activeAsOfDate = params.activeAsOfDate || params.activeasofdate || '';
