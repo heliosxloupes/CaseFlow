@@ -1,0 +1,304 @@
+workflows:
+  ios-app-store:
+    name: CaseArc iOS — App Store
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Codemagic
+
+    environment:
+      groups:
+        - ios
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.caseflow.app
+      vars:
+        XCODE_WORKSPACE: ios/App/App.xcworkspace
+        XCODE_SCHEME: App
+        BUNDLE_ID: com.caseflow.app
+      node: v20.11.0
+      xcode: latest
+      cocoapods: default
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+
+    scripts:
+      - name: Install dependencies
+        script: npm install
+
+      - name: Inject ios-bridge.js into index.html
+        script: |
+          node -e "
+          const fs = require('fs');
+          let html = fs.readFileSync('index.html', 'utf8');
+          const bridge = '<script src=\"ios-bridge.js\"></script>';
+          const capCore = '<script src=\"capacitor.js\"></script>';
+          if (!html.includes('ios-bridge.js')) {
+            html = html.replace('<head>', '<head>\n  ' + bridge);
+          }
+          if (!html.includes('capacitor.js')) {
+            html = html.replace('<head>', '<head>\n  ' + capCore);
+          }
+          fs.writeFileSync('index.html', html);
+          console.log('index.html patched for iOS');
+          "
+
+      - name: Prepare web assets
+        script: |
+          mkdir -p www
+          cp index.html ios-bridge.js manifest.json sw.js caseflow-data.js www/ 2>/dev/null || true
+          cp *.png www/ 2>/dev/null || true
+
+      - name: Add Capacitor iOS platform
+        script: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          else
+            echo "ios/ already exists, skipping cap add"
+          fi
+
+      - name: Sync Capacitor
+        script: npx cap sync ios
+
+      - name: Inject native speech bridge into ViewController.swift
+        script: |
+          cat > ios/App/App/ViewController.swift << 'SWIFTEOF'
+          import UIKit
+          import Capacitor
+          import Speech
+          import AVFoundation
+
+          // MARK: - SpeechBridge
+          // Direct SFSpeechRecognizer bridge via WKScriptMessageHandler.
+          // JS calls: window.webkit.messageHandlers.nativeSR.postMessage({action:'start'|'stop'})
+          // Swift calls back: webView.evaluateJavaScript("window.__srResult('...')")
+          private class SpeechBridge: NSObject, WKScriptMessageHandler {
+
+              private weak var webView: WKWebView?
+              private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+              private var request: SFSpeechAudioBufferRecognitionRequest?
+              private var task: SFSpeechRecognitionTask?
+              private var engine: AVAudioEngine?
+              private var tapInstalled = false
+
+              func attach(to wv: WKWebView) {
+                  webView = wv
+                  wv.configuration.userContentController.add(self, name: "nativeSR")
+                  // Pre-request permission so dialog shows before first tap
+                  SFSpeechRecognizer.requestAuthorization { _ in }
+              }
+
+              // Runs on main thread (WKWebView guarantee)
+              func userContentController(_ c: WKUserContentController,
+                                         didReceive msg: WKScriptMessage) {
+                  guard let action = (msg.body as? [String: Any])?["action"] as? String else { return }
+                  if action == "start" { beginSession() }
+                  else if action == "stop" { endSession() }
+              }
+
+              private func beginSession() {
+                  endSession() // always tear down previous session first
+
+                  let session = AVAudioSession.sharedInstance()
+                  do {
+                      try session.setCategory(.playAndRecord, mode: .measurement,
+                                              options: [.defaultToSpeaker, .allowBluetooth, .mixWithOthers])
+                      try session.setActive(true, options: .notifyOthersOnDeactivation)
+                  } catch { return }
+
+                  let eng = AVAudioEngine()
+                  engine = eng
+
+                  let req = SFSpeechAudioBufferRecognitionRequest()
+                  req.shouldReportPartialResults = true
+                  request = req
+
+                  let inputNode = eng.inputNode
+                  let fmt = inputNode.outputFormat(forBus: 0)
+                  inputNode.installTap(onBus: 0, bufferSize: 1024, format: fmt) { [weak req] buf, _ in
+                      req?.append(buf)
+                  }
+                  tapInstalled = true
+
+                  task = recognizer?.recognitionTask(with: req) { [weak self] result, error in
+                      if let text = result?.bestTranscription.formattedString, !text.isEmpty {
+                          let safe = text
+                              .replacingOccurrences(of: "\\", with: "\\\\")
+                              .replacingOccurrences(of: "'", with: "\\'")
+                              .replacingOccurrences(of: "\n", with: " ")
+                          DispatchQueue.main.async {
+                              self?.webView?.evaluateJavaScript(
+                                  "window.__srResult&&window.__srResult('\(safe)')",
+                                  completionHandler: nil)
+                          }
+                      }
+                      if error != nil || result?.isFinal == true {
+                          DispatchQueue.main.async { self?.endSession() }
+                      }
+                  }
+
+                  do {
+                      eng.prepare()
+                      try eng.start()
+                  } catch { endSession() }
+              }
+
+              func endSession() {
+                  if tapInstalled {
+                      engine?.inputNode.removeTap(onBus: 0)
+                      tapInstalled = false
+                  }
+                  engine?.stop()
+                  engine = nil
+                  request?.endAudio()
+                  task?.cancel()
+                  request = nil
+                  task = nil
+              }
+          }
+
+          // MARK: - ViewController
+          class ViewController: CAPBridgeViewController {
+              private var speechBridge: SpeechBridge?
+
+              override func viewDidLoad() {
+                  super.viewDidLoad()
+                  guard let wv = webView else { return }
+                  let bridge = SpeechBridge()
+                  bridge.attach(to: wv)
+                  speechBridge = bridge
+                  NotificationCenter.default.addObserver(
+                      self, selector: #selector(appDidBackground),
+                      name: UIApplication.didEnterBackgroundNotification, object: nil)
+              }
+
+              @objc private func appDidBackground() {
+                  speechBridge?.endSession()
+                  try? AVAudioSession.sharedInstance().setActive(false,
+                      options: .notifyOthersOnDeactivation)
+              }
+          }
+          SWIFTEOF
+          echo "ViewController.swift injected"
+
+      - name: Set Info.plist keys
+        script: |
+          PLIST="ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string 'CaseArc uses your microphone to transcribe surgical case descriptions by voice.'" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :NSMicrophoneUsageDescription 'CaseArc uses your microphone to transcribe surgical case descriptions by voice.'" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSSpeechRecognitionUsageDescription string 'CaseArc uses speech recognition to show your words in real time as you speak.'" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :NSSpeechRecognitionUsageDescription 'CaseArc uses speech recognition to show your words in real time as you speak.'" "$PLIST"
+
+      - name: Patch Xcode signing
+        script: |
+          PROFILE_PATH=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | head -1)
+          PROFILE_UUID=$(security cms -D -i "$PROFILE_PATH" 2>/dev/null | plutil -extract UUID raw - 2>/dev/null)
+          echo "Patching project.pbxproj with UUID: $PROFILE_UUID"
+          PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' "$PBXPROJ"
+          sed -i '' 's/DEVELOPMENT_TEAM = "";/DEVELOPMENT_TEAM = TZYVUU4RND;/g' "$PBXPROJ"
+          awk -v uuid="$PROFILE_UUID" '{print} /CODE_SIGN_STYLE = Manual;/{print "\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"" uuid "\";"}' "$PBXPROJ" > /tmp/pbx_patched && mv /tmp/pbx_patched "$PBXPROJ"
+          echo "Patch complete"
+
+      - name: Install CocoaPods
+        script: |
+          cd ios/App
+          pod install
+
+      - name: Set build number
+        script: |
+          BUILD_NUMBER=$(date +%Y%m%d%H%M)
+          echo "Build number: $BUILD_NUMBER"
+          agvtool new-version -all "$BUILD_NUMBER"
+        working_directory: ios/App
+
+      - name: Build and archive
+        script: |
+          PROFILE_PATH=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | head -1)
+          PROFILE_UUID=$(security cms -D -i "$PROFILE_PATH" 2>/dev/null | plutil -extract UUID raw - 2>/dev/null)
+
+          xcodebuild \
+            -workspace "$XCODE_WORKSPACE" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -archivePath /tmp/CaseFlow.xcarchive \
+            -destination "generic/platform=iOS" \
+            archive \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM="TZYVUU4RND"
+
+          printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n\t<key>method</key>\n\t<string>app-store</string>\n\t<key>teamID</key>\n\t<string>TZYVUU4RND</string>\n\t<key>signingStyle</key>\n\t<string>manual</string>\n\t<key>provisioningProfiles</key>\n\t<dict>\n\t\t<key>com.caseflow.app</key>\n\t\t<string>%s</string>\n\t</dict>\n</dict>\n</plist>\n' "$PROFILE_UUID" > /tmp/export_options.plist
+
+          mkdir -p build/ios/ipa
+          xcodebuild \
+            -exportArchive \
+            -archivePath /tmp/CaseFlow.xcarchive \
+            -exportOptionsPlist /tmp/export_options.plist \
+            -exportPath build/ios/ipa
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
+        beta_groups:
+          - Internal Testers
+      email:
+        recipients:
+          - $CM_EMAIL
+        notify:
+          success: true
+          failure: true
+
+  ios-dev:
+    name: CaseArc iOS — Dev Check
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+
+    environment:
+      node: v20.11.0
+      xcode: latest
+      cocoapods: default
+
+    triggering:
+      events:
+        - pull_request
+      branch_patterns:
+        - pattern: '*'
+          include: true
+
+    scripts:
+      - name: Install dependencies
+        script: npm install
+
+      - name: Add/sync Capacitor
+        script: |
+          if [ ! -d "ios" ]; then npx cap add ios; fi
+          npx cap sync ios
+
+      - name: Install CocoaPods
+        script: |
+          cd ios/App
+          pod install
+
+      - name: Build (no signing)
+        script: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro' \
+            -configuration Debug \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            build | xcpretty
