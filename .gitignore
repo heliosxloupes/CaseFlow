@@ -1,4 +1,9 @@
 .vercel
+.env
+.env.*
 .env*.local
 acgme-backend/.env
 acgme-backend/node_modules/
+node_modules/
+*.pem
+*.key
