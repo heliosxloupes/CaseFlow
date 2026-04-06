@@ -5297,6 +5297,7 @@ async function launchApp(name,email){
   if(menuName) menuName.textContent = firstName;
   showPage('pg-app');
   requestAnimationFrame(syncAppBarHeight);
+  setTimeout(syncAppBarHeight, 300);
   ensureBackgroundRenderers();
   startOrb();
   // Re-bind tap/click handlers after app is visible (guards against partial reloads)
