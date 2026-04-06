@@ -1,0 +1,38 @@
+name: Sync to CaseFlow-iOS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout CaseFlow
+        uses: actions/checkout@v4
+
+      - name: Checkout CaseFlow-iOS
+        uses: actions/checkout@v4
+        with:
+          repository: heliosxloupes/CaseFlow-iOS
+          token: ${{ secrets.IOS_SYNC_TOKEN }}
+          path: CaseFlow-iOS
+
+      - name: Sync web files
+        run: |
+          cp index.html CaseFlow-iOS/
+          cp sw.js CaseFlow-iOS/
+          cp caseflow-data.js CaseFlow-iOS/
+          cp manifest.json CaseFlow-iOS/
+          cp *.png CaseFlow-iOS/ 2>/dev/null || true
+
+      - name: Commit and push
+        run: |
+          cd CaseFlow-iOS
+          git config user.email "github-actions@github.com"
+          git config user.name "GitHub Actions"
+          git add -A
+          git diff --staged --quiet && echo "No changes to sync" && exit 0
+          git commit -m "Sync from CaseFlow: ${{ github.event.head_commit.message }}"
+          git push
