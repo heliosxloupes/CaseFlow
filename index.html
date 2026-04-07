@@ -1147,11 +1147,18 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   border-color:rgba(202,104,115,.45);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.03), 0 0 0 1px rgba(202,104,115,.08)
 }
+.mile-metric-icon{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);color:rgba(214,221,233,.4);margin-bottom:12px;flex-shrink:0}
+.mile-metric.complete{background:linear-gradient(180deg,rgba(18,38,30,.82) 0%,rgba(12,26,21,.94) 100%);border-color:rgba(52,211,153,.25)}
+.mile-metric.complete .mile-metric-icon{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.2);color:#34d399}
+.mile-metric.at-risk .mile-metric-icon{background:rgba(255,111,121,.1);border-color:rgba(195,90,102,.25);color:#f87171}
 .mile-metric-label{font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:rgba(214,221,233,.34)}
+.mile-metric.complete .mile-metric-label{color:rgba(141,243,202,.6)}
 .mile-metric.at-risk .mile-metric-label{color:rgba(240,169,177,.78)}
-.mile-metric-value{margin-top:18px;font-size:48px;font-weight:700;letter-spacing:-.08em;line-height:.92}
+.mile-metric-value{margin-top:14px;font-size:48px;font-weight:700;letter-spacing:-.08em;line-height:.92}
+.mile-metric.complete .mile-metric-value{color:#34d399}
 .mile-metric.at-risk .mile-metric-value{color:#ff6f79}
 .mile-metric-sub{margin-top:12px;font-size:14px;color:rgba(214,221,233,.42);line-height:1.28;max-width:11ch}
+.mile-metric.complete .mile-metric-sub{color:rgba(141,243,202,.5)}
 .mile-metric.at-risk .mile-metric-sub{color:rgba(240,169,177,.78)}
 .mile-section{
   padding:24px;border-radius:30px;border:1px solid rgba(255,255,255,.08);
@@ -1211,17 +1218,21 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 }
 .mile-cat-list{display:grid;gap:12px}
 .mile-cat{
-  padding:18px 18px 16px;border-radius:26px;background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.06)
+  padding:18px 18px 16px;border-radius:26px;background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.06);transition:border-color .2s,background .2s
 }
+.mile-cat.complete{background:rgba(14,30,22,.7);border-color:rgba(52,211,153,.18)}
+.mile-cat.at-risk{background:rgba(28,16,18,.7);border-color:rgba(195,90,102,.22)}
 .mile-cat-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .mile-cat-title{font-size:18px;font-weight:700;line-height:1.3;max-width:14ch}
 .mile-cat-section{margin-top:6px;font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:rgba(214,221,233,.26)}
 .mile-status{
-  font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;padding:10px 14px;border-radius:999px;white-space:nowrap
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:8px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0
 }
 .mile-status.complete{background:rgba(52,211,153,.10);border:1px solid rgba(52,211,153,.18);color:#8df3ca}
 .mile-status.in-progress{background:rgba(79,142,247,.10);border:1px solid rgba(79,142,247,.18);color:#a6c8ff}
 .mile-status.at-risk{background:rgba(255,111,121,.10);border:1px solid rgba(195,90,102,.36);color:#f3b0b0}
+.mile-cat-remaining{color:rgba(251,191,36,.7);font-weight:600}
 .mile-bar{margin-top:16px;height:12px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);position:relative}
 .mile-bar::before{
   content:"";position:absolute;inset:0 auto 0 0;width:var(--pct,0%);
@@ -1265,11 +1276,18 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .case-edit-modal{position:fixed;inset:0;z-index:8500;background:rgb(7,9,15);display:flex;flex-direction:column;opacity:0;pointer-events:none!important;transition:opacity .22s;transform:translateY(20px);overflow:hidden;width:100vw;max-width:100vw;height:100dvh;height:100vh}
 @supports(height:100dvh){.case-edit-modal{height:100dvh}}
 .case-edit-modal.on{opacity:1;pointer-events:all!important;transform:translateY(0);transition:opacity .22s,transform .22s}
-.case-edit-header{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 14px;border-bottom:1px solid var(--line);flex-shrink:0;box-sizing:border-box;width:100%}
+.case-edit-header{display:flex;align-items:center;justify-content:space-between;padding:max(18px,env(safe-area-inset-top)) 18px 14px;border-bottom:1px solid var(--line);flex-shrink:0;box-sizing:border-box;width:100%}
 .case-edit-title{font-size:16px;font-weight:700;color:var(--text)}
 .case-edit-close{background:var(--bg2);border:1px solid var(--line2);color:var(--text2);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;line-height:1;flex-shrink:0}
 .case-edit-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:18px 18px 24px;width:100%;box-sizing:border-box}
 .case-edit-footer{padding:14px 18px max(16px,env(safe-area-inset-bottom));border-top:1px solid var(--line);display:flex;gap:10px;flex-shrink:0;box-sizing:border-box;width:100%;background:linear-gradient(180deg,rgba(9,12,18,.82) 0%,rgba(9,12,18,.96) 100%)}
+.ce-status-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px 6px 10px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid transparent;margin-bottom:18px}
+.ce-status-badge.ok{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.25);color:#34d399}
+.ce-status-badge.warn{background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.25);color:#fbbf24}
+.ce-status-badge.idle{background:rgba(255,255,255,.04);border-color:var(--line2);color:var(--text3)}
+.ce-status-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;opacity:.8}
+.ce-status-badge.ok .ce-status-dot{box-shadow:0 0 6px rgba(52,211,153,.6)}
+.ce-status-badge.warn .ce-status-dot{box-shadow:0 0 6px rgba(251,191,36,.5)}
 .ce-field{margin-bottom:18px;width:100%;box-sizing:border-box}
 .ce-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px}
 .ce-chips{display:flex;flex-wrap:wrap;gap:7px}
@@ -3772,7 +3790,7 @@ function filterHistory(){
         <div class="hmeta">${d} &middot; ${c.role||'—'} &middot; Year ${c.yr||'—'}</div>
         <div class="hmeta">${c.site||'—'} &middot; ${c.att||'—'}</div>
       </div>
-      <div class="spill s-${c.status}">${c.status}</div>
+      <div class="spill s-${c.status||'pending'}">${c.status==='submitted'?'Submitted':c.status==='pending'?'Pending':'Pending'}</div>
     </div>`;
   }).join('');
   // Ensure delegated handlers remain attached after any re-render
@@ -3800,7 +3818,29 @@ function openCaseEdit(id){
     editingCase.cid=editingCase.caseId;
     if(!Array.isArray(editingCase.procs)) editingCase.procs=[];
     renderCaseEditModal();
-    document.getElementById('case-edit-modal').classList.add('on');
+    const _modal=document.getElementById('case-edit-modal');
+    _modal.classList.add('on');
+    // Resize modal to visible viewport so keyboard doesn't trap scroll
+    function _ceVpResize(){
+      const h=window.visualViewport?window.visualViewport.height:window.innerHeight;
+      _modal.style.height=h+'px';
+    }
+    if(window.visualViewport){
+      window.visualViewport.addEventListener('resize',_ceVpResize);
+      window.visualViewport.addEventListener('scroll',_ceVpResize);
+    }
+    _modal._ceVpResize=_ceVpResize;
+    _ceVpResize();
+    // Scroll focused input into view above keyboard
+    function _ceFocusIn(e){
+      const el=e.target;
+      if(el&&(el.tagName==='INPUT'||el.tagName==='TEXTAREA')){
+        setTimeout(()=>el.scrollIntoView({block:'center',behavior:'smooth'}),320);
+      }
+    }
+    const _scroll=document.getElementById('case-edit-scroll');
+    _scroll.addEventListener('focusin',_ceFocusIn);
+    _modal._ceFocusIn=_ceFocusIn;
     if(typeof ACGME_BACKEND_URL !== 'undefined' && ACGME_BACKEND_URL && localStorage.getItem('cf5-token')){
       fetchAcgmeProfile().then(function(){
         try{
@@ -3816,7 +3856,19 @@ function openCaseEdit(id){
   }
 }
 function closeCaseEdit(){
-  document.getElementById('case-edit-modal').classList.remove('on');
+  const _modal=document.getElementById('case-edit-modal');
+  _modal.classList.remove('on');
+  _modal.style.height='';
+  if(window.visualViewport&&_modal._ceVpResize){
+    window.visualViewport.removeEventListener('resize',_modal._ceVpResize);
+    window.visualViewport.removeEventListener('scroll',_modal._ceVpResize);
+    delete _modal._ceVpResize;
+  }
+  const _scroll=document.getElementById('case-edit-scroll');
+  if(_modal._ceFocusIn){
+    _scroll.removeEventListener('focusin',_modal._ceFocusIn);
+    delete _modal._ceFocusIn;
+  }
   editingCase=null;
 }
 function setEditCaseId(val){
@@ -3910,7 +3962,16 @@ function renderCaseEditModal(){
   const attHint=hasProfileCache('cf5-attendings')
     ? 'Options from your ACGME program (saved on this device).'
     : 'Using defaults — connect ACGME in Settings to load your program list.';
+  // Update resubmit button label based on status
+  const _resubBtn=document.getElementById('resubmit-btn');
+  if(_resubBtn) _resubBtn.textContent=c.status==='submitted'?'Re-submit to ACGME':'Submit to ACGME';
+  const _statusBadge=(()=>{
+    if(c.status==='submitted') return`<div class="ce-status-badge ok"><span class="ce-status-dot"></span>Submitted to ACGME</div>`;
+    if(c.status==='pending') return`<div class="ce-status-badge warn"><span class="ce-status-dot"></span>Pending — not yet submitted</div>`;
+    return`<div class="ce-status-badge idle"><span class="ce-status-dot"></span>Status unknown</div>`;
+  })();
   document.getElementById('case-edit-scroll').innerHTML=`
+    ${_statusBadge}
     <div class="ce-field">
       <div class="ce-label">Date</div>
       <input type="date" class="ce-date-input" id="ce-date" value="${c.date||''}" oninput="editingCase.date=this.value" onchange="editingCase.date=this.value">
@@ -5481,17 +5542,20 @@ function renderMilestonesPane(){
         </div>
       </div>
       <div class="mile-metric-grid">
-        <div class="mile-metric">
+        <div class="mile-metric complete">
+          <div class="mile-metric-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
           <div class="mile-metric-label">Complete</div>
           <div class="mile-metric-value">${data.summary?.completeCategories||0}</div>
           <div class="mile-metric-sub">Categories met</div>
         </div>
         <div class="mile-metric">
+          <div class="mile-metric-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
           <div class="mile-metric-label">In Progress</div>
           <div class="mile-metric-value">${data.summary?.incompleteCategories||0}</div>
           <div class="mile-metric-sub">Underway</div>
         </div>
         <div class="mile-metric at-risk">
+          <div class="mile-metric-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
           <div class="mile-metric-label">At Risk</div>
           <div class="mile-metric-value">${data.summary?.atRiskCategories||0}</div>
           <div class="mile-metric-sub">Below 50%</div>
@@ -5567,19 +5631,24 @@ function renderMilestonesPane(){
               ${filtered.map(row=>{
                 const statusClass = row.status === 'complete' ? 'complete' : (row.status === 'at-risk' ? 'at-risk' : 'in-progress');
                 const pct = Math.max(0, Math.min(100, Number(row.completionPct||0)));
+                const statusIcon = statusClass==='complete'
+                  ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`
+                  : statusClass==='at-risk'
+                    ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+                    : `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
                 return `
-                  <div class="mile-cat">
+                  <div class="mile-cat ${statusClass}">
                     <div class="mile-cat-head">
                       <div>
                         <div class="mile-cat-title">${escHtml(row.categoryName)}</div>
                         ${row.section?`<div class="mile-cat-section">${escHtml(row.section)}</div>`:''}
                       </div>
-                      <div class="mile-status ${statusClass}">${milestoneStatusLabel(row.status)}</div>
+                      <div class="mile-status ${statusClass}">${statusIcon}${milestoneStatusLabel(row.status)}</div>
                     </div>
                     <div class="mile-bar ${statusClass}" style="--pct:${pct}%"></div>
                     <div class="mile-cat-meta">
                       <div><b>${row.completed}</b> logged of <b>${row.minimumRequired}</b> required</div>
-                      <div>${row.remaining>0?`${row.remaining} remaining`:'Minimum met'}</div>
+                      <div class="${row.remaining>0?'mile-cat-remaining':''}">${row.remaining>0?`${row.remaining} remaining`:'Minimum met ✓'}</div>
                     </div>
                   </div>
                 `;
