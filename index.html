@@ -646,7 +646,7 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .srch-info{flex:1}
 .srch-desc{font-size:13px;color:var(--text);line-height:1.35}
 .srch-area{font-size:11px;color:var(--text3);margin-top:2px}
-.srch-add{font-size:18px;color:var(--text3);padding-top:2px}
+.srch-add{font-size:22px;font-weight:700;color:rgba(100,160,255,.8);padding-top:0;line-height:1}
 .no-results{padding:14px;font-size:13px;color:var(--text3);text-align:center}
 .srch-count{padding:8px 14px;font-size:11px;color:var(--text3);border-bottom:1px solid var(--line)}
 
@@ -656,8 +656,11 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .cpt-found-item.removing{opacity:0}
 .cpt-found-code{font-size:12px;font-weight:600;color:var(--blue);min-width:46px;padding-top:2px}
 .cpt-found-desc{flex:1;font-size:13px;color:var(--text);line-height:1.35}
-.cpt-found-remove{flex-shrink:0;background:none;border:none;padding:2px 4px;cursor:pointer;color:var(--text3);font-size:16px;line-height:1;border-radius:4px;transition:color .15s}
-.cpt-found-remove:hover,.cpt-found-remove:active{color:var(--red)}
+.cpt-found-actions{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.cpt-found-dup{background:rgba(100,160,255,.12);border:1px solid rgba(100,160,255,.25);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--blue);font-size:10px;font-weight:600;letter-spacing:.04em;line-height:1.4;transition:background .15s,color .15s;white-space:nowrap}
+.cpt-found-dup:active{background:rgba(100,160,255,.25)}
+.cpt-found-remove{flex-shrink:0;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.18);border-radius:6px;padding:3px 7px;cursor:pointer;color:rgba(255,120,120,.7);font-size:15px;font-weight:700;line-height:1.3;transition:background .15s,color .15s}
+.cpt-found-remove:active{background:rgba(255,80,80,.22);color:var(--red)}
 
 .cpt-select-head{font-size:14px;color:var(--text);font-weight:500;margin-bottom:12px;line-height:1.5}
 .cpt-select-option{background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s}
@@ -1655,9 +1658,16 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
 .auth-check{display:flex;align-items:flex-start;gap:10px;margin-top:4px;padding:12px 12px 10px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
 .auth-check input{margin-top:2px;accent-color:var(--blue);width:16px;height:16px;flex-shrink:0}
 .auth-check-label{font-size:12px;line-height:1.6;color:rgba(232,237,244,.7)}
-.save-creds-row{display:flex;gap:16px;margin:10px 0 4px;padding:0 2px}
-.save-creds-row label{display:flex;align-items:center;gap:7px;font-size:12px;color:rgba(232,237,244,.55);cursor:pointer;user-select:none}
-.save-creds-row input[type=checkbox]{accent-color:var(--blue);width:15px;height:15px;flex-shrink:0;cursor:pointer}
+.save-creds-row{display:flex;margin:12px 0 6px;padding:0}
+.remember-toggle{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);width:100%;transition:background .15s}
+.remember-toggle:active{background:rgba(255,255,255,.07)}
+.remember-toggle input[type=checkbox]{display:none}
+.remember-switch{width:36px;height:20px;border-radius:10px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);flex-shrink:0;position:relative;transition:background .2s,border-color .2s}
+.remember-switch::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.5);transition:transform .2s,background .2s}
+.remember-toggle input:checked+.remember-switch{background:var(--blue);border-color:var(--blue)}
+.remember-toggle input:checked+.remember-switch::after{transform:translateX(16px);background:#fff}
+.remember-label{font-size:13px;font-weight:500;color:rgba(232,237,244,.6);transition:color .2s}
+.remember-toggle input:checked~.remember-label{color:rgba(232,237,244,.9)}
 .text-link-btn{background:none;border:none;padding:0;color:var(--blue-soft);font:inherit;cursor:pointer}
 .text-link-btn:active{opacity:.84}
 .login-shell-foot{
@@ -1722,7 +1732,11 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
                    onkeydown="if(event.key==='Enter')this.form.requestSubmit()">
           </div>
           <div class="save-creds-row">
-            <label><input type="checkbox" id="l-remember" onchange="loginRememberChanged()"> Remember me</label>
+            <label class="remember-toggle" for="l-remember">
+              <input type="checkbox" id="l-remember" onchange="loginRememberChanged()">
+              <span class="remember-switch"></span>
+              <span class="remember-label">Remember me</span>
+            </label>
           </div>
           <button class="btn-main" id="l-btn" type="submit" style="margin-top:8px">Sign In</button>
           <div class="auth-err" id="l-err"></div>
@@ -2034,7 +2048,11 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
                 </div>
               </div>
               <div class="save-creds-row" style="margin:2px 0 10px">
-                <label><input type="checkbox" id="s-remember" onchange="acgmeRememberChanged()"> Remember me</label>
+                <label class="remember-toggle" for="s-remember">
+                  <input type="checkbox" id="s-remember" onchange="acgmeRememberChanged()">
+                  <span class="remember-switch"></span>
+                  <span class="remember-label">Remember me</span>
+                </label>
               </div>
               <div class="settings-cred-status" id="s-cred-status"></div>
               <button class="acgme-continue-btn" type="submit" id="s-continue-btn">Continue →</button>
@@ -3099,7 +3117,7 @@ function showAddMoreScreen(){
             <div class="cpt-sel-name">${s.desc}</div>
             <div class="cpt-sel-note">${s.area}</div>
           </div>
-          <div class="radd" style="font-size:20px;color:var(--text3);padding-top:2px">+</div>
+          <div class="radd" style="font-size:22px;font-weight:700;color:rgba(100,160,255,.75);padding-top:0;line-height:1">+</div>
         </div>
       </div>`).join('')}
     <div style="height:10px"></div>` : '';
@@ -3341,13 +3359,20 @@ function doneAddingCodes(){
 function showCptFound(procs){
   const box=document.getElementById('cpt-found-box');
   if(!procs.length){box.classList.remove('show');return}
-  box.innerHTML=`<div class="cpt-found-label">&#10022; CPT codes identified (${procs.length})</div>`+procs.map((p,i)=>`<div class="cpt-found-item" id="cpt-found-item-${i}"><div class="cpt-found-code">${p.c}</div><div class="cpt-found-desc">${p.d}<br><span style="font-size:11px;color:var(--text3)">${p.a}</span></div><button class="cpt-found-remove" onclick="removeCptFound(${i})" aria-label="Remove">&#215;</button></div>`).join('');
+  box.innerHTML=`<div class="cpt-found-label">&#10022; CPT codes identified (${procs.length})</div>`+procs.map((p,i)=>`<div class="cpt-found-item" id="cpt-found-item-${i}"><div class="cpt-found-code">${p.c}</div><div class="cpt-found-desc">${p.d}<br><span style="font-size:11px;color:var(--text3)">${p.a}</span></div><div class="cpt-found-actions"><button class="cpt-found-dup" onclick="dupCptFound(${i})" aria-label="Duplicate">2×</button><button class="cpt-found-remove" onclick="removeCptFound(${i})" aria-label="Remove">&#215;</button></div></div>`).join('');
   box.classList.add('show');
 }
 function removeCptFound(idx){
   const item=document.getElementById(`cpt-found-item-${idx}`);
   if(item){item.classList.add('removing');setTimeout(()=>{caseData.procedures.splice(idx,1);showCptFound(caseData.procedures);},200);}
   else{caseData.procedures.splice(idx,1);showCptFound(caseData.procedures);}
+}
+function dupCptFound(idx){
+  const p=caseData.procedures[idx];
+  if(!p)return;
+  caseData.procedures.splice(idx+1,0,{c:p.c,d:p.d,a:p.a});
+  showCptFound(caseData.procedures);
+  toast('Code duplicated','ok');
 }
 function setStateLabel(t){document.getElementById('state-label').textContent=t}
 const SUMMARY_FIELDS = [
