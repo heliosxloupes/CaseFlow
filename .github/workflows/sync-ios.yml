@@ -28,11 +28,14 @@ jobs:
           cp *.png CaseFlow-iOS/ 2>/dev/null || true
 
       - name: Commit and push
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           cd CaseFlow-iOS
           git config user.email "github-actions@github.com"
           git config user.name "GitHub Actions"
           git add -A
           git diff --staged --quiet && echo "No changes to sync" && exit 0
-          git commit -m "Sync from CaseFlow: ${{ github.event.head_commit.message }}"
+          FIRST_LINE=$(echo "$COMMIT_MSG" | head -1)
+          git commit -m "Sync: $FIRST_LINE"
           git push
