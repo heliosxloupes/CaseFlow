@@ -1655,6 +1655,9 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
 .auth-check{display:flex;align-items:flex-start;gap:10px;margin-top:4px;padding:12px 12px 10px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
 .auth-check input{margin-top:2px;accent-color:var(--blue);width:16px;height:16px;flex-shrink:0}
 .auth-check-label{font-size:12px;line-height:1.6;color:rgba(232,237,244,.7)}
+.save-creds-row{display:flex;gap:16px;margin:10px 0 4px;padding:0 2px}
+.save-creds-row label{display:flex;align-items:center;gap:7px;font-size:12px;color:rgba(232,237,244,.55);cursor:pointer;user-select:none}
+.save-creds-row input[type=checkbox]{accent-color:var(--blue);width:15px;height:15px;flex-shrink:0;cursor:pointer}
 .text-link-btn{background:none;border:none;padding:0;color:var(--blue-soft);font:inherit;cursor:pointer}
 .text-link-btn:active{opacity:.84}
 .login-shell-foot{
@@ -1717,6 +1720,9 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
             <input class="form-input" type="password" id="l-pass" name="password" placeholder="••••••••"
                    autocomplete="current-password"
                    onkeydown="if(event.key==='Enter')this.form.requestSubmit()">
+          </div>
+          <div class="save-creds-row">
+            <label><input type="checkbox" id="l-remember" onchange="loginRememberChanged()"> Remember me</label>
           </div>
           <button class="btn-main" id="l-btn" type="submit" style="margin-top:8px">Sign In</button>
           <div class="auth-err" id="l-err"></div>
@@ -2026,6 +2032,9 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
                     <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                   </button>
                 </div>
+              </div>
+              <div class="save-creds-row" style="margin:2px 0 10px">
+                <label><input type="checkbox" id="s-remember" onchange="acgmeRememberChanged()"> Remember me</label>
               </div>
               <div class="settings-cred-status" id="s-cred-status"></div>
               <button class="acgme-continue-btn" type="submit" id="s-continue-btn">Continue →</button>
@@ -4286,6 +4295,7 @@ function toggleAcgmeForm(){
   const isOpen=form.classList.toggle('open');
   // Hide/show the connect card when form opens/closes
   if(connectCard) connectCard.style.display=isOpen?'none':'';
+  if(isOpen) setTimeout(initAcgmeSavedCreds, 50);
   // Reset both steps when closing so reopening is always fresh
   if(!isOpen){
     const mfa=document.getElementById('s-mfa-section');
@@ -4350,6 +4360,14 @@ async function saveAcgmeCredentials(){
       setAcgmeLoadingStatus('Secure connection in progress', 'Opening ACGME login...');
       const saveBtn = document.getElementById('s-continue-btn');
       setBusyButtonState(saveBtn, 'Connecting…');
+      // Persist ACGME credentials if Remember me is checked
+      if(document.getElementById('s-remember')?.checked){
+        localStorage.setItem('cf5-saved-acgme-user',user);
+        localStorage.setItem('cf5-saved-acgme-pass',pass);
+      } else {
+        localStorage.removeItem('cf5-saved-acgme-user');
+        localStorage.removeItem('cf5-saved-acgme-pass');
+      }
       const token = localStorage.getItem('cf5-token');
       const resp = await fetch(`${ACGME_BACKEND_URL}/api/auth/save-credentials`,{
         method:'POST',
@@ -4667,7 +4685,7 @@ function expandAuthPanel(which){
     signupPanel.classList.remove('open');
     signinBtn.classList.toggle('active',opening);
     signupBtn.classList.remove('active');
-    if(opening) setTimeout(()=>document.getElementById('l-email')?.focus(),420);
+    if(opening){setTimeout(()=>{initLoginSavedCreds();document.getElementById('l-email')?.focus();},420);}
   } else {
     const opening=!signupPanel.classList.contains('open');
     signupPanel.classList.toggle('open',opening);
@@ -4678,6 +4696,42 @@ function expandAuthPanel(which){
   }
   document.getElementById('l-err')&&(document.getElementById('l-err').textContent='');
   document.getElementById('r-err')&&(document.getElementById('r-err').textContent='');
+}
+
+// --- Remember me helpers ---
+function initLoginSavedCreds(){
+  const remember=localStorage.getItem('cf5-remember')==='1';
+  const cb=document.getElementById('l-remember');
+  if(!cb)return;
+  cb.checked=remember;
+  if(remember){
+    const e=localStorage.getItem('cf5-saved-email');
+    const p=localStorage.getItem('cf5-saved-pass');
+    if(e)document.getElementById('l-email').value=e;
+    if(p)document.getElementById('l-pass').value=p;
+  }
+}
+function loginRememberChanged(){
+  const on=document.getElementById('l-remember').checked;
+  localStorage.setItem('cf5-remember',on?'1':'0');
+  if(!on){localStorage.removeItem('cf5-saved-email');localStorage.removeItem('cf5-saved-pass');}
+}
+function initAcgmeSavedCreds(){
+  const remember=localStorage.getItem('cf5-acgme-remember')==='1';
+  const cb=document.getElementById('s-remember');
+  if(!cb)return;
+  cb.checked=remember;
+  if(remember){
+    const u=localStorage.getItem('cf5-saved-acgme-user');
+    const p=localStorage.getItem('cf5-saved-acgme-pass');
+    if(u)document.getElementById('s-acgme-user').value=u;
+    if(p)document.getElementById('s-acgme-pass').value=p;
+  }
+}
+function acgmeRememberChanged(){
+  const on=document.getElementById('s-remember').checked;
+  localStorage.setItem('cf5-acgme-remember',on?'1':'0');
+  if(!on){localStorage.removeItem('cf5-saved-acgme-user');localStorage.removeItem('cf5-saved-acgme-pass');}
 }
 
 async function doLogin(){
@@ -4693,6 +4747,14 @@ async function doLogin(){
     const data=await res.json();
     clearAuthButtonLoading(btn);
     if(!res.ok){errEl.textContent=data.error||'Sign in failed.';return;}
+    // Persist credentials if Remember me is checked
+    if(document.getElementById('l-remember')?.checked){
+      localStorage.setItem('cf5-saved-email',email);
+      localStorage.setItem('cf5-saved-pass',pass);
+    } else {
+      localStorage.removeItem('cf5-saved-email');
+      localStorage.removeItem('cf5-saved-pass');
+    }
     _onAuthSuccess(data,pass);
   }catch(e){
     clearAuthButtonLoading(btn);
