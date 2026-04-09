@@ -575,6 +575,69 @@ function extractCaseIdFieldNameFromInsertHtml(html) {
   return '';
 }
 
+/**
+ * Resolve the Case Date field name from the ACGME Insert page HTML.
+ *
+ * On the obfuscated portal, the visible text inputs are hash-named and ordered:
+ *   1. Case ID
+ *   2. Case Date
+ * The HAR in date3.har confirms the second hash field carries the submitted date.
+ */
+function extractCaseDateFieldNameFromInsertHtml(html) {
+  if (!html || typeof html !== 'string') return '';
+
+  // 1. Non-obfuscated name match.
+  const tagRe = /<(input|textarea)\b([^>]*)>/gi;
+  let m;
+  while ((m = tagRe.exec(html)) !== null) {
+    const tag = m[1].toLowerCase();
+    const attrs = m[2];
+    if (tag === 'input' && /type\s*=\s*["']hidden["']/i.test(attrs)) continue;
+    const nameM = attrs.match(/\bname\s*=\s*["']([^"']+)["']/i);
+    if (!nameM) continue;
+    const name = nameM[1];
+    if (/case\s*date|procedure\s*date/i.test(name.replace(/[\s._-]/g, ' '))) return name;
+  }
+
+  // 2. Label-based association.
+  const labelRe = /<label\b[^>]*\bfor\s*=\s*["']([^"']+)["'][^>]*>([\s\S]{0,200}?)<\/label>/gi;
+  let lm;
+  while ((lm = labelRe.exec(html)) !== null) {
+    const labelText = lm[2].replace(/<[^>]+>/g, ' ');
+    if (!/case\s*date|procedure\s*date/i.test(labelText)) continue;
+    const forId = lm[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const inputRe2 = new RegExp(`<input\\b[^>]*\\bid\\s*=\\s*["']${forId}["'][^>]*>`, 'i');
+    const im = inputRe2.exec(html);
+    if (im) {
+      const nm = im[0].match(/\bname\s*=\s*["']([^"']+)["']/i);
+      if (nm) return nm[1];
+    }
+  }
+
+  // 3. Obfuscated portal: second hash-named visible input = Case Date.
+  const hashNames = [];
+  const hashRe = /<input\b([^>]*)>/gi;
+  let hm;
+  while ((hm = hashRe.exec(html)) !== null) {
+    const attrs = hm[1];
+    if (/type\s*=\s*["']hidden["']/i.test(attrs)) continue;
+    const nm = attrs.match(/\bname\s*=\s*["']([^"']+)["']/i);
+    if (!nm) continue;
+    const name = nm[1];
+    if (/^[0-9a-f]{32,}$/i.test(name)) hashNames.push(name);
+  }
+  if (hashNames.length >= 2) return hashNames[1];
+
+  // 4. Known candidate fallbacks.
+  for (const candidate of ['CaseDate', 'ProcedureDate', 'Date']) {
+    if (new RegExp(`<input\\b[^>]*\\bname\\s*=\\s*["']${candidate}["'][^>]*>`, 'i').test(html)) {
+      return candidate;
+    }
+  }
+
+  return '';
+}
+
 /** Value for the CaseId POST field (only called when shouldPostCaseIdToAds — ref already has a letter). */
 function caseIdForAdsInsertForm(raw) {
   return String(raw || '').trim().slice(0, ADS_CASE_ID_MAX_LEN);
@@ -954,6 +1017,20 @@ function stripHiddenCaseIdKeys(hidden) {
   return out;
 }
 
+/** Remove hidden/default date keys so the visible submitted Case Date wins. */
+function stripHiddenDateKeys(hidden, keepFieldName = '') {
+  const out = { ...hidden };
+  const keep = String(keepFieldName || '').trim();
+  for (const k of Object.keys(out)) {
+    const key = k.trim();
+    if (keep && key === keep) continue;
+    if (/(\.|^)(case|procedure)?date$/i.test(key) || /date/i.test(key)) {
+      delete out[k];
+    }
+  }
+  return out;
+}
+
 function buildInsertFormPayload(token, hidden, caseData, insertHtml) {
   const codes = normalizeSelectedCodesForAdsInsert(caseData.selectedCodes || '');
   // Successful browser HAR: HoldSelectedCodes=False, SelectedCodes=P,codeId,typeToCodeId,q,1;
@@ -969,9 +1046,12 @@ function buildInsertFormPayload(token, hidden, caseData, insertHtml) {
       : (hidden.Residents || '');
   const postCaseId = shouldPostCaseIdToAds(caseData.caseId);
   const caseIdFieldName = extractCaseIdFieldNameFromInsertHtml(insertHtml || '') || 'CaseId';
+  const caseDateFieldName = extractCaseDateFieldNameFromInsertHtml(insertHtml || '');
   console.warn('[ACGME] CaseId field name resolved:', caseIdFieldName.slice(0, 20), '| will post:', postCaseId, '| raw:', String(caseData.caseId || '').slice(0, 8));
+  console.warn('[ACGME] CaseDate field name resolved:', caseDateFieldName ? caseDateFieldName.slice(0, 20) : '(none)', '| value:', String(caseData.procedureDate || '').slice(0, 12));
   const cid = postCaseId ? caseIdForAdsInsertForm(caseData.caseId) : '';
-  const hiddenClean = postCaseId ? stripHiddenCaseIdKeys(hidden) : { ...hidden };
+  let hiddenClean = stripHiddenDateKeys(hidden, caseDateFieldName);
+  hiddenClean = postCaseId ? stripHiddenCaseIdKeys(hiddenClean) : hiddenClean;
   if (!postCaseId && String(caseData.caseId || '').trim()) {
     const s = String(caseData.caseId).trim();
     const env = String(process.env.ACGME_POST_CASE_ID || '').trim().toLowerCase();
@@ -999,6 +1079,9 @@ function buildInsertFormPayload(token, hidden, caseData, insertHtml) {
     Comments:        mergeLocalCaseIdIntoComments(caseData),
     SearchTerm:      'False',
   };
+  if (caseDateFieldName) {
+    body[caseDateFieldName] = caseData.procedureDate;
+  }
   if (cid) {
     body[caseIdFieldName] = cid;
   }
