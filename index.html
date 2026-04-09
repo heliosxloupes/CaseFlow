@@ -3393,7 +3393,7 @@ function renderSummaryCard(){
     if(isEditing){
       if(f.type==='date'){
         html += `<div class="sum-edit-panel" onclick="event.stopPropagation()">
-          <input type="date" class="sum-date-input" value="${val||''}" oninput="saveSummaryDate(this.value)" onchange="saveSummaryDate(this.value)">
+          <input type="date" class="sum-date-input" value="${val||''}" onchange="saveSummaryDate(this.value)">
         </div>`;
       } else if(f.type==='combo'){
         const w=f.combo;
@@ -3498,6 +3498,7 @@ function toggleSummaryEdit(key){
 }
 
 function saveSummaryDate(val){
+  if(!val) return; // ignore empty — user hasn't confirmed
   const f = SUMMARY_FIELDS.find(f=>f.key==='date');
   if(f) f.set(val);
   summaryEditKey=null;
@@ -3629,11 +3630,14 @@ async function submitCase(){
     if(overlay.classList.contains('on')) labelEl.textContent='Still contacting ACGME… If your hospital uses Duo, you may get a push to approve.';
   },15000);
 
-  // Flush any open date input before building payload
+  // Flush: if date edit panel is still open, grab the live input value
   const _sumDateEl=document.querySelector('.sum-date-input');
   if(_sumDateEl&&_sumDateEl.value) caseData.date=_sumDateEl.value;
+  // Final fallback: read directly from SUMMARY_FIELDS getter (always current)
+  const _dateField=SUMMARY_FIELDS.find(f=>f.key==='date');
+  const _finalDate=caseData.date||(_dateField&&_dateField.get())||isoToday();
   const payload={
-    date:caseData.date||isoToday(),
+    date:_finalDate,
     procs:caseData.procedures,
     role:caseData.role||'Surgeon',
     site:caseData.site||'',
