@@ -4866,7 +4866,7 @@ async function doRegister(){
   const btn=document.getElementById('r-btn');
   setAuthButtonLoading(btn,'Creating Account');
   try{
-    const res=await fetch(`${ACGME_BACKEND_URL}/api/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pass,betaKey,tosAccepted})});
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/auth/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pass,betaKey,tosAccepted})});
     const data=await res.json();
     clearAuthButtonLoading(btn);
     if(!res.ok){errEl.textContent=data.error||'Registration failed.';return;}
