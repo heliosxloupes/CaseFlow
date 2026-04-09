@@ -2323,6 +2323,44 @@ function searchCPT(query,limit=12){
   }
   return results.slice(0,limit);
 }
+function extractSpokenCptCodes(text){
+  const raw=String(text||'');
+  if(!raw.trim())return[];
+  const found=[];
+  const seen=new Set();
+  const direct=raw.match(/\b\d{5}\b/g)||[];
+  for(const code of direct){
+    if(!seen.has(code)){seen.add(code);found.push(code);}
+  }
+  const spaced=raw.match(/(?:^|\D)((?:\d[\s-]*){5})(?=\D|$)/g)||[];
+  for(const token of spaced){
+    const digits=token.replace(/\D/g,'');
+    if(digits.length===5&&!seen.has(digits)){seen.add(digits);found.push(digits);}
+  }
+  return found;
+}
+function resolveSpokenCptHits(text,limit=6){
+  const codes=extractSpokenCptCodes(text);
+  if(!codes.length)return[];
+  const hits=[];
+  const seen=new Set();
+  for(const code of codes){
+    let match=null;
+    if(currentUserMeta.cptCodes?.length){
+      const entry=currentUserMeta.cptCodes.find(e=>String(e.code||'').trim()===code);
+      if(entry)match={c:String(entry.code).trim(),d:entry.description||'',a:entry.area||''};
+    }
+    if(!match){
+      const exact=searchCPT(code,1).find(e=>e.c===code);
+      if(exact)match=exact;
+    }
+    if(match&&!seen.has(match.c)){
+      seen.add(match.c);
+      hits.push(match);
+    }
+  }
+  return hits.slice(0,limit);
+}
 function kwMatch(text){
   const lo=text.toLowerCase();
   const matched=[];
@@ -2714,6 +2752,7 @@ async function processDescription(text){
   caseData.description=text;buildIndex();
   let extracted=null;
   const localDate=extractSpokenDate(text);
+  const spokenCodeHits=resolveSpokenCptHits(text);
   try{
     const res=await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:currentUserMeta.specialty||'plastic-surgery',sites:getSitesForEdit(),attendings:getAttendingsForEdit()})});
     if(!res.ok)throw new Error();extracted=await res.json()
@@ -2728,6 +2767,11 @@ async function processDescription(text){
   const parsedDate=normalizeIsoDate(extracted.date);
   caseData.date = parsedDate || localDate || isoToday();
   console.log('[CaseFlow date]',{transcript:text,aiDate:extracted.date||null,localDate,finalDate:caseData.date});
+  if(spokenCodeHits.length){
+    const exactSuggested=spokenCodeHits.map(h=>({code:h.c,desc:h.d,area:h.a,primary:true,source:'spoken-cpt'}));
+    const rest=(extracted.suggestedCodes||[]).filter(s=>!spokenCodeHits.find(h=>h.c===s.code));
+    extracted.suggestedCodes=[...exactSuggested,...rest];
+  }
   if(extracted.suggestedCodes&&extracted.suggestedCodes.length){
     // Primary codes go straight into procedures
     const primaries = extracted.suggestedCodes.filter(s=>s.primary!==false);
@@ -2753,9 +2797,12 @@ function localExtract(text){
   const lo=text.toLowerCase();
   const role=lo.includes('assist')?'Assistant':lo.includes('observer')?'Observer':'Surgeon';
   const pt=(lo.includes('pediatric')||lo.includes('child')||lo.includes('infant'))?'Pediatric':'Adult';
+  const spokenCodeHits=resolveSpokenCptHits(text);
   // Use user's ACGME-synced codes if available, else fall back to built-in plastic surgery index
   let suggestedCodes=[];
-  if(currentUserMeta.cptCodes?.length){
+  if(spokenCodeHits.length){
+    suggestedCodes=spokenCodeHits.map(e=>({code:e.c,desc:e.d,area:e.a}));
+  } else if(currentUserMeta.cptCodes?.length){
     const words=lo.split(/\W+/).filter(w=>w.length>3);
     const scored=[];
     for(const entry of currentUserMeta.cptCodes){
@@ -3292,6 +3339,7 @@ async function stopAddMoreVoice(){
 
   // Upgrade to Groq transcript; fall back to Web Speech if unavailable
   const text = await getGroqTranscript(recSnap, chunksSnap, wsText);
+  const spokenCodeHits=resolveSpokenCptHits(text);
 
   let extracted = null;
   try {
@@ -3301,7 +3349,7 @@ async function stopAddMoreVoice(){
   } catch(e) {
     // Fallback: local keyword match
     buildIndex();
-    const matched = kwMatch(text);
+    const matched = spokenCodeHits.length ? spokenCodeHits : kwMatch(text);
     orbState='idle';
     document.getElementById('q-bubble').classList.remove('show');
     document.getElementById('orb-hint').classList.remove('hide');
@@ -3318,6 +3366,11 @@ async function stopAddMoreVoice(){
       toast('No exact match — refine in search','');
     }
     return;
+  }
+  if(spokenCodeHits.length){
+    const exactSuggested=spokenCodeHits.map(h=>({code:h.c,desc:h.d,area:h.a,primary:true,source:'spoken-cpt'}));
+    const rest=(extracted.suggestedCodes||[]).filter(s=>!spokenCodeHits.find(h=>h.c===s.code));
+    extracted.suggestedCodes=[...exactSuggested,...rest];
   }
 
   // Add new primary codes; merge new alternatives
