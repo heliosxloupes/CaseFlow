@@ -130,9 +130,12 @@ Return ONLY valid JSON, no markdown:
   "caseYear": 1-6,
   "attending": exact string from attendings list above, or null if not mentioned,
   "site": exact string from sites list above, or null if not mentioned,
+  "date": "YYYY-MM-DD if a specific date was mentioned, otherwise null",
   "notes": "brief clinical notes",
   "procedures": ["procedure name 1", "procedure name 2"]
 }
+
+For date: extract only if a specific date is clearly stated (e.g. "March 15", "August 9th 2026", "yesterday"). Convert to ISO format YYYY-MM-DD. Use today's date (${new Date().toISOString().slice(0,10)}) as the reference year if only month/day mentioned. Return null if no date is mentioned.
 
 For attending and site: return the EXACT string from the list above. Use fuzzy/partial matching — if the resident says a last name or partial name, find the best match. Only return null if the attending/site was genuinely not mentioned or cannot be matched.
 
@@ -175,6 +178,7 @@ List each procedure separately.`,
       caseYear: parsed.caseYear || 4,
       attending: parsed.attending || null,
       site: parsed.site || null,
+      date: parsed.date || null,
       notes: parsed.notes || '',
       suggestedCodes
     });

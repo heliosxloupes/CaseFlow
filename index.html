@@ -1705,63 +1705,67 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
     <!-- Sign In panel -->
     <div class="login-panel" id="panel-signin">
       <div class="login-panel-inner">
-        <div class="form-field">
-          <label class="form-label">Email</label>
-          <input class="form-input" type="email" id="l-email" placeholder="you@hospital.com"
-                 autocomplete="email" autocapitalize="none" autocorrect="off"
-                 onkeydown="if(event.key==='Enter')document.getElementById('l-pass').focus()">
-        </div>
-        <div class="form-field">
-          <label class="form-label">Password</label>
-          <input class="form-input" type="password" id="l-pass" placeholder="••••••••"
-                 autocomplete="current-password"
-                 onkeydown="if(event.key==='Enter')doLogin()">
-        </div>
-        <button class="btn-main" id="l-btn" onclick="doLogin()" style="margin-top:8px">Sign In</button>
-        <div class="auth-err" id="l-err"></div>
+        <form id="signin-form" autocomplete="on" action="javascript:void(0)" onsubmit="doLogin()">
+          <div class="form-field">
+            <label class="form-label">Email</label>
+            <input class="form-input" type="email" id="l-email" name="email" placeholder="you@hospital.com"
+                   autocomplete="username" autocapitalize="none" autocorrect="off"
+                   onkeydown="if(event.key==='Enter')document.getElementById('l-pass').focus()">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Password</label>
+            <input class="form-input" type="password" id="l-pass" name="password" placeholder="••••••••"
+                   autocomplete="current-password"
+                   onkeydown="if(event.key==='Enter')this.form.requestSubmit()">
+          </div>
+          <button class="btn-main" id="l-btn" type="submit" style="margin-top:8px">Sign In</button>
+          <div class="auth-err" id="l-err"></div>
+        </form>
       </div>
     </div>
 
     <!-- Create Account panel -->
     <div class="login-panel" id="panel-signup">
       <div class="login-panel-inner">
-        <div class="form-field">
-          <label class="form-label">Full Name</label>
-          <input class="form-input" type="text" id="r-name" placeholder="Dr. Jane Smith"
-                 autocomplete="name"
-                 onkeydown="if(event.key==='Enter')document.getElementById('r-email').focus()">
-        </div>
-        <div class="form-field">
-          <label class="form-label">Email</label>
-          <input class="form-input" type="email" id="r-email" placeholder="you@hospital.com"
-                 autocomplete="email" autocapitalize="none" autocorrect="off"
-                 onkeydown="if(event.key==='Enter')document.getElementById('r-pass').focus()">
-        </div>
-        <div class="form-field">
-          <label class="form-label">Password</label>
-          <input class="form-input" type="password" id="r-pass" placeholder="Min. 8 characters"
-                 autocomplete="new-password"
-                 onkeydown="if(event.key==='Enter')document.getElementById('r-pass2').focus()">
-        </div>
-        <div class="form-field">
-          <label class="form-label">Confirm Password</label>
-          <input class="form-input" type="password" id="r-pass2" placeholder="Repeat password"
-                 autocomplete="new-password"
-                 onkeydown="if(event.key==='Enter')document.getElementById('r-beta-key').focus()">
-        </div>
-        <div class="form-field">
-          <label class="form-label">Beta Key</label>
-          <input class="form-input" type="text" id="r-beta-key" placeholder="CASEFLOW-BETA-XXXX"
-                 autocapitalize="characters" autocorrect="off"
-                 onkeydown="if(event.key==='Enter')document.getElementById('r-tos').focus()">
-        </div>
-        <label class="auth-check">
-          <input type="checkbox" id="r-tos">
-          <span class="auth-check-label">I agree to the <button class="text-link-btn" type="button" onclick="openTosModal()">Terms of Service</button> for this beta and understand that usage may be logged for debugging.</span>
-        </label>
-        <button class="btn-main" id="r-btn" onclick="doRegister()" style="margin-top:8px">Create Account</button>
-        <div class="auth-err" id="r-err"></div>
-        <div class="auth-helper-text">Each tester needs a valid beta key. If you delete and recreate your account later, use the same email and the same beta key.</div>
+        <form id="signup-form" autocomplete="on" action="javascript:void(0)" onsubmit="doRegister()">
+          <div class="form-field">
+            <label class="form-label">Full Name</label>
+            <input class="form-input" type="text" id="r-name" name="name" placeholder="Dr. Jane Smith"
+                   autocomplete="name"
+                   onkeydown="if(event.key==='Enter')document.getElementById('r-email').focus()">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Email</label>
+            <input class="form-input" type="email" id="r-email" name="email" placeholder="you@hospital.com"
+                   autocomplete="username" autocapitalize="none" autocorrect="off"
+                   onkeydown="if(event.key==='Enter')document.getElementById('r-pass').focus()">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Password</label>
+            <input class="form-input" type="password" id="r-pass" name="password" placeholder="Min. 8 characters"
+                   autocomplete="new-password"
+                   onkeydown="if(event.key==='Enter')document.getElementById('r-pass2').focus()">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Confirm Password</label>
+            <input class="form-input" type="password" id="r-pass2" name="password2" placeholder="Repeat password"
+                   autocomplete="new-password"
+                   onkeydown="if(event.key==='Enter')document.getElementById('r-beta-key').focus()">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Beta Key</label>
+            <input class="form-input" type="text" id="r-beta-key" name="betakey" placeholder="CASEFLOW-BETA-XXXX"
+                   autocapitalize="characters" autocorrect="off"
+                   onkeydown="if(event.key==='Enter')document.getElementById('r-tos').focus()">
+          </div>
+          <label class="auth-check">
+            <input type="checkbox" id="r-tos">
+            <span class="auth-check-label">I agree to the <button class="text-link-btn" type="button" onclick="openTosModal()">Terms of Service</button> for this beta and understand that usage may be logged for debugging.</span>
+          </label>
+          <button class="btn-main" id="r-btn" type="submit" style="margin-top:8px">Create Account</button>
+          <div class="auth-err" id="r-err"></div>
+          <div class="auth-helper-text">Each tester needs a valid beta key. If you delete and recreate your account later, use the same email and the same beta key.</div>
+        </form>
       </div>
     </div>
     <div class="login-shell-foot">Secure sign-in, encrypted case history, and a single workflow from dictation to ACGME submission. <button class="text-link-btn" type="button" onclick="openTosModal()">Terms</button></div>
@@ -2011,19 +2015,21 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
             </div>
             <div class="acgme-step-title">ACGME Login</div>
             <div class="acgme-step-desc">Your credentials are encrypted and stored only on this device.</div>
-            <div class="settings-field">
-              <input class="settings-input" id="s-acgme-user" type="text" placeholder="Username or email" autocomplete="username" autocapitalize="none">
-            </div>
-            <div class="settings-field" style="margin-bottom:14px">
-              <div class="settings-pass-wrap">
-                <input class="settings-input" id="s-acgme-pass" type="password" placeholder="Password" autocomplete="current-password">
-                <button class="settings-pass-toggle" onclick="togglePassVis()" id="s-pass-toggle" type="button">
-                  <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
+            <form id="acgme-cred-form" autocomplete="on" action="javascript:void(0)" onsubmit="saveAcgmeCredentials()">
+              <div class="settings-field">
+                <input class="settings-input" id="s-acgme-user" name="username" type="text" placeholder="Username or email" autocomplete="username" autocapitalize="none">
               </div>
-            </div>
-            <div class="settings-cred-status" id="s-cred-status"></div>
-            <button class="acgme-continue-btn" onclick="saveAcgmeCredentials()" id="s-continue-btn">Continue →</button>
+              <div class="settings-field" style="margin-bottom:14px">
+                <div class="settings-pass-wrap">
+                  <input class="settings-input" id="s-acgme-pass" name="password" type="password" placeholder="Password" autocomplete="current-password">
+                  <button class="settings-pass-toggle" onclick="togglePassVis()" id="s-pass-toggle" type="button">
+                    <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="settings-cred-status" id="s-cred-status"></div>
+              <button class="acgme-continue-btn" type="submit" id="s-continue-btn">Continue →</button>
+            </form>
             <button class="acgme-back-link" onclick="toggleAcgmeForm()">Cancel</button>
           </div>
 
@@ -2678,7 +2684,7 @@ function stopInitialListening(){
   });
 }
 async function processDescription(text){
-  caseData.description=text;caseData.date=isoToday();buildIndex();
+  caseData.description=text;buildIndex();
   let extracted=null;
   try{
     const res=await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:currentUserMeta.specialty||'plastic-surgery',sites:getSitesForEdit(),attendings:getAttendingsForEdit()})});
@@ -2691,6 +2697,7 @@ async function processDescription(text){
   if(extracted.attending)caseData.attending=extracted.attending;
   if(extracted.site)caseData.site=extracted.site;
   if(extracted.notes)caseData.notes=extracted.notes;
+  caseData.date = extracted.date || isoToday();
   if(extracted.suggestedCodes&&extracted.suggestedCodes.length){
     // Primary codes go straight into procedures
     const primaries = extracted.suggestedCodes.filter(s=>s.primary!==false);
@@ -3167,14 +3174,10 @@ function modalSearch(q){
 
 function addMoreCode(code, desc, area){
   closeSearchModal();
-  if(!caseData.procedures.find(p=>p.c===code)){
-    caseData.procedures.push({c:code, d:desc, a:area});
-    showCptFound(caseData.procedures);
-    showAddMoreScreen();
-    toast('Code added','ok');
-  } else {
-    toast('Already added','');
-  }
+  caseData.procedures.push({c:code, d:desc, a:area});
+  showCptFound(caseData.procedures);
+  showAddMoreScreen();
+  toast('Code added','ok');
 }
 
 async function startAddMoreVoice(){
@@ -3617,6 +3620,9 @@ async function submitCase(){
     if(overlay.classList.contains('on')) labelEl.textContent='Still contacting ACGME… If your hospital uses Duo, you may get a push to approve.';
   },15000);
 
+  // Flush any open date input before building payload
+  const _sumDateEl=document.querySelector('.sum-date-input');
+  if(_sumDateEl&&_sumDateEl.value) caseData.date=_sumDateEl.value;
   const payload={
     date:caseData.date||isoToday(),
     procs:caseData.procedures,
@@ -4062,20 +4068,16 @@ function addMoreCode(code,desc,area){
   if(searchModalMode==='editcase'){
     closeSearchModal();
     if(!editingCase.procs)editingCase.procs=[];
-    if(!editingCase.procs.find(p=>p.c===code)){
-      editingCase.procs.push({c:code,d:desc,a:area});
-      document.getElementById('ce-procs').innerHTML=renderCeProcs();
-      toast('Procedure added to case','ok');
-    } else {toast('Already added','');}
+    editingCase.procs.push({c:code,d:desc,a:area});
+    document.getElementById('ce-procs').innerHTML=renderCeProcs();
+    toast('Procedure added to case','ok');
     return;
   }
   closeSearchModal();
-  if(!caseData.procedures.find(p=>p.c===code)){
-    caseData.procedures.push({c:code,d:desc,a:area});
-    showCptFound(caseData.procedures);
-    showAddMoreScreen();
-    toast('Code added','ok');
-  } else {toast('Already added','');}
+  caseData.procedures.push({c:code,d:desc,a:area});
+  showCptFound(caseData.procedures);
+  showAddMoreScreen();
+  toast('Code added','ok');
 }
 function deleteCase(){
   if(!editingCase)return;
@@ -4104,6 +4106,9 @@ async function resubmitCase(){
     if(overlay.classList.contains('on')) labelEl2.textContent='Still contacting ACGME… If your hospital uses Duo, you may get a push to approve.';
   },15000);
 
+  // Flush any open date input before submitting
+  const _ceDateEl=document.getElementById('ce-date');
+  if(_ceDateEl&&_ceDateEl.value) editingCase.date=_ceDateEl.value;
   let newStatus='submitted';
   try{
     try{
