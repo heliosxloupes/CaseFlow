@@ -141,10 +141,39 @@ module.exports = async function handler(req, res) {
     await page.waitForLoadState('networkidle', { timeout: 10000 });
 
     // ── Date ──────────────────────────────────────────────────────────────
-    const dateInput = page.locator('input[type="date"], input[name*="date"], input[id*="date"], input[placeholder*="date" i]').first();
-    if (await dateInput.isVisible()) {
-      await dateInput.fill(caseData.date || new Date().toISOString().slice(0, 10));
-    }
+    // ACGME uses a Bootstrap datepicker (text input, not input[type="date"]).
+    // Format must be M/D/YYYY (e.g. "4/9/2026"). We set via JS + dispatch events
+    // + call Bootstrap datepicker('update') so the internal state matches.
+    const rawDate = caseData.date || new Date().toISOString().slice(0, 10);
+    const [dYr, dMo, dDy] = rawDate.split('-');
+    const acgmeDateStr = `${parseInt(dMo)}/${parseInt(dDy)}/${dYr}`; // M/D/YYYY
+    step(`Filling date: ${acgmeDateStr}`);
+
+    // ACGME uses a Bootstrap 3 datepicker (text input, calendar widget).
+    // Approach: use page JS to find the input and set it properly.
+    const dateFilled = await page.evaluate((val) => {
+      // Try Bootstrap datepicker inputs first (data-provide or data-date-format)
+      let el = document.querySelector(
+        'input[data-provide="datepicker"], input[data-date-format], input[name="Date"], input[id="Date"]'
+      );
+      // Fallback: any text input inside a .date or [data-date*] container
+      if (!el) {
+        const wrap = document.querySelector('.date, [data-date], .input-group.date');
+        if (wrap) el = wrap.querySelector('input[type="text"], input:not([type="hidden"])');
+      }
+      if (!el || el.offsetParent === null) return false; // not visible
+      el.value = val;
+      ['input', 'keyup', 'change', 'blur'].forEach(t =>
+        el.dispatchEvent(new Event(t, { bubbles: true }))
+      );
+      // Bootstrap 3 datepicker API
+      try {
+        if (window.$ && window.$(el).data('datepicker')) window.$(el).datepicker('update');
+      } catch (_) {}
+      return true;
+    }, acgmeDateStr);
+    await page.waitForTimeout(400);
+    step(dateFilled ? `Date set to ${acgmeDateStr}` : 'Date input not found — skipping');
 
     // ── Role ──────────────────────────────────────────────────────────────
     const acgmeRole = ROLE_MAP[caseData.role] || caseData.role || 'Surgeon';
