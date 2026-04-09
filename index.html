@@ -2695,6 +2695,7 @@ function stopInitialListening(){
 async function processDescription(text){
   caseData.description=text;buildIndex();
   let extracted=null;
+  const localDate=extractSpokenDate(text);
   try{
     const res=await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:currentUserMeta.specialty||'plastic-surgery',sites:getSitesForEdit(),attendings:getAttendingsForEdit()})});
     if(!res.ok)throw new Error();extracted=await res.json()
@@ -2706,7 +2707,9 @@ async function processDescription(text){
   if(extracted.attending)caseData.attending=extracted.attending;
   if(extracted.site)caseData.site=extracted.site;
   if(extracted.notes)caseData.notes=extracted.notes;
-  caseData.date = extracted.date || isoToday();
+  const parsedDate=normalizeIsoDate(extracted.date);
+  caseData.date = parsedDate || localDate || isoToday();
+  console.log('[CaseFlow date]',{transcript:text,aiDate:extracted.date||null,localDate,finalDate:caseData.date});
   if(extracted.suggestedCodes&&extracted.suggestedCodes.length){
     // Primary codes go straight into procedures
     const primaries = extracted.suggestedCodes.filter(s=>s.primary!==false);
@@ -2749,7 +2752,7 @@ function localExtract(text){
     const matched=kwMatch(lo);
     suggestedCodes=matched.map(e=>({code:e.c,desc:e.d,area:e.a}));
   }
-  return{role,patientType:pt,caseYear:4,suggestedCodes};
+  return{role,patientType:pt,caseYear:4,date:extractSpokenDate(text),suggestedCodes};
 }
 function nextQuestion(){
   AudioFX.stopThink();
@@ -6096,6 +6099,42 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 });
 function isoToday(){return new Date().toISOString().split('T')[0]}
+function pad2(n){return String(n).padStart(2,'0')}
+function normalizeIsoDate(value){
+  if(!value)return null;
+  const txt=String(value).trim();
+  const m=txt.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(!m)return null;
+  const iso=`${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
+  const dt=new Date(iso+'T12:00:00');
+  if(Number.isNaN(dt.getTime()))return null;
+  if(dt.getFullYear()!==Number(m[1])||dt.getMonth()+1!==Number(m[2])||dt.getDate()!==Number(m[3]))return null;
+  return iso;
+}
+function buildIsoDate(year,monthIndex,day){return normalizeIsoDate(`${year}-${pad2(monthIndex+1)}-${pad2(day)}`)}
+function extractSpokenDate(text){
+  if(!text)return null;
+  const raw=String(text);
+  const lo=raw.toLowerCase();
+  const now=new Date();
+  if(/\byesterday\b/.test(lo)){const dt=new Date(now);dt.setDate(dt.getDate()-1);return normalizeIsoDate(dt.toISOString().slice(0,10))}
+  if(/\btoday\b/.test(lo))return normalizeIsoDate(now.toISOString().slice(0,10));
+  const numeric=raw.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
+  if(numeric){
+    let year=numeric[3]?Number(numeric[3]):now.getFullYear();
+    if(numeric[3]&&numeric[3].length===2)year+=year>=70?1900:2000;
+    const iso=normalizeIsoDate(`${year}-${pad2(numeric[1])}-${pad2(numeric[2])}`);
+    if(iso)return iso;
+  }
+  const months={january:0,jan:0,february:1,feb:1,march:2,mar:2,april:3,apr:3,may:4,june:5,jun:5,july:6,jul:6,august:7,aug:7,september:8,sep:8,sept:8,october:9,oct:9,november:10,nov:10,december:11,dec:11};
+  const pattern=Object.keys(months).sort((a,b)=>b.length-a.length).join('|');
+  const monthMatch=raw.match(new RegExp(`\\b(${pattern})\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(\\d{4}))?\\b`,'i'));
+  if(monthMatch){
+    const year=monthMatch[3]?Number(monthMatch[3]):now.getFullYear();
+    return buildIsoDate(year,months[monthMatch[1].toLowerCase()],Number(monthMatch[2]));
+  }
+  return null;
+}
 function formatDate(d){if(!d)return'Today';return new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}
 function esc(s){return s.replace(/'/g,"\'").replace(/"/g,'&quot;')}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}

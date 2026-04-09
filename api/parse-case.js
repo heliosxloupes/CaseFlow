@@ -82,6 +82,79 @@ function findCodes(procedureNames, topPerProc = 3) {
   return results;
 }
 
+function pad2(value) {
+  return String(value).padStart(2, '0');
+}
+
+function normalizeIsoDate(value) {
+  if (!value) return null;
+  const text = String(value).trim();
+  const match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!match) return null;
+  const [, y, m, d] = match;
+  const iso = `${y}-${pad2(m)}-${pad2(d)}`;
+  const dt = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(dt.getTime())) return null;
+  if (dt.getFullYear() !== Number(y) || dt.getMonth() + 1 !== Number(m) || dt.getDate() !== Number(d)) {
+    return null;
+  }
+  return iso;
+}
+
+function buildIsoDate(year, monthIndex, day) {
+  return normalizeIsoDate(`${year}-${pad2(monthIndex + 1)}-${pad2(day)}`);
+}
+
+function extractDateFromTranscript(transcript) {
+  if (!transcript) return null;
+  const text = String(transcript);
+  const lower = text.toLowerCase();
+  const now = new Date();
+
+  if (/\byesterday\b/.test(lower)) {
+    const dt = new Date(now);
+    dt.setDate(dt.getDate() - 1);
+    return normalizeIsoDate(dt.toISOString().slice(0, 10));
+  }
+  if (/\btoday\b/.test(lower)) {
+    return normalizeIsoDate(now.toISOString().slice(0, 10));
+  }
+
+  const numeric = text.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
+  if (numeric) {
+    let [, month, day, year] = numeric;
+    let yearNum = year ? Number(year) : now.getFullYear();
+    if (year && year.length === 2) yearNum += yearNum >= 70 ? 1900 : 2000;
+    const iso = normalizeIsoDate(`${yearNum}-${pad2(month)}-${pad2(day)}`);
+    if (iso) return iso;
+  }
+
+  const months = {
+    january: 0, jan: 0,
+    february: 1, feb: 1,
+    march: 2, mar: 2,
+    april: 3, apr: 3,
+    may: 4,
+    june: 5, jun: 5,
+    july: 6, jul: 6,
+    august: 7, aug: 7,
+    september: 8, sep: 8, sept: 8,
+    october: 9, oct: 9,
+    november: 10, nov: 10,
+    december: 11, dec: 11,
+  };
+  const monthPattern = Object.keys(months).sort((a, b) => b.length - a.length).join('|');
+  const monthRegex = new RegExp(`\\b(${monthPattern})\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(\\d{4}))?\\b`, 'i');
+  const monthMatch = text.match(monthRegex);
+  if (monthMatch) {
+    const [, monthName, day, year] = monthMatch;
+    const yearNum = year ? Number(year) : now.getFullYear();
+    return buildIsoDate(yearNum, months[monthName.toLowerCase()], Number(day));
+  }
+
+  return null;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -167,6 +240,7 @@ List each procedure separately.`,
     const aiData = await response.json();
     const rawText = aiData.content.filter(b => b.type === 'text').map(b => b.text).join('');
     const parsed = JSON.parse(rawText.replace(/```json|```/g, '').trim());
+    const normalizedDate = normalizeIsoDate(parsed.date) || extractDateFromTranscript(transcript);
 
     // Map procedure names → CPT codes using local index
     // Only codes from your ACGME PDF can ever appear here
@@ -178,7 +252,7 @@ List each procedure separately.`,
       caseYear: parsed.caseYear || 4,
       attending: parsed.attending || null,
       site: parsed.site || null,
-      date: parsed.date || null,
+      date: normalizedDate,
       notes: parsed.notes || '',
       suggestedCodes
     });
