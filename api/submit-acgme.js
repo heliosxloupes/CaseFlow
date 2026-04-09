@@ -141,17 +141,20 @@ module.exports = async function handler(req, res) {
     await page.waitForLoadState('networkidle', { timeout: 10000 });
 
     // ── Date ──────────────────────────────────────────────────────────────
-    // ACGME uses a Bootstrap 3 datepicker on a plain text input (not input[type="date"]).
-    // Format: M/D/YYYY — e.g. "10/3/2025". Strategy: JS-inject the value, dispatch
-    // all events Bootstrap listens to, then call datepicker('update') via jQuery.
+    // HAR analysis confirmed:
+    //   - ACGME date format is MM/DD/YYYY with leading zeros (e.g. "05/20/2025")
+    //   - Changing the date fires 4 AJAX calls: GetResidentRoles, GetAreas, GetTypes, GetMappings
+    //     all with activeAsOfDate=MM/DD/YYYY — these reload the roles and code dropdowns
+    //   - We MUST wait for networkidle after setting the date before touching any other field
     const rawDate = caseData.date || new Date().toISOString().slice(0, 10);
     const [dYr, dMo, dDy] = rawDate.split('-');
-    const acgmeDateStr = `${parseInt(dMo)}/${parseInt(dDy)}/${dYr}`; // M/D/YYYY
+    // Zero-pad to MM/DD/YYYY as ACGME expects
+    const acgmeDateStr = `${dMo.padStart(2,'0')}/${dDy.padStart(2,'0')}/${dYr}`;
     step(`Filling date: ${acgmeDateStr}`);
 
-    // Find the datepicker input via JS (handles any selector variation in ACGME)
+    // Inject the date value and fire all Bootstrap datepicker events
     const dateFilled = await page.evaluate((val) => {
-      // Priority: datepicker-specific attributes, then name/id hints, then container search
+      // Priority: datepicker-specific attributes, then name/id, then container, then value-pattern match
       let el = document.querySelector('input[data-provide="datepicker"]')
             || document.querySelector('input[data-date-format]')
             || document.querySelector('input[name="Date"]')
@@ -159,35 +162,36 @@ module.exports = async function handler(req, res) {
             || document.querySelector('input[name*="Date"]')
             || document.querySelector('input[id*="Date"]');
 
-      // Broad fallback: first visible text input inside a .date wrapper (Bootstrap datepicker pattern)
       if (!el) {
         const wrap = document.querySelector('.input-group.date, .date, [data-date]');
         if (wrap) el = wrap.querySelector('input[type="text"], input:not([type="hidden"])');
       }
-      // Last resort: first visible text input that currently holds a date-like value
+      // Last resort: visible text input currently showing a date-pattern value
       if (!el) {
-        const allText = Array.from(document.querySelectorAll('input[type="text"]'));
-        el = allText.find(i => /\d{1,2}\/\d{1,2}\/\d{4}/.test(i.value) && i.offsetParent !== null) || null;
+        el = Array.from(document.querySelectorAll('input[type="text"]'))
+          .find(i => /\d{1,2}\/\d{1,2}\/\d{4}/.test(i.value) && i.offsetParent !== null) || null;
       }
 
       if (!el || el.offsetParent === null) return false;
 
-      // Set value and fire all events Bootstrap datepicker listens to
       el.value = val;
       ['keydown', 'keyup', 'input', 'change', 'blur'].forEach(t =>
         el.dispatchEvent(new Event(t, { bubbles: true }))
       );
-      // Sync Bootstrap's internal date model
       try {
-        if (window.$ && window.$(el).data('datepicker')) {
-          window.$(el).datepicker('update');
-        }
+        if (window.$ && window.$(el).data('datepicker')) window.$(el).datepicker('update');
       } catch (_) {}
-      return el.value; // return actual value so we can confirm in log
+      return el.value;
     }, acgmeDateStr);
 
-    await page.waitForTimeout(500);
     step(dateFilled ? `Date set: ${dateFilled}` : 'WARNING: date input not found');
+
+    // CRITICAL: wait for ACGME's 4 AJAX calls (GetResidentRoles, GetAreas, GetTypes, GetMappings)
+    // that fire when date changes — these repopulate the roles and code type dropdowns.
+    // Without this wait, subsequent field interactions hit a half-loaded form.
+    await page.waitForLoadState('networkidle', { timeout: 12000 }).catch(() => {
+      step('networkidle timeout after date — continuing anyway');
+    });
 
     // ── Role ──────────────────────────────────────────────────────────────
     const acgmeRole = ROLE_MAP[caseData.role] || caseData.role || 'Surgeon';
