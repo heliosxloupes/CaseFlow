@@ -141,39 +141,53 @@ module.exports = async function handler(req, res) {
     await page.waitForLoadState('networkidle', { timeout: 10000 });
 
     // ── Date ──────────────────────────────────────────────────────────────
-    // ACGME uses a Bootstrap datepicker (text input, not input[type="date"]).
-    // Format must be M/D/YYYY (e.g. "4/9/2026"). We set via JS + dispatch events
-    // + call Bootstrap datepicker('update') so the internal state matches.
+    // ACGME uses a Bootstrap 3 datepicker on a plain text input (not input[type="date"]).
+    // Format: M/D/YYYY — e.g. "10/3/2025". Strategy: JS-inject the value, dispatch
+    // all events Bootstrap listens to, then call datepicker('update') via jQuery.
     const rawDate = caseData.date || new Date().toISOString().slice(0, 10);
     const [dYr, dMo, dDy] = rawDate.split('-');
     const acgmeDateStr = `${parseInt(dMo)}/${parseInt(dDy)}/${dYr}`; // M/D/YYYY
     step(`Filling date: ${acgmeDateStr}`);
 
-    // ACGME uses a Bootstrap 3 datepicker (text input, calendar widget).
-    // Approach: use page JS to find the input and set it properly.
+    // Find the datepicker input via JS (handles any selector variation in ACGME)
     const dateFilled = await page.evaluate((val) => {
-      // Try Bootstrap datepicker inputs first (data-provide or data-date-format)
-      let el = document.querySelector(
-        'input[data-provide="datepicker"], input[data-date-format], input[name="Date"], input[id="Date"]'
-      );
-      // Fallback: any text input inside a .date or [data-date*] container
+      // Priority: datepicker-specific attributes, then name/id hints, then container search
+      let el = document.querySelector('input[data-provide="datepicker"]')
+            || document.querySelector('input[data-date-format]')
+            || document.querySelector('input[name="Date"]')
+            || document.querySelector('input[id="Date"]')
+            || document.querySelector('input[name*="Date"]')
+            || document.querySelector('input[id*="Date"]');
+
+      // Broad fallback: first visible text input inside a .date wrapper (Bootstrap datepicker pattern)
       if (!el) {
-        const wrap = document.querySelector('.date, [data-date], .input-group.date');
+        const wrap = document.querySelector('.input-group.date, .date, [data-date]');
         if (wrap) el = wrap.querySelector('input[type="text"], input:not([type="hidden"])');
       }
-      if (!el || el.offsetParent === null) return false; // not visible
+      // Last resort: first visible text input that currently holds a date-like value
+      if (!el) {
+        const allText = Array.from(document.querySelectorAll('input[type="text"]'));
+        el = allText.find(i => /\d{1,2}\/\d{1,2}\/\d{4}/.test(i.value) && i.offsetParent !== null) || null;
+      }
+
+      if (!el || el.offsetParent === null) return false;
+
+      // Set value and fire all events Bootstrap datepicker listens to
       el.value = val;
-      ['input', 'keyup', 'change', 'blur'].forEach(t =>
+      ['keydown', 'keyup', 'input', 'change', 'blur'].forEach(t =>
         el.dispatchEvent(new Event(t, { bubbles: true }))
       );
-      // Bootstrap 3 datepicker API
+      // Sync Bootstrap's internal date model
       try {
-        if (window.$ && window.$(el).data('datepicker')) window.$(el).datepicker('update');
+        if (window.$ && window.$(el).data('datepicker')) {
+          window.$(el).datepicker('update');
+        }
       } catch (_) {}
-      return true;
+      return el.value; // return actual value so we can confirm in log
     }, acgmeDateStr);
-    await page.waitForTimeout(400);
-    step(dateFilled ? `Date set to ${acgmeDateStr}` : 'Date input not found — skipping');
+
+    await page.waitForTimeout(500);
+    step(dateFilled ? `Date set: ${dateFilled}` : 'WARNING: date input not found');
 
     // ── Role ──────────────────────────────────────────────────────────────
     const acgmeRole = ROLE_MAP[caseData.role] || caseData.role || 'Surgeon';

@@ -113,7 +113,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 400,
+        max_tokens: 700,
         system: `You are a medical coding assistant for a Plastic Surgery residency.
 Extract case details from the resident's spoken description.
 
@@ -123,19 +123,19 @@ ${attendingList.map((a, i) => `${i + 1}. ${a}`).join('\n')}
 Available sites (use FUZZY matching — partial name like "Larkin", "palmetto", "palm springs" should match the closest entry):
 ${siteList.map((s, i) => `${i + 1}. ${s}`).join('\n')}
 
-Return ONLY valid JSON, no markdown:
+Return ONLY valid JSON, no markdown. ALL fields are required:
 {
+  "date": "YYYY-MM-DD if a specific date was mentioned (e.g. 'October 3rd 2025' → '2025-10-03', 'March 15' → '${new Date().getFullYear()}-03-15'), otherwise null",
   "role": "Surgeon" | "Assistant" | "Teaching Assistant" | "Observer",
   "patientType": "Adult" | "Pediatric",
   "caseYear": 1-6,
   "attending": exact string from attendings list above, or null if not mentioned,
   "site": exact string from sites list above, or null if not mentioned,
-  "date": "YYYY-MM-DD if a specific date was mentioned, otherwise null",
   "notes": "brief clinical notes",
   "procedures": ["procedure name 1", "procedure name 2"]
 }
 
-For date: extract only if a specific date is clearly stated (e.g. "March 15", "August 9th 2026", "yesterday"). Convert to ISO format YYYY-MM-DD. Use today's date (${new Date().toISOString().slice(0,10)}) as the reference year if only month/day mentioned. Return null if no date is mentioned.
+DATE RULE: If any date is spoken (month, day, year in any format), extract it as YYYY-MM-DD. "October 3rd 2025" → "2025-10-03". "March 15" → "${new Date().getFullYear()}-03-15". No date mentioned → null.
 
 For attending and site: return the EXACT string from the list above. Use fuzzy/partial matching — if the resident says a last name or partial name, find the best match. Only return null if the attending/site was genuinely not mentioned or cannot be matched.
 
