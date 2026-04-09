@@ -656,11 +656,11 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .cpt-found-item.removing{opacity:0}
 .cpt-found-code{font-size:12px;font-weight:600;color:var(--blue);min-width:46px;padding-top:2px}
 .cpt-found-desc{flex:1;font-size:13px;color:var(--text);line-height:1.35}
-.cpt-found-actions{display:flex;align-items:center;gap:4px;flex-shrink:0}
-.cpt-found-dup{background:rgba(100,160,255,.12);border:1px solid rgba(100,160,255,.25);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--blue);font-size:10px;font-weight:600;letter-spacing:.04em;line-height:1.4;transition:background .15s,color .15s;white-space:nowrap}
-.cpt-found-dup:active{background:rgba(100,160,255,.25)}
-.cpt-found-remove{flex-shrink:0;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.18);border-radius:6px;padding:3px 7px;cursor:pointer;color:rgba(255,120,120,.7);font-size:15px;font-weight:700;line-height:1.3;transition:background .15s,color .15s}
-.cpt-found-remove:active{background:rgba(255,80,80,.22);color:var(--red)}
+.cpt-found-actions{display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:6px;flex-shrink:0;align-self:stretch;padding:2px 0}
+.cpt-found-dup{background:rgba(100,160,255,.13);border:1px solid rgba(100,160,255,.3);border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--blue);font-size:22px;font-weight:400;line-height:1;transition:background .15s}
+.cpt-found-dup:active{background:rgba(100,160,255,.28)}
+.cpt-found-remove{background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.25);border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(255,110,110,.85);font-size:22px;font-weight:400;line-height:1;transition:background .15s,color .15s}
+.cpt-found-remove:active{background:rgba(255,80,80,.25);color:var(--red)}
 
 .cpt-select-head{font-size:14px;color:var(--text);font-weight:500;margin-bottom:12px;line-height:1.5}
 .cpt-select-option{background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s}
@@ -3359,7 +3359,7 @@ function doneAddingCodes(){
 function showCptFound(procs){
   const box=document.getElementById('cpt-found-box');
   if(!procs.length){box.classList.remove('show');return}
-  box.innerHTML=`<div class="cpt-found-label">&#10022; CPT codes identified (${procs.length})</div>`+procs.map((p,i)=>`<div class="cpt-found-item" id="cpt-found-item-${i}"><div class="cpt-found-code">${p.c}</div><div class="cpt-found-desc">${p.d}<br><span style="font-size:11px;color:var(--text3)">${p.a}</span></div><div class="cpt-found-actions"><button class="cpt-found-dup" onclick="dupCptFound(${i})" aria-label="Duplicate">2×</button><button class="cpt-found-remove" onclick="removeCptFound(${i})" aria-label="Remove">&#215;</button></div></div>`).join('');
+  box.innerHTML=`<div class="cpt-found-label">&#10022; CPT codes identified (${procs.length})</div>`+procs.map((p,i)=>`<div class="cpt-found-item" id="cpt-found-item-${i}"><div class="cpt-found-code">${p.c}</div><div class="cpt-found-desc">${p.d}<br><span style="font-size:11px;color:var(--text3)">${p.a}</span></div><div class="cpt-found-actions"><button class="cpt-found-dup" onclick="dupCptFound(${i})" aria-label="Duplicate">+</button><button class="cpt-found-remove" onclick="removeCptFound(${i})" aria-label="Remove">&#8722;</button></div></div>`).join('');
   box.classList.add('show');
 }
 function removeCptFound(idx){
