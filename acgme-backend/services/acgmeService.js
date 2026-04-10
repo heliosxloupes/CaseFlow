@@ -1373,6 +1373,31 @@ async function getUserProfile(sessionCookie) {
   let roles = parseSelectOptions(html, 'ResidentRoles');
   if (!roles.length) roles = parseSelectOptions(html, 'ResidentRole');
   if (!roles.length) roles = parseSelectOptions(html, 'residentRoles');
+
+  // Roles are often loaded via AJAX (GetResidentRoles) and not in the page HTML.
+  // Fall back to hitting the endpoint directly using today's date.
+  if (!roles.length) {
+    try {
+      const today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+      // specialtyId scraped from hidden fields, or default plastic surgery
+      const hidden2 = scrapeHiddenFields(html);
+      const spId = specialtyIdFromInsertHidden(hidden2) || scrapeSpecialtyIdFromHtml(html) || '158';
+      const rolesUrl = `${BASE_URL}/ads/CaseLogs/Code/GetResidentRoles?specialtyId=${spId}&activeAsOfDate=${encodeURIComponent(today)}&_=${Date.now()}`;
+      const rolesResp = await fetchT(rolesUrl, {
+        headers: { 'Cookie': sessionCookie, 'User-Agent': UA, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      }, 10000);
+      if (rolesResp.ok) {
+        const rolesJson = await rolesResp.json();
+        const payload = rolesJson.Payload || rolesJson.payload || rolesJson;
+        if (Array.isArray(payload)) {
+          roles = payload.map(r => ({ id: String(r.ID || r.id || r.Value || r.value || ''), label: String(r.ShortName || r.shortName || r.Text || r.label || '') })).filter(r => r.id);
+        }
+      }
+    } catch (e) {
+      console.warn('[profile] GetResidentRoles fallback failed:', e.message);
+    }
+  }
+
   let patientTypes = parseSelectOptions(html, 'PatientTypes');
   if (!patientTypes.length) patientTypes = parseSelectOptions(html, 'PatientType');
   if (!patientTypes.length) patientTypes = parseSelectOptions(html, 'patientTypes');

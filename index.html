@@ -4701,12 +4701,8 @@ async function callSubmitAcgme(casePayload){
   if(!token) throw new Error('Not logged in');
   if(!ACGME_BACKEND_URL) throw new Error('ACGME backend not configured. Deploy Railway and set ACGME_BACKEND_URL in index.html.');
 
-  if(!acgmeProfileMapsReady()){
-    await fetchAcgmeProfile();
-  }
-  if(!acgmeProfileMapsReady()){
-    throw new Error('Could not load role and patient-type IDs from ACGME. Open Settings → ACGME, reconnect, wait a few seconds, then try again.');
-  }
+  // Always refresh profile before submit to ensure IDs are current
+  await fetchAcgmeProfile();
 
   // Submit all procedures as ONE case entry (ACGME accepts multiple codes via comma-joined CPTs)
   const procs = casePayload.procs || [];
