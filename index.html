@@ -2600,6 +2600,21 @@ function humanizeKey(s){
     .replace(/^\w/,c=>c.toUpperCase())
     .trim();
 }
+function inferStandardFieldKey(field){
+  const label=String(field?.label||'').replace(/\*+/g,'').trim().toLowerCase();
+  const name=String(field?.name||'').trim().toLowerCase();
+  const known=field?.standardKey||'';
+  if(known) return known;
+  if(name==='procedureyear'||label==='case year'||label==='procedure year') return 'caseYear';
+  if(label==='date'||label==='case date'||label==='procedure date') return 'date';
+  if(label==='case id'||name==='caseid') return 'caseId';
+  if(label==='setting'||name==='rotations'||label==='rotation') return 'rotation';
+  if(label==='role'||name==='residentroles') return 'role';
+  if(label==='site'||name==='institutions') return 'site';
+  if(label==='attending'||name==='attendings') return 'attending';
+  if(label==='patient age'||label==='patient type'||name==='patienttypes') return 'patientType';
+  return '';
+}
 function getAcgmeFormFields(){
   try{
     const arr=JSON.parse(localStorage.getItem('cf5-form-fields')||'[]');
@@ -2617,12 +2632,26 @@ function getAcgmeFieldValue(key,name){
   if(key==='rotation') return caseData.rotation||caseData.extraFields?.[name]||'';
   return caseData.extraFields?.[name]||'';
 }
+function normalizeCaseYearValue(val){
+  const s=String(val||'').trim();
+  if(!s)return'';
+  const labels=((QUESTIONS.find(q=>q.key==='caseYear')||{}).options||[]).map(String);
+  if(labels.includes(s)) return s;
+  const digits=(s.match(/\d+/)||[])[0];
+  if(digits){
+    const label=labels.find(l=>l.includes(digits));
+    if(label) return label;
+    if(/^year\s+/i.test(labels[0]||'')) return `Year ${digits}`;
+    return digits;
+  }
+  return s;
+}
 function setAcgmeFieldValue(key,name,val){
   if(key==='role'){caseData.role=val;return;}
   if(key==='site'){caseData.site=val;return;}
   if(key==='attending'){caseData.attending=val;return;}
   if(key==='patientType'){caseData.patientType=val;return;}
-  if(key==='caseYear'){caseData.caseYear=val;return;}
+  if(key==='caseYear'){caseData.caseYear=normalizeCaseYearValue(val);return;}
   if(key==='date'){caseData.date=val;return;}
   if(key==='caseId'){caseData.caseId=String(val||'').slice(0,CASE_ID_MAX_LEN);return;}
   if(key==='rotation') caseData.rotation=val;
@@ -2641,9 +2670,10 @@ function syncDynamicAcgmeFields(){
   for(let i=SUMMARY_FIELDS.length-1;i>=0;i--){if(SUMMARY_FIELDS[i].isDynamicAcgme)SUMMARY_FIELDS.splice(i,1);}
   const fields=getAcgmeFormFields();
   for(const field of fields){
+    const standardKey=inferStandardFieldKey(field);
     const labels=optionLabelsForField(field);
     const qType=field.type==='select'?(shouldUseChipsForField(field)?'chips':'select'):(field.type==='date'?'date':'text');
-    if(field.standardKey==='rotation'){
+    if(standardKey==='rotation'){
       QUESTIONS.push({
         key:'rotation',
         isDynamicAcgme:true,
@@ -2665,7 +2695,7 @@ function syncDynamicAcgmeFields(){
       });
       continue;
     }
-    if(field.standardKey||!field.required) continue;
+    if(standardKey||!field.required) continue;
     QUESTIONS.push({
       key:field.key,
       isDynamicAcgme:true,
@@ -2856,7 +2886,7 @@ async function processDescription(text){
   catch(e){extracted=localExtract(text)}
   if(extracted.role)caseData.role=extracted.role;
   if(extracted.patientType)caseData.patientType=extracted.patientType;
-  if(extracted.caseYear)caseData.caseYear='Year '+(extracted.caseYear||4);
+  if(extracted.caseYear)caseData.caseYear=normalizeCaseYearValue(extracted.caseYear);
   if(extracted.attending)caseData.attending=extracted.attending;
   if(extracted.site)caseData.site=extracted.site;
   if(extracted.notes)caseData.notes=extracted.notes;
@@ -2913,7 +2943,7 @@ function localExtract(text){
     const matched=kwMatch(lo);
     suggestedCodes=matched.map(e=>({code:e.c,desc:e.d,area:e.a}));
   }
-  return{role,patientType:pt,caseYear:4,date:extractSpokenDate(text),suggestedCodes};
+  return{role,patientType:pt,caseYear:'',date:extractSpokenDate(text),suggestedCodes};
 }
 function nextQuestion(){
   AudioFX.stopThink();
@@ -4769,7 +4799,7 @@ function _applyProfileToUI(sites, attendings, roles, patientTypes, rotations, fo
     const sSite = SUMMARY_FIELDS.find(f=>f.key==='site');
     if(qSite) qSite.options = siteLabels;
     if(sSite) sSite.options = siteLabels;
-    const siteField=fields.find(f=>f.standardKey==='site');
+    const siteField=fields.find(f=>inferStandardFieldKey(f)==='site');
     if(qSite&&siteField?.label) qSite.question=`Which ${siteField.label.replace(/\*+$/,'').trim().toLowerCase()} was this performed at?`;
     if(sSite&&siteField?.label) sSite.label=siteField.label;
   }
@@ -4778,7 +4808,7 @@ function _applyProfileToUI(sites, attendings, roles, patientTypes, rotations, fo
     const sAtt = SUMMARY_FIELDS.find(f=>f.key==='attending');
     if(qAtt) qAtt.options = attLabels;
     if(sAtt) sAtt.options = attLabels;
-    const attField=fields.find(f=>f.standardKey==='attending');
+    const attField=fields.find(f=>inferStandardFieldKey(f)==='attending');
     if(qAtt&&attField?.label) qAtt.question=`Who was the ${attField.label.replace(/\*+$/,'').trim().toLowerCase()}?`;
     if(sAtt&&attField?.label) sAtt.label=attField.label;
   }
@@ -4787,7 +4817,7 @@ function _applyProfileToUI(sites, attendings, roles, patientTypes, rotations, fo
     const sRole = SUMMARY_FIELDS.find(f=>f.key==='role');
     if(qRole) qRole.options = roleLabels;
     if(sRole) sRole.options = roleLabels;
-    const roleField=fields.find(f=>f.standardKey==='role');
+    const roleField=fields.find(f=>inferStandardFieldKey(f)==='role');
     if(qRole&&roleField?.label) qRole.question=`What was your ${roleField.label.replace(/\*+$/,'').trim().toLowerCase()} in this case?`;
     if(sRole&&roleField?.label) sRole.label=roleField.label;
     // Also update case edit modal roles list
@@ -4799,15 +4829,27 @@ function _applyProfileToUI(sites, attendings, roles, patientTypes, rotations, fo
     const sPt = SUMMARY_FIELDS.find(f=>f.key==='patient');
     if(qPt) qPt.options = ptLabels;
     if(sPt) sPt.options = ptLabels;
-    const ptField=fields.find(f=>f.standardKey==='patientType');
+    const ptField=fields.find(f=>inferStandardFieldKey(f)==='patientType');
     if(qPt&&ptField?.label) qPt.question=`What ${ptField.label.replace(/\*+$/,'').trim().toLowerCase()} applies to this case?`;
     if(sPt&&ptField?.label) sPt.label=ptField.label;
   }
-  const yearField=fields.find(f=>f.standardKey==='caseYear');
+  const yearField=fields.find(f=>inferStandardFieldKey(f)==='caseYear');
   const qYear=QUESTIONS.find(q=>q.key==='caseYear');
   const sYear=SUMMARY_FIELDS.find(f=>f.key==='year');
+  const yearLabels=optionLabelsForField(yearField);
+  if(qYear&&yearLabels.length) qYear.options=yearLabels;
+  if(sYear&&yearLabels.length) sYear.options=yearLabels;
   if(qYear&&yearField?.label) qYear.question=`What ${yearField.label.replace(/\*+$/,'').trim().toLowerCase()} applies?`;
   if(sYear&&yearField?.label) sYear.label=yearField.label;
+  if(yearField?.selectedId&&yearField?.options?.length){
+    const selected=yearField.options.find(o=>String(o.id||'')===String(yearField.selectedId));
+    if(selected){
+      const normalized=normalizeCaseYearValue(selected.label);
+      if(!caseData.caseYear||!yearLabels.includes(caseData.caseYear)) caseData.caseYear=normalized;
+    }
+  } else if(yearLabels.length && (!caseData.caseYear || !yearLabels.includes(caseData.caseYear))) {
+    caseData.caseYear=yearLabels[0];
+  }
   syncDynamicAcgmeFields();
 }
 async function getAcgmeCredentials(){
@@ -4866,8 +4908,9 @@ function buildAcgmeExtraFieldsPayload(){
   const out={};
   for(const field of getAcgmeFormFields()){
     if(!field||!field.name) continue;
-    if(['role','site','attending','patientType','caseYear','date','caseId','resident'].includes(field.standardKey||'')) continue;
-    const raw=getAcgmeFieldValue(field.standardKey||field.key,field.name);
+    const standardKey=inferStandardFieldKey(field);
+    if(['role','site','attending','patientType','caseYear','date','caseId','resident'].includes(standardKey||'')) continue;
+    const raw=getAcgmeFieldValue(standardKey||field.key,field.name);
     if(raw==null||String(raw).trim()==='') continue;
     if(field.type==='select'){
       const resolved=resolveSchemaOptionId(field, raw);

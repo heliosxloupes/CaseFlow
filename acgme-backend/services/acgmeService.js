@@ -1399,6 +1399,20 @@ function standardFieldKeyFromName(name = '') {
   return null;
 }
 
+function standardFieldKeyFromLabel(label = '') {
+  const l = String(label || '').replace(/\*+/g, '').trim().toLowerCase();
+  if (!l) return null;
+  if (l === 'date' || l === 'case date' || l === 'procedure date') return 'date';
+  if (l === 'case year' || l === 'procedure year' || l === 'resident year of case') return 'caseYear';
+  if (l === 'role' || l === 'resident role') return 'role';
+  if (l === 'site' || l === 'institution') return 'site';
+  if (l === 'attending') return 'attending';
+  if (l === 'patient age' || l === 'patient type') return 'patientType';
+  if (l === 'case id' || l === 'patient id') return 'caseId';
+  if (l === 'setting' || l === 'rotation') return 'rotation';
+  return null;
+}
+
 function shouldIgnoreSchemaField(name = '') {
   const n = String(name || '').trim();
   if (!n) return true;
@@ -1452,14 +1466,15 @@ function scrapeVisibleFormFields(html) {
     const label = inferLabelForControl(html, name, id) || humanizeFieldName(name);
     const options = parseSelectOptions(html, name);
     if (!options.length) continue;
+    const standardKey = standardFieldKeyFromName(name) || standardFieldKeyFromLabel(label);
     fields.push({
-      key: standardFieldKeyFromName(name) || `field:${name}`,
+      key: standardKey || `field:${name}`,
       name,
       label,
       type: 'select',
       required: /\*/.test(label) || /required/i.test(attrs),
       options,
-      standardKey: standardFieldKeyFromName(name),
+      standardKey,
     });
   }
 
@@ -1474,13 +1489,14 @@ function scrapeVisibleFormFields(html) {
     seen.add(`input:${name}`);
     const label = inferLabelForControl(html, name, id) || humanizeFieldName(name);
     if (!label) continue;
+    const standardKey = standardFieldKeyFromName(name) || standardFieldKeyFromLabel(label) || (type === 'date' ? 'date' : null);
     fields.push({
-      key: standardFieldKeyFromName(name) || (type === 'date' ? 'date' : `field:${name}`),
+      key: standardKey || `field:${name}`,
       name,
       label,
       type: type === 'date' ? 'date' : 'text',
       required: /\*/.test(label) || /required/i.test(attrs),
-      standardKey: standardFieldKeyFromName(name) || (type === 'date' ? 'date' : null),
+      standardKey,
     });
   }
 
@@ -1560,12 +1576,14 @@ async function getUserProfile(sessionCookie) {
   }
 
   const residentsId = parseSelectSelectedValue(html, 'Residents');
+  const procedureYearSelected = parseSelectSelectedValue(html, 'ProcedureYear');
   const formFields = scrapeVisibleFormFields(html).map(field => {
     if ((field.standardKey === 'site' || field.name === 'Institutions') && sites.length) return { ...field, options: sites };
     if ((field.standardKey === 'attending' || field.name === 'Attendings') && attendings.length) return { ...field, options: attendings };
     if ((field.standardKey === 'role' || field.name === 'ResidentRoles') && roles.length) return { ...field, options: roles };
     if ((field.standardKey === 'patientType' || field.name === 'PatientTypes') && patientTypes.length) return { ...field, options: patientTypes };
     if ((field.standardKey === 'rotation' || field.name === 'Rotations') && rotations.length) return { ...field, options: rotations };
+    if (field.standardKey === 'caseYear' && procedureYearSelected) return { ...field, selectedId: procedureYearSelected };
     return field;
   });
 
@@ -1577,7 +1595,7 @@ async function getUserProfile(sessionCookie) {
       (residentsId ? `, residentsId: set` : `, residentsId: (none)`) +
       (specialtyId ? `, specialtyId: ${specialtyId}` : `, specialtyId: (not found)`)
   );
-  return { sites, attendings, roles, patientTypes, rotations, residentsId, specialtyId, formFields };
+  return { sites, attendings, roles, patientTypes, rotations, residentsId, specialtyId, procedureYearSelected, formFields };
 }
 
 async function getLookupData(sessionCookie, type, params = {}) {
