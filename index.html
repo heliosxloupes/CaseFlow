@@ -1836,6 +1836,9 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
           </button>
         </div>
       </div>
+      <div class="cpt-found-box" id="cpt-found-box"></div>
+      <div class="cpt-select-box" id="cpt-select-box"></div>
+      <div class="add-more-box" id="add-more-box"></div>
       <div class="question-bubble" id="q-bubble"></div>
       <div class="answer-chips" id="a-chips"></div>
       <div class="flow-combo-wrap" id="a-combo-wrap"></div>
@@ -1856,9 +1859,6 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
         </div>
         <div class="voice-answer-tx" id="a-voice-tx">Tap mic or type above</div>
       </div>
-      <div class="cpt-found-box" id="cpt-found-box"></div>
-      <div class="cpt-select-box" id="cpt-select-box"></div>
-      <div class="add-more-box" id="add-more-box"></div>
       <div class="state-label" id="state-label"></div>
       <div class="summary-card" id="summary-card"></div>
       <div class="final-actions" id="final-actions">
@@ -2645,6 +2645,18 @@ function normalizeCaseYearValue(val){
     return digits;
   }
   return s;
+}
+function getPreferredCaseYearValue(){
+  const normalized=normalizeCaseYearValue(caseData.caseYear);
+  if(normalized) return normalized;
+  const yearField=getAcgmeFormFields().find(f=>inferStandardFieldKey(f)==='caseYear');
+  if(yearField?.selectedId&&Array.isArray(yearField.options)){
+    const selected=yearField.options.find(o=>String(o.id||'')===String(yearField.selectedId));
+    const selectedLabel=normalizeCaseYearValue(selected?.label);
+    if(selectedLabel) return selectedLabel;
+  }
+  const labels=((QUESTIONS.find(q=>q.key==='caseYear')||{}).options||[]).map(String).filter(Boolean);
+  return labels[0]||'';
 }
 function setAcgmeFieldValue(key,name,val){
   if(key==='role'){caseData.role=val;return;}
@@ -3900,7 +3912,7 @@ async function submitCase(){
     site:caseData.site||'',
     att:caseData.attending||'',
     pt:caseData.patientType||'Adult',
-    yr:(caseData.caseYear||'Year 4').replace('Year ',''),
+    yr:getPreferredCaseYearValue().replace(/^Year\s+/i,''),
     notes:caseData.notes||'',
     caseId:caseData.caseId||'',
   };
@@ -4293,7 +4305,12 @@ function renderCaseEditModal(){
     </div>
     <div class="ce-field">
       <div class="ce-label">Year of Residency</div>
-      <div class="ce-chips">${CE_YEARS.map(o=>`<div class="ce-chip${('Year '+c.yr)===o?' active':''}" onclick="setCeField('yr','${o.replace('Year ','')}',this,'ce-yr')">${o}</div>`).join('')}</div>
+      <div class="ce-chips">${CE_YEARS.map(o=>{
+        const normalizedOption=normalizeCaseYearValue(o);
+        const normalizedCurrent=normalizeCaseYearValue(c.yr);
+        const submitValue=String(o).replace(/^Year\\s+/i,'');
+        return `<div class="ce-chip${normalizedCurrent===normalizedOption?' active':''}" onclick="setCeField('yr','${submitValue}',this,'ce-yr')">${o}</div>`;
+      }).join('')}</div>
     </div>`;
   setTimeout(()=>{
     ceComboFilter('site', c.site||'');
@@ -4839,6 +4856,10 @@ function _applyProfileToUI(sites, attendings, roles, patientTypes, rotations, fo
   const yearLabels=optionLabelsForField(yearField);
   if(qYear&&yearLabels.length) qYear.options=yearLabels;
   if(sYear&&yearLabels.length) sYear.options=yearLabels;
+  if(yearLabels.length){
+    CE_YEARS.length=0;
+    yearLabels.forEach(l=>CE_YEARS.push(l));
+  }
   if(qYear&&yearField?.label) qYear.question=`What ${yearField.label.replace(/\*+$/,'').trim().toLowerCase()} applies?`;
   if(sYear&&yearField?.label) sYear.label=yearField.label;
   if(yearField?.selectedId&&yearField?.options?.length){

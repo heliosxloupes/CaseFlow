@@ -196,7 +196,7 @@ List each procedure separately.`,
     return res.status(200).json({
       role: parsed.role || 'Surgeon',
       patientType: parsed.patientType || 'Adult',
-      caseYear: parsed.caseYear || 4,
+      caseYear: parsed.caseYear || null,
       attending: parsed.attending || null,
       site: parsed.site || null,
       notes: parsed.notes || '',
