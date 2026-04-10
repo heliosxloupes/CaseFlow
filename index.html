@@ -2596,7 +2596,7 @@ let onboardingStep=0;
 let pendingQs=[],currentQ=-1;
 const QUESTIONS=[
   {key:'procedures',isEmpty:()=>caseData.procedures.length===0,question:"I couldn't identify the procedure. What was performed? Search by name or CPT code.",type:'cpt-search'},
-  {key:'role',isEmpty:()=>!caseData.role,question:'What was your role in this case?',type:'chips',options:['Surgeon','Assistant','Teaching Assistant','Observer']},
+  {key:'role',isEmpty:()=>{ const q=QUESTIONS.find(x=>x.key==='role'); return !caseData.role || (q.options && !q.options.includes(caseData.role)); },question:'What was your role in this case?',type:'chips',options:['Surgeon','Assistant','Teaching Assistant','Observer']},
   {key:'site',isEmpty:()=>!caseData.site,question:'At which hospital or site was this performed?',type:'combo',combo:'site'},
   {key:'attending',isEmpty:()=>!caseData.attending,question:'Who was the attending physician?',type:'combo',combo:'att'},
   {key:'patientType',isEmpty:()=>!caseData.patientType,question:'Was this an adult or pediatric patient?',type:'chips',options:['Adult','Pediatric']},
@@ -4590,7 +4590,7 @@ async function fetchAcgmeProfile(opts){
     if(roles.length)         localStorage.setItem('cf5-roles',           JSON.stringify(roles));
     if(patientTypes.length) localStorage.setItem('cf5-patient-types',  JSON.stringify(patientTypes));
     if(body.residentsId) localStorage.setItem('cf5-residents-id', String(body.residentsId));
-    _applyProfileToUI(sites, attendings);
+    _applyProfileToUI(sites, attendings, roles, patientTypes);
     acgmeServerSessionActive = true;
     return { ok: true, sitesLen: sites.length, attLen: attendings.length };
   }
@@ -4607,10 +4607,12 @@ async function fetchAcgmeProfile(opts){
   } catch(e){ console.warn('fetchAcgmeProfile:', e.message); toast(e.message, ''); }
 }
 
-/** Patches QUESTIONS and SUMMARY_FIELDS with fetched site/attending data */
-function _applyProfileToUI(sites, attendings){
-  const siteLabels = sites.map(s=>s.label);
-  const attLabels  = attendings.map(a=>a.label);
+/** Patches QUESTIONS and SUMMARY_FIELDS with fetched profile data */
+function _applyProfileToUI(sites, attendings, roles, patientTypes){
+  const siteLabels = (sites||[]).map(s=>s.label);
+  const attLabels  = (attendings||[]).map(a=>a.label);
+  const roleLabels = (roles||[]).map(r=>r.label).filter(Boolean);
+  const ptLabels   = (patientTypes||[]).map(p=>p.label).filter(Boolean);
   if(siteLabels.length){
     const qSite = QUESTIONS.find(q=>q.key==='site');
     const sSite = SUMMARY_FIELDS.find(f=>f.key==='site');
@@ -4622,6 +4624,21 @@ function _applyProfileToUI(sites, attendings){
     const sAtt = SUMMARY_FIELDS.find(f=>f.key==='attending');
     if(qAtt) qAtt.options = attLabels;
     if(sAtt) sAtt.options = attLabels;
+  }
+  if(roleLabels.length){
+    const qRole = QUESTIONS.find(q=>q.key==='role');
+    const sRole = SUMMARY_FIELDS.find(f=>f.key==='role');
+    if(qRole) qRole.options = roleLabels;
+    if(sRole) sRole.options = roleLabels;
+    // Also update case edit modal roles list
+    CE_ROLES.length = 0;
+    roleLabels.forEach(l=>CE_ROLES.push(l));
+  }
+  if(ptLabels.length){
+    const qPt = QUESTIONS.find(q=>q.key==='patientType');
+    const sPt = SUMMARY_FIELDS.find(f=>f.key==='patient');
+    if(qPt) qPt.options = ptLabels;
+    if(sPt) sPt.options = ptLabels;
   }
 }
 async function getAcgmeCredentials(){
@@ -5519,8 +5536,10 @@ async function launchApp(name,email){
   await syncAcgmeSettingsFromServer();
   const cachedSites      = JSON.parse(localStorage.getItem('cf5-sites')||'[]');
   const cachedAttendants = JSON.parse(localStorage.getItem('cf5-attendings')||'[]');
-  if(cachedSites.length || cachedAttendants.length){
-    _applyProfileToUI(cachedSites, cachedAttendants);
+  const cachedRoles      = JSON.parse(localStorage.getItem('cf5-roles')||'[]');
+  const cachedPatientTypes = JSON.parse(localStorage.getItem('cf5-patient-types')||'[]');
+  if(cachedSites.length || cachedAttendants.length || cachedRoles.length || cachedPatientTypes.length){
+    _applyProfileToUI(cachedSites, cachedAttendants, cachedRoles, cachedPatientTypes);
   }
   if(localStorage.getItem('cf5-vault') && ACGME_BACKEND_URL && localStorage.getItem('cf5-token')){
     await fetchAcgmeProfile();
