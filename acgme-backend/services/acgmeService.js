@@ -1364,6 +1364,9 @@ function parseSelectOptions(html, selectName) {
 async function getUserProfile(sessionCookie) {
   const { html } = await fetchInsertHtmlWithRedirects(sessionCookie);
 
+  // Hoist hidden-field scrape so all AJAX fallbacks can share it
+  const hidden = scrapeHiddenFields(html);
+
   let sites = parseSelectOptions(html, 'Institutions');
   if (!sites.length) sites = parseSelectOptions(html, 'Institution');
   if (!sites.length) sites = parseSelectOptions(html, 'institutions');
@@ -1379,9 +1382,7 @@ async function getUserProfile(sessionCookie) {
   if (!roles.length) {
     try {
       const today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-      // specialtyId scraped from hidden fields, or default plastic surgery
-      const hidden2 = scrapeHiddenFields(html);
-      const spId = specialtyIdFromInsertHidden(hidden2) || scrapeSpecialtyIdFromHtml(html) || '158';
+      const spId = specialtyIdFromInsertHidden(hidden) || scrapeSpecialtyIdFromHtml(html) || '158';
       const rolesUrl = `${BASE_URL}/ads/CaseLogs/Code/GetResidentRoles?specialtyId=${spId}&activeAsOfDate=${encodeURIComponent(today)}&_=${Date.now()}`;
       const rolesResp = await fetchT(rolesUrl, {
         headers: { 'Cookie': sessionCookie, 'User-Agent': UA, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -1402,10 +1403,32 @@ async function getUserProfile(sessionCookie) {
   if (!patientTypes.length) patientTypes = parseSelectOptions(html, 'PatientType');
   if (!patientTypes.length) patientTypes = parseSelectOptions(html, 'patientTypes');
 
+  // Patient types are also AJAX-loaded for some programs — fall back to GetPatientTypes endpoint.
+  if (!patientTypes.length) {
+    try {
+      const today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+      const spId = specialtyIdFromInsertHidden(hidden) || scrapeSpecialtyIdFromHtml(html) || '158';
+      const ptUrl = `${BASE_URL}/ads/CaseLogs/Code/GetPatientTypes?specialtyId=${spId}&activeAsOfDate=${encodeURIComponent(today)}&_=${Date.now()}`;
+      const ptResp = await fetchT(ptUrl, {
+        headers: { 'Cookie': sessionCookie, 'User-Agent': UA, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      }, 10000);
+      if (ptResp.ok) {
+        const ptJson = await ptResp.json();
+        const payload = ptJson.Payload || ptJson.payload || ptJson;
+        if (Array.isArray(payload)) {
+          patientTypes = payload
+            .map(p => ({ id: String(p.ID || p.id || ''), label: String(p.ShortName || p.shortName || p.Text || p.text || '') }))
+            .filter(p => p.id && p.label);
+        }
+      }
+    } catch (e) {
+      console.warn('[profile] GetPatientTypes fallback failed:', e.message);
+    }
+  }
+
   const residentsId = parseSelectSelectedValue(html, 'Residents');
 
-  // Scrape specialty ID from Insert page (used for multi-specialty support)
-  const hidden = scrapeHiddenFields(html);
+  // specialtyId already scraped above (hidden hoisted)
   const specialtyId = specialtyIdFromInsertHidden(hidden) || scrapeSpecialtyIdFromHtml(html);
 
   console.log(
