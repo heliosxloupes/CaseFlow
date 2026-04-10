@@ -2536,7 +2536,7 @@ function makeRec(onResult,onEnd){
   return r;
 }
 // CONVERSATION
-let caseData={description:'',procedures:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:''};
+let caseData={description:'',procedures:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:'',rotation:null,extraFields:{}};
 /** Matches ADS Case ID input (bootstrap-maxlength on apps.acgme.org). */
 const CASE_ID_MAX_LEN=25;
 const APP_TOS_VERSION='2026-03-31';
@@ -2591,6 +2591,102 @@ const SPECIALTY_LABELS={
   'vascular-surgery':'Vascular Surgery',
 };
 function getSpecialtyLabel(slug){return SPECIALTY_LABELS[slug]||'Residency';}
+function humanizeKey(s){
+  return String(s||'')
+    .replace(/^field:/,'')
+    .replace(/([a-z0-9])([A-Z])/g,'$1 $2')
+    .replace(/[_-]+/g,' ')
+    .replace(/\s+/g,' ')
+    .replace(/^\w/,c=>c.toUpperCase())
+    .trim();
+}
+function getAcgmeFormFields(){
+  try{
+    const arr=JSON.parse(localStorage.getItem('cf5-form-fields')||'[]');
+    return Array.isArray(arr)?arr:[];
+  }catch(_){return[];}
+}
+function getAcgmeFieldValue(key,name){
+  if(key==='role') return caseData.role||'';
+  if(key==='site') return caseData.site||'';
+  if(key==='attending') return caseData.attending||'';
+  if(key==='patientType') return caseData.patientType||'';
+  if(key==='caseYear') return caseData.caseYear||'';
+  if(key==='date') return caseData.date||'';
+  if(key==='caseId') return caseData.caseId||'';
+  if(key==='rotation') return caseData.rotation||caseData.extraFields?.[name]||'';
+  return caseData.extraFields?.[name]||'';
+}
+function setAcgmeFieldValue(key,name,val){
+  if(key==='role'){caseData.role=val;return;}
+  if(key==='site'){caseData.site=val;return;}
+  if(key==='attending'){caseData.attending=val;return;}
+  if(key==='patientType'){caseData.patientType=val;return;}
+  if(key==='caseYear'){caseData.caseYear=val;return;}
+  if(key==='date'){caseData.date=val;return;}
+  if(key==='caseId'){caseData.caseId=String(val||'').slice(0,CASE_ID_MAX_LEN);return;}
+  if(key==='rotation') caseData.rotation=val;
+  if(!caseData.extraFields||typeof caseData.extraFields!=='object') caseData.extraFields={};
+  caseData.extraFields[name]=val;
+}
+function optionLabelsForField(field){
+  return (field?.options||[]).map(o=>typeof o==='string'?o:(o&&o.label!=null?String(o.label):'')).filter(Boolean);
+}
+function shouldUseChipsForField(field){
+  const labels=optionLabelsForField(field);
+  return labels.length>0&&labels.length<=6;
+}
+function syncDynamicAcgmeFields(){
+  for(let i=QUESTIONS.length-1;i>=0;i--){if(QUESTIONS[i].isDynamicAcgme)QUESTIONS.splice(i,1);}
+  for(let i=SUMMARY_FIELDS.length-1;i>=0;i--){if(SUMMARY_FIELDS[i].isDynamicAcgme)SUMMARY_FIELDS.splice(i,1);}
+  const fields=getAcgmeFormFields();
+  for(const field of fields){
+    const labels=optionLabelsForField(field);
+    const qType=field.type==='select'?(shouldUseChipsForField(field)?'chips':'select'):(field.type==='date'?'date':'text');
+    if(field.standardKey==='rotation'){
+      QUESTIONS.push({
+        key:'rotation',
+        isDynamicAcgme:true,
+        isEmpty:()=>!getAcgmeFieldValue('rotation',field.name),
+        question:`What ${String(field.label||'rotation').replace(/\*+$/,'').trim().toLowerCase()} applies to this case?`,
+        type:qType,
+        options:labels,
+        set:v=>setAcgmeFieldValue('rotation',field.name,v),
+      });
+      SUMMARY_FIELDS.push({
+        key:'rotation',
+        label:field.label||'Rotation',
+        type:qType,
+        isDynamicAcgme:true,
+        options:labels,
+        get:()=>getAcgmeFieldValue('rotation',field.name),
+        set:v=>setAcgmeFieldValue('rotation',field.name,v),
+        fieldName:field.name,
+      });
+      continue;
+    }
+    if(field.standardKey||!field.required) continue;
+    QUESTIONS.push({
+      key:field.key,
+      isDynamicAcgme:true,
+      isEmpty:()=>!getAcgmeFieldValue(field.key,field.name),
+      question:`What ${String(field.label||humanizeKey(field.name||field.key)).replace(/\*+$/,'').trim().toLowerCase()} applies to this case?`,
+      type:qType,
+      options:labels,
+      set:v=>setAcgmeFieldValue(field.key,field.name,v),
+    });
+    SUMMARY_FIELDS.push({
+      key:field.key,
+      label:field.label||humanizeKey(field.name||field.key),
+      type:qType,
+      isDynamicAcgme:true,
+      options:labels,
+      get:()=>getAcgmeFieldValue(field.key,field.name),
+      set:v=>setAcgmeFieldValue(field.key,field.name,v),
+      fieldName:field.name,
+    });
+  }
+}
 let adminDiagnostics=null;
 let onboardingStep=0;
 let pendingQs=[],currentQ=-1;
@@ -2832,13 +2928,17 @@ function nextQuestion(){
     showBubble(q.question);document.getElementById('q-bubble').classList.add('show');
     if(q.type==='chips')showChips(typeof q.options==='function'?q.options():q.options);
     else if(q.type==='combo')showFlowCombo(q.combo);
+    else if(q.type==='select')showSelectQuestion(q);
+    else if(q.type==='date')showDateQuestion(q);
     else if(q.type==='cpt-search')showCptSearchPanel();
     else showTextAndVoice();
   },320);
 }
 function answerQuestion(value){
   const q=pendingQs[currentQ];if(!q)return;
-  if(q.key==='caseYear')caseData.caseYear=value;else caseData[q.key]=value;
+  if(typeof q.set==='function') q.set(value);
+  else if(q.key==='caseYear')caseData.caseYear=value;
+  else caseData[q.key]=value;
   hideAnswerUI();nextQuestion();
 }
 function showCptSearchPanel(){
@@ -2939,6 +3039,40 @@ function hideAnswerUI(){
 }
 function hideAll(){stopProcessingBubble();hideAnswerUI();document.getElementById('cpt-found-box').classList.remove('show');document.getElementById('cpt-select-box').classList.remove('show');document.getElementById('add-more-box').classList.remove('show');document.getElementById('summary-card').classList.remove('show');document.getElementById('final-actions').classList.remove('show');updateHomeFloatingUi()}
 function showChips(opts){const el=document.getElementById('a-chips');el.innerHTML=opts.map(o=>`<div class="chip-opt" onclick="chipPick('${o}',this)">${o}</div>`).join('');el.classList.add('show');}
+function showSelectQuestion(q){
+  const el=document.getElementById('a-chips');
+  const opts=(typeof q.options==='function'?q.options():q.options||[]).filter(Boolean);
+  const current=typeof q.get==='function'?q.get():getAcgmeFieldValue(q.key,q.fieldName||'');
+  el.innerHTML='<div class="sum-edit-panel" style="display:block;padding:0;background:none;border:none">'+
+    '<select id="a-dyn-select" class="sum-date-input" style="width:100%;margin-bottom:10px">'+
+    '<option value="">Select an option…</option>'+
+    opts.map(o=>'<option value="'+escAttr(o)+'"'+(o===current?' selected':'')+'>'+escHtml(o)+'</option>').join('')+
+    '</select>'+
+    '<button type="button" class="done-btn" style="width:100%" onclick="submitSelectQuestion()">Continue</button>'+
+    '</div>';
+  el.classList.add('show');
+}
+function submitSelectQuestion(){
+  const el=document.getElementById('a-dyn-select');
+  const v=el&&el.value?el.value.trim():'';
+  if(!v)return;
+  answerQuestion(v);
+}
+function showDateQuestion(q){
+  const el=document.getElementById('a-chips');
+  const current=typeof q.get==='function'?q.get():getAcgmeFieldValue(q.key,q.fieldName||'');
+  el.innerHTML='<div class="sum-edit-panel" style="display:block;padding:0;background:none;border:none">'+
+    '<input type="date" id="a-dyn-date" class="sum-date-input" value="'+escAttr(current||'')+'" style="width:100%;margin-bottom:10px">'+
+    '<button type="button" class="done-btn" style="width:100%" onclick="submitDateQuestion()">Continue</button>'+
+    '</div>';
+  el.classList.add('show');
+}
+function submitDateQuestion(){
+  const el=document.getElementById('a-dyn-date');
+  const v=el&&el.value?el.value.trim():'';
+  if(!v)return;
+  answerQuestion(v);
+}
 /** Site / attending: searchable combo (same data as ACGME profile lists) */
 function showFlowCombo(which){
   const labels=which==='site'?getSitesForEdit():getAttendingsForEdit();
@@ -3474,7 +3608,7 @@ function renderSummaryCard(){
     if(isEditing){
       if(f.type==='date'){
         html += `<div class="sum-edit-panel" onclick="event.stopPropagation()">
-          <input type="date" class="sum-date-input" value="${val||''}" onchange="saveSummaryDate(this.value)">
+          <input type="date" class="sum-date-input" value="${val||''}" onchange="saveSummaryDateField('${f.key}',this.value)">
         </div>`;
       } else if(f.type==='combo'){
         const w=f.combo;
@@ -3484,6 +3618,18 @@ function renderSummaryCard(){
               onfocus="sumFlowComboOpen('${f.key}')" oninput="sumFlowComboInput('${f.key}',this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();sumFlowComboPickExact('${f.key}');}">
             <div class="ce-combo-panel" id="sum-edit-${f.key}-panel"></div>
           </div>
+        </div>`;
+      } else if(f.type==='select'){
+        const opts = typeof f.options==='function' ? f.options() : (f.options||[]);
+        html += `<div class="sum-edit-panel" onclick="event.stopPropagation()">
+          <select class="sum-date-input" onchange="saveSummaryText('${f.key}',this.value);summaryEditKey=null;renderSummaryCard();toast('Updated','ok');">
+            <option value="">Select an option…</option>
+            ${opts.map(o=>`<option value="${escAttr(o)}"${val===o?' selected':''}>${escHtml(o)}</option>`).join('')}
+          </select>
+        </div>`;
+      } else if(f.type==='text'){
+        html += `<div class="sum-edit-panel" onclick="event.stopPropagation()">
+          <input type="text" class="sum-date-input" value="${escAttr(val||'')}" placeholder="${escAttr(f.label||'Value')}" oninput="saveSummaryText('${f.key}',this.value)">
         </div>`;
       } else {
         const opts = typeof f.options==='function' ? f.options() : (f.options||[]);
@@ -3578,9 +3724,9 @@ function toggleSummaryEdit(key){
   }
 }
 
-function saveSummaryDate(val){
+function saveSummaryDateField(key, val){
   if(!val) return; // ignore empty — user hasn't confirmed
-  const f = SUMMARY_FIELDS.find(f=>f.key==='date');
+  const f = SUMMARY_FIELDS.find(f=>f.key===key);
   if(f) f.set(val);
   summaryEditKey=null;
   renderSummaryCard();
@@ -3793,7 +3939,7 @@ function resetFlow(){
   stopMic();
   savedMicStream=null;
   txFinal='';txInt='';fuFinal='';fuInt='';addMoreFinal='';addMoreInt='';
-  caseData={description:'',procedures:[],alternatives:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:''};
+  caseData={description:'',procedures:[],alternatives:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:'',rotation:null,extraFields:{}};
   pendingQs=[];currentQ=-1;
   orbState='idle';
   clearHomeFlowPanels();
@@ -4585,12 +4731,16 @@ async function fetchAcgmeProfile(opts){
     const attendings = body.attendings || [];
     const roles = body.roles || [];
     const patientTypes = body.patientTypes || [];
+    const rotations = body.rotations || [];
+    const formFields = body.formFields || [];
     if(sites.length)        localStorage.setItem('cf5-sites',           JSON.stringify(sites));
     if(attendings.length)    localStorage.setItem('cf5-attendings',     JSON.stringify(attendings));
     if(roles.length)         localStorage.setItem('cf5-roles',           JSON.stringify(roles));
     if(patientTypes.length) localStorage.setItem('cf5-patient-types',  JSON.stringify(patientTypes));
+    if(rotations.length)    localStorage.setItem('cf5-rotations',      JSON.stringify(rotations));
+    localStorage.setItem('cf5-form-fields', JSON.stringify(formFields));
     if(body.residentsId) localStorage.setItem('cf5-residents-id', String(body.residentsId));
-    _applyProfileToUI(sites, attendings, roles, patientTypes);
+    _applyProfileToUI(sites, attendings, roles, patientTypes, rotations, formFields);
     acgmeServerSessionActive = true;
     return { ok: true, sitesLen: sites.length, attLen: attendings.length };
   }
@@ -4608,28 +4758,38 @@ async function fetchAcgmeProfile(opts){
 }
 
 /** Patches QUESTIONS and SUMMARY_FIELDS with fetched profile data */
-function _applyProfileToUI(sites, attendings, roles, patientTypes){
+function _applyProfileToUI(sites, attendings, roles, patientTypes, rotations, formFields){
   const siteLabels = (sites||[]).map(s=>s.label);
   const attLabels  = (attendings||[]).map(a=>a.label);
   const roleLabels = (roles||[]).map(r=>r.label).filter(Boolean);
   const ptLabels   = (patientTypes||[]).map(p=>p.label).filter(Boolean);
+  const fields=(formFields||getAcgmeFormFields());
   if(siteLabels.length){
     const qSite = QUESTIONS.find(q=>q.key==='site');
     const sSite = SUMMARY_FIELDS.find(f=>f.key==='site');
     if(qSite) qSite.options = siteLabels;
     if(sSite) sSite.options = siteLabels;
+    const siteField=fields.find(f=>f.standardKey==='site');
+    if(qSite&&siteField?.label) qSite.question=`Which ${siteField.label.replace(/\*+$/,'').trim().toLowerCase()} was this performed at?`;
+    if(sSite&&siteField?.label) sSite.label=siteField.label;
   }
   if(attLabels.length){
     const qAtt = QUESTIONS.find(q=>q.key==='attending');
     const sAtt = SUMMARY_FIELDS.find(f=>f.key==='attending');
     if(qAtt) qAtt.options = attLabels;
     if(sAtt) sAtt.options = attLabels;
+    const attField=fields.find(f=>f.standardKey==='attending');
+    if(qAtt&&attField?.label) qAtt.question=`Who was the ${attField.label.replace(/\*+$/,'').trim().toLowerCase()}?`;
+    if(sAtt&&attField?.label) sAtt.label=attField.label;
   }
   if(roleLabels.length){
     const qRole = QUESTIONS.find(q=>q.key==='role');
     const sRole = SUMMARY_FIELDS.find(f=>f.key==='role');
     if(qRole) qRole.options = roleLabels;
     if(sRole) sRole.options = roleLabels;
+    const roleField=fields.find(f=>f.standardKey==='role');
+    if(qRole&&roleField?.label) qRole.question=`What was your ${roleField.label.replace(/\*+$/,'').trim().toLowerCase()} in this case?`;
+    if(sRole&&roleField?.label) sRole.label=roleField.label;
     // Also update case edit modal roles list
     CE_ROLES.length = 0;
     roleLabels.forEach(l=>CE_ROLES.push(l));
@@ -4639,7 +4799,16 @@ function _applyProfileToUI(sites, attendings, roles, patientTypes){
     const sPt = SUMMARY_FIELDS.find(f=>f.key==='patient');
     if(qPt) qPt.options = ptLabels;
     if(sPt) sPt.options = ptLabels;
+    const ptField=fields.find(f=>f.standardKey==='patientType');
+    if(qPt&&ptField?.label) qPt.question=`What ${ptField.label.replace(/\*+$/,'').trim().toLowerCase()} applies to this case?`;
+    if(sPt&&ptField?.label) sPt.label=ptField.label;
   }
+  const yearField=fields.find(f=>f.standardKey==='caseYear');
+  const qYear=QUESTIONS.find(q=>q.key==='caseYear');
+  const sYear=SUMMARY_FIELDS.find(f=>f.key==='year');
+  if(qYear&&yearField?.label) qYear.question=`What ${yearField.label.replace(/\*+$/,'').trim().toLowerCase()} applies?`;
+  if(sYear&&yearField?.label) sYear.label=yearField.label;
+  syncDynamicAcgmeFields();
 }
 async function getAcgmeCredentials(){
   // When backend is configured, credentials live in the Railway DB — no local decryption needed.
@@ -4686,6 +4855,28 @@ function resolveProfileId(cacheKey, label){
     const found = list.find(item=>String(item.label).trim()===needle);
     return found ? String(found.id) : '';
   } catch(_){ return ''; }
+}
+function resolveSchemaOptionId(field, displayValue){
+  if(!field||displayValue==null) return '';
+  const needle=String(displayValue).trim().toLowerCase();
+  const found=(field.options||[]).find(opt=>String(opt.label||'').trim().toLowerCase()===needle);
+  return found?String(found.id||''):'';
+}
+function buildAcgmeExtraFieldsPayload(){
+  const out={};
+  for(const field of getAcgmeFormFields()){
+    if(!field||!field.name) continue;
+    if(['role','site','attending','patientType','caseYear','date','caseId','resident'].includes(field.standardKey||'')) continue;
+    const raw=getAcgmeFieldValue(field.standardKey||field.key,field.name);
+    if(raw==null||String(raw).trim()==='') continue;
+    if(field.type==='select'){
+      const resolved=resolveSchemaOptionId(field, raw);
+      out[field.name]=resolved||String(raw).trim();
+    } else {
+      out[field.name]=String(raw).trim();
+    }
+  }
+  return out;
 }
 
 function formatAcgmeDate(isoDate){
@@ -4745,6 +4936,7 @@ async function callSubmitAcgme(casePayload){
     comments:        casePayload.notes||'',
     caseId:          casePayload.caseId||'',
     residentsId:     localStorage.getItem('cf5-residents-id') || '',
+    extraFields:     buildAcgmeExtraFieldsPayload(),
   };
 
   const resp=await fetch(`${ACGME_BACKEND_URL}/api/cases/submit`,{
@@ -4923,7 +5115,10 @@ function doLogout(skipConfirm){
   localStorage.removeItem('cf5-attendings');
   localStorage.removeItem('cf5-roles');
   localStorage.removeItem('cf5-patient-types');
+  localStorage.removeItem('cf5-rotations');
+  localStorage.removeItem('cf5-form-fields');
   localStorage.removeItem('cf5-user-meta');
+  syncDynamicAcgmeFields();
   resetFlow();
   showPage('pg-login');
 }
@@ -5538,8 +5733,10 @@ async function launchApp(name,email){
   const cachedAttendants = JSON.parse(localStorage.getItem('cf5-attendings')||'[]');
   const cachedRoles      = JSON.parse(localStorage.getItem('cf5-roles')||'[]');
   const cachedPatientTypes = JSON.parse(localStorage.getItem('cf5-patient-types')||'[]');
-  if(cachedSites.length || cachedAttendants.length || cachedRoles.length || cachedPatientTypes.length){
-    _applyProfileToUI(cachedSites, cachedAttendants, cachedRoles, cachedPatientTypes);
+  const cachedRotations  = JSON.parse(localStorage.getItem('cf5-rotations')||'[]');
+  const cachedFormFields = JSON.parse(localStorage.getItem('cf5-form-fields')||'[]');
+  if(cachedSites.length || cachedAttendants.length || cachedRoles.length || cachedPatientTypes.length || cachedRotations.length || cachedFormFields.length){
+    _applyProfileToUI(cachedSites, cachedAttendants, cachedRoles, cachedPatientTypes, cachedRotations, cachedFormFields);
   }
   if(localStorage.getItem('cf5-vault') && ACGME_BACKEND_URL && localStorage.getItem('cf5-token')){
     await fetchAcgmeProfile();
@@ -5951,6 +6148,9 @@ async function syncAcgmeSettingsFromServer(){
       localStorage.removeItem('cf5-attendings');
       localStorage.removeItem('cf5-roles');
       localStorage.removeItem('cf5-patient-types');
+      localStorage.removeItem('cf5-rotations');
+      localStorage.removeItem('cf5-form-fields');
+      syncDynamicAcgmeFields();
     } else {
       localStorage.setItem('cf5-vault', JSON.stringify({ saved: true }));
       acgmeServerSessionActive = data.sessionActive !== false;

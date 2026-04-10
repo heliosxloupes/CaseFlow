@@ -1079,6 +1079,15 @@ function buildInsertFormPayload(token, hidden, caseData, insertHtml) {
     Comments:        mergeLocalCaseIdIntoComments(caseData),
     SearchTerm:      'False',
   };
+  if (caseData.extraFields && typeof caseData.extraFields === 'object') {
+    for (const [fieldName, value] of Object.entries(caseData.extraFields)) {
+      if (!fieldName) continue;
+      if (value == null) continue;
+      const normalized = Array.isArray(value) ? value.join(',') : String(value).trim();
+      if (normalized === '') continue;
+      body[fieldName] = normalized;
+    }
+  }
   if (caseDateFieldName) {
     body[caseDateFieldName] = caseData.procedureDate;
   }
@@ -1357,6 +1366,127 @@ function parseSelectOptions(html, selectName) {
   return results;
 }
 
+function decodeHtmlLite(str = '') {
+  return String(str)
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function humanizeFieldName(name = '') {
+  return decodeHtmlLite(
+    String(name || '')
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/[_-]+/g, ' ')
+  );
+}
+
+function standardFieldKeyFromName(name = '') {
+  const n = String(name || '').trim().toLowerCase();
+  if (n === 'residentroles' || n === 'residentrole') return 'role';
+  if (n === 'institutions' || n === 'institution') return 'site';
+  if (n === 'attendings' || n === 'attending') return 'attending';
+  if (n === 'patienttypes' || n === 'patienttype') return 'patientType';
+  if (n === 'procedureyear') return 'caseYear';
+  if (n === 'rotations' || n === 'rotation') return 'rotation';
+  if (n === 'residents' || n === 'resident') return 'resident';
+  if (n === 'caseid') return 'caseId';
+  return null;
+}
+
+function shouldIgnoreSchemaField(name = '') {
+  const n = String(name || '').trim();
+  if (!n) return true;
+  if (/^(?:__RequestVerificationToken|SelectedCodes|SelectedCodeAttributes|Comments|CodeDescription|CodeIdToAddToFavList|TypeToCodeIdToAddToFavList|FavoriteLists|FavoriteListIdToAddCode|CategoriesShortLabel|GetSelectedCodePartial|GetYearOptionsUrl|UrlGetLastFive|UrlGetLastCase|SearchTerm|HoldSelectedCodes|HiddenUrls|Areas|Types|Categories|CategoryCodeDescription|NewFavoriteListName|NewFavListIds|NewFavListNames|SelectedCodesTab|MaxProcedureCaseTemplate|CountProcedureCaseTemplate|ResidentProcedureCaseTemplateId|TemplateNewName|TemplateSaveType|ProgramId|SpecialtyCode|SpecialtyId|SpecialtyTypeId|CPTBasedCase|TypeBasedCase|SpecialtyUsesPrimaryCredit|IsOrthopaedicSubspecialty|IsProcedureCaseTemplateEnabled|IsSpecialtyContainsCodeMessage|PatientIdDisplayName|DefaultInstitutions|DefaultAttendings|DefaultResidentRoles|DefaultRotations|DefaultGenders|DefaultPatientTypes|DefaultProcedureYear)$/i.test(n)) {
+    return true;
+  }
+  if (/^Favorite/i.test(n) || /^HiddenUrls$/i.test(n)) return true;
+  return false;
+}
+
+function inferLabelForControl(html, controlName, controlId = '') {
+  const escName = String(controlName || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escId = String(controlId || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const attrsRe = new RegExp(
+    `<label\\b[^>]*?(?:for=["']${escId}["']|for=["']${escName}["'])[^>]*>([\\s\\S]*?)<\\/label>`,
+    'i'
+  );
+  const explicit = html.match(attrsRe);
+  if (explicit && explicit[1]) {
+    return decodeHtmlLite(explicit[1].replace(/<[^>]+>/g, ' ')).trim();
+  }
+
+  const controlRe = new RegExp(
+    `<(?:select|input)\\b[^>]*?(?:name=["']${escName}["']|id=["']${escId || escName}["'])[^>]*>`,
+    'i'
+  );
+  const m = controlRe.exec(html);
+  if (!m) return '';
+  const start = Math.max(0, m.index - 600);
+  const windowHtml = html.slice(start, m.index);
+  const labels = [...windowHtml.matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/gi)];
+  if (labels.length) {
+    const last = labels[labels.length - 1][1];
+    return decodeHtmlLite(last.replace(/<[^>]+>/g, ' ')).trim();
+  }
+  return '';
+}
+
+function scrapeVisibleFormFields(html) {
+  const fields = [];
+  const seen = new Set();
+
+  const selectRe = /<select\b([^>]*)>([\s\S]*?)<\/select>/gi;
+  let m;
+  while ((m = selectRe.exec(html)) !== null) {
+    const attrs = m[1];
+    const name = attrs.match(/\bname="([^"]+)"/i)?.[1] || attrs.match(/\bid="([^"]+)"/i)?.[1] || '';
+    const id = attrs.match(/\bid="([^"]+)"/i)?.[1] || '';
+    if (!name || shouldIgnoreSchemaField(name) || seen.has(`select:${name}`)) continue;
+    seen.add(`select:${name}`);
+    const label = inferLabelForControl(html, name, id) || humanizeFieldName(name);
+    const options = parseSelectOptions(html, name);
+    if (!options.length) continue;
+    fields.push({
+      key: standardFieldKeyFromName(name) || `field:${name}`,
+      name,
+      label,
+      type: 'select',
+      required: /\*/.test(label) || /required/i.test(attrs),
+      options,
+      standardKey: standardFieldKeyFromName(name),
+    });
+  }
+
+  const inputRe = /<input\b([^>]*)>/gi;
+  while ((m = inputRe.exec(html)) !== null) {
+    const attrs = m[1];
+    const type = (attrs.match(/\btype="([^"]+)"/i)?.[1] || 'text').toLowerCase();
+    if (type === 'hidden' || type === 'checkbox' || type === 'radio' || type === 'submit' || type === 'button') continue;
+    const name = attrs.match(/\bname="([^"]+)"/i)?.[1] || attrs.match(/\bid="([^"]+)"/i)?.[1] || '';
+    const id = attrs.match(/\bid="([^"]+)"/i)?.[1] || '';
+    if (!name || shouldIgnoreSchemaField(name) || seen.has(`input:${name}`)) continue;
+    seen.add(`input:${name}`);
+    const label = inferLabelForControl(html, name, id) || humanizeFieldName(name);
+    if (!label) continue;
+    fields.push({
+      key: standardFieldKeyFromName(name) || (type === 'date' ? 'date' : `field:${name}`),
+      name,
+      label,
+      type: type === 'date' ? 'date' : 'text',
+      required: /\*/.test(label) || /required/i.test(attrs),
+      standardKey: standardFieldKeyFromName(name) || (type === 'date' ? 'date' : null),
+    });
+  }
+
+  return fields;
+}
+
 /**
  * Fetches the ACGME Insert page and returns program-specific selects as {id, label} arrays.
  * Same GET as getInsertPageData (manual redirect) so profile matches submit auth.
@@ -1402,6 +1532,9 @@ async function getUserProfile(sessionCookie) {
   let patientTypes = parseSelectOptions(html, 'PatientTypes');
   if (!patientTypes.length) patientTypes = parseSelectOptions(html, 'PatientType');
   if (!patientTypes.length) patientTypes = parseSelectOptions(html, 'patientTypes');
+  let rotations = parseSelectOptions(html, 'Rotations');
+  if (!rotations.length) rotations = parseSelectOptions(html, 'Rotation');
+  if (!rotations.length) rotations = parseSelectOptions(html, 'rotations');
 
   // Patient types are also AJAX-loaded for some programs — fall back to GetPatientTypes endpoint.
   if (!patientTypes.length) {
@@ -1427,16 +1560,24 @@ async function getUserProfile(sessionCookie) {
   }
 
   const residentsId = parseSelectSelectedValue(html, 'Residents');
+  const formFields = scrapeVisibleFormFields(html).map(field => {
+    if ((field.standardKey === 'site' || field.name === 'Institutions') && sites.length) return { ...field, options: sites };
+    if ((field.standardKey === 'attending' || field.name === 'Attendings') && attendings.length) return { ...field, options: attendings };
+    if ((field.standardKey === 'role' || field.name === 'ResidentRoles') && roles.length) return { ...field, options: roles };
+    if ((field.standardKey === 'patientType' || field.name === 'PatientTypes') && patientTypes.length) return { ...field, options: patientTypes };
+    if ((field.standardKey === 'rotation' || field.name === 'Rotations') && rotations.length) return { ...field, options: rotations };
+    return field;
+  });
 
   // specialtyId already scraped above (hidden hoisted)
   const specialtyId = specialtyIdFromInsertHidden(hidden) || scrapeSpecialtyIdFromHtml(html);
 
   console.log(
-    `[profile] sites: ${sites.length}, attendings: ${attendings.length}, roles: ${roles.length}, patientTypes: ${patientTypes.length}` +
+    `[profile] sites: ${sites.length}, attendings: ${attendings.length}, roles: ${roles.length}, patientTypes: ${patientTypes.length}, rotations: ${rotations.length}, schemaFields: ${formFields.length}` +
       (residentsId ? `, residentsId: set` : `, residentsId: (none)`) +
       (specialtyId ? `, specialtyId: ${specialtyId}` : `, specialtyId: (not found)`)
   );
-  return { sites, attendings, roles, patientTypes, residentsId, specialtyId };
+  return { sites, attendings, roles, patientTypes, rotations, residentsId, specialtyId, formFields };
 }
 
 async function getLookupData(sessionCookie, type, params = {}) {

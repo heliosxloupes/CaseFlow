@@ -39,6 +39,7 @@ router.post('/submit', async (req, res, next) => {
       selectedCodes, codeDescription, comments,
       caseId = '',
       residentsId = '',
+      extraFields = {},
     } = req.body;
 
     const required = { procedureDate, procedureYear, residentRoleId, institutionId, attendingId, patientTypeId, selectedCodes };
@@ -53,6 +54,7 @@ router.post('/submit', async (req, res, next) => {
       selectedCodes, codeDescription, comments,
       caseId,
       residentsId,
+      extraFields,
     };
 
     let result;
