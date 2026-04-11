@@ -1279,10 +1279,10 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .case-edit-modal{position:fixed;inset:0;z-index:8500;background:rgb(7,9,15);display:flex;flex-direction:column;opacity:0;pointer-events:none!important;transition:opacity .22s;transform:translateY(20px);overflow:hidden;width:100vw;max-width:100vw;height:100dvh;height:100vh}
 @supports(height:100dvh){.case-edit-modal{height:100dvh}}
 .case-edit-modal.on{opacity:1;pointer-events:all!important;transform:translateY(0);transition:opacity .22s,transform .22s}
-.case-edit-header{display:flex;align-items:center;justify-content:space-between;padding:max(18px,env(safe-area-inset-top)) 18px 14px;border-bottom:1px solid var(--line);flex-shrink:0;box-sizing:border-box;width:100%}
+.case-edit-header{display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 22px) 18px 14px;border-bottom:1px solid var(--line);flex-shrink:0;box-sizing:border-box;width:100%;min-height:calc(68px + env(safe-area-inset-top,0px))}
 .case-edit-title{font-size:16px;font-weight:700;color:var(--text)}
 .case-edit-close{background:var(--bg2);border:1px solid var(--line2);color:var(--text2);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;line-height:1;flex-shrink:0}
-.case-edit-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:18px 18px 24px;width:100%;box-sizing:border-box}
+.case-edit-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:18px 18px calc(24px + env(safe-area-inset-bottom,0px));width:100%;box-sizing:border-box}
 .case-edit-footer{padding:14px 18px max(16px,env(safe-area-inset-bottom));border-top:1px solid var(--line);display:flex;gap:10px;flex-shrink:0;box-sizing:border-box;width:100%;background:linear-gradient(180deg,rgba(9,12,18,.82) 0%,rgba(9,12,18,.96) 100%)}
 .ce-status-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px 6px 10px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid transparent;margin-bottom:18px}
 .ce-status-badge.ok{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.25);color:#34d399}
@@ -3859,7 +3859,17 @@ function saveSummaryChip(key, val, e){
   renderSummaryCard();
   toast('Updated','ok');
 }
-let cases=JSON.parse(localStorage.getItem('cf5-cases')||'[]');
+let cases=(function(){
+  try{
+    const stored=JSON.parse(localStorage.getItem('cf5-cases')||'[]');
+    if(!Array.isArray(stored)) return [];
+    return stored
+      .map(c=>({...c,status:normalizeCaseStatus(c?.status)}))
+      .filter(isSubmittedCase);
+  }catch(_){
+    return [];
+  }
+})();
 let _currentCaseId=null; // set before saving to avoid duplicate DB inserts
 let appIridescenceRenderer=null,submitThreadsRenderer=null;
 let summaryRevealTimer=null;
@@ -3993,15 +4003,14 @@ async function submitCase(){
     try{
       await callSubmitAcgme(payload);
     } catch(e){
-      // Save locally even if ACGME submission fails; user can re-submit from History
       status='pending';
       if(e.mfaRequired){
-        showErrBanner('Case saved. ACGME session expired — tap to go to Settings and reconnect.', ()=>{goTab('settings');toggleAcgmeForm();});
+        showErrBanner('ACGME session expired — tap to go to Settings and reconnect.', ()=>{goTab('settings');toggleAcgmeForm();});
       } else {
         const hint2=/session expired|not authenticated|reconnect/i.test(e.message||'')
           ? '\n\nTip: CaseArc login is not the same as ACGME. Use Settings → ACGME to reconnect.'
           : '';
-        showErrBanner('Case saved locally. ACGME submission failed:\n\n'+e.message+'\n\nYou can re-submit from Case History. Tap to dismiss.'+hint2);
+        showErrBanner('ACGME submission failed:\n\n'+e.message+'\n\nThe case was not saved. Tap to dismiss.'+hint2);
       }
       console.warn('ACGME submit error:',e);
       sendClientLog({source:'case.submit',severity:'error',message:e.message||'ACGME submit failed',context:{caseId:caseData.caseId||null}});
@@ -4011,11 +4020,13 @@ async function submitCase(){
     duoEl.classList.remove('on');
     kickerEl.textContent='CaseArc Submission';
     labelEl.textContent='Submitting to ACGME…';
-    const localId='cf-'+Date.now();
-    const c={id:localId,...payload,yr:payload.yr,cid:caseData.caseId,status,ts:new Date().toISOString()};
-    cases.unshift(c);localStorage.setItem('cf5-cases',JSON.stringify(cases));
-    saveCaseToDB(c); // async, fire-and-forget sync to DB
-    document.getElementById('hdr-n').textContent=cases.length;
+    if(status==='submitted'){
+      const localId='cf-'+Date.now();
+      const c={id:localId,...payload,yr:payload.yr,cid:caseData.caseId,status:'submitted',ts:new Date().toISOString()};
+      cases.unshift(c);
+      localStorage.setItem('cf5-cases',JSON.stringify(cases));
+      document.getElementById('hdr-n').textContent=cases.length;
+    }
 
     if(status==='submitted'){
       showSubmitOverlaySuccess(
@@ -4103,6 +4114,15 @@ function updateDateToggleLabel(){
 function escAttr(s){
   return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 }
+function normalizeCaseStatus(status){
+  const normalized=String(status||'').trim().toLowerCase();
+  if(normalized==='submitted'||normalized==='success'||normalized==='completed') return 'submitted';
+  if(normalized==='pending'||normalized==='draft'||normalized==='failed') return 'pending';
+  return 'pending';
+}
+function isSubmittedCase(caseObj){
+  return normalizeCaseStatus(caseObj?.status)==='submitted';
+}
 /** Legacy DB rows from failed /api/cases/submit with no case payload — not real cases */
 function isJunkHistoryCase(c){
   if((c.status||'')!=='failed')return false;
@@ -4112,7 +4132,7 @@ function isJunkHistoryCase(c){
 }
 function filterHistory(){
   const beforeLen=cases.length;
-  cases=cases.filter(c=>!isJunkHistoryCase(c));
+  cases=cases.filter(c=>!isJunkHistoryCase(c)&&isSubmittedCase(c));
   if(cases.length!==beforeLen){
     try{localStorage.setItem('cf5-cases',JSON.stringify(cases));}catch(e){}
     const hdr=document.getElementById('hdr-n');
@@ -4149,7 +4169,7 @@ function filterHistory(){
         <div class="hmeta">${d} &middot; ${c.role||'—'} &middot; Year ${c.yr||'—'}</div>
         <div class="hmeta">${c.site||'—'} &middot; ${c.att||'—'}</div>
       </div>
-      <div class="spill s-${c.status||'pending'}">${c.status==='submitted'?'Submitted':c.status==='pending'?'Pending':'Pending'}</div>
+      <div class="spill s-${normalizeCaseStatus(c.status)}">${isSubmittedCase(c)?'Submitted':'Pending'}</div>
     </div>`;
   }).join('');
   // Ensure delegated handlers remain attached after any re-render
@@ -4173,6 +4193,7 @@ function openCaseEdit(id){
       return;
     }
     editingCase=JSON.parse(JSON.stringify(c)); // deep copy
+    editingCase.status=normalizeCaseStatus(editingCase.status);
     editingCase.caseId=(editingCase.caseId||editingCase.cid||'').slice(0,CASE_ID_MAX_LEN);
     editingCase.cid=editingCase.caseId;
     if(!Array.isArray(editingCase.procs)) editingCase.procs=[];
@@ -4183,6 +4204,7 @@ function openCaseEdit(id){
     function _ceVpResize(){
       const h=window.visualViewport?window.visualViewport.height:window.innerHeight;
       _modal.style.height=h+'px';
+      _modal.style.top=(window.visualViewport?window.visualViewport.offsetTop:0)+'px';
     }
     if(window.visualViewport){
       window.visualViewport.addEventListener('resize',_ceVpResize);
@@ -4216,8 +4238,13 @@ function openCaseEdit(id){
 }
 function closeCaseEdit(){
   const _modal=document.getElementById('case-edit-modal');
+  try{
+    const active=document.activeElement;
+    if(active&&(active.tagName==='INPUT'||active.tagName==='TEXTAREA')) active.blur();
+  }catch(_){}
   _modal.classList.remove('on');
   _modal.style.height='';
+  _modal.style.top='';
   if(window.visualViewport&&_modal._ceVpResize){
     window.visualViewport.removeEventListener('resize',_modal._ceVpResize);
     window.visualViewport.removeEventListener('scroll',_modal._ceVpResize);
@@ -4237,6 +4264,13 @@ function setEditCaseId(val){
   editingCase.cid=next;
   const inp=document.getElementById('ce-caseid');
   if(inp && inp.value!==next) inp.value=next;
+}
+function handleCaseEditFieldKeydown(event, which){
+  if(!event || event.key!=='Enter') return true;
+  event.preventDefault();
+  if(which==='site'||which==='att') ceComboClose(which);
+  if(event.target && typeof event.target.blur==='function') event.target.blur();
+  return false;
 }
 function getSitesForEdit(){
   try{
@@ -4323,10 +4357,10 @@ function renderCaseEditModal(){
     : 'Using defaults — connect ACGME in Settings to load your program list.';
   // Update resubmit button label based on status
   const _resubBtn=document.getElementById('resubmit-btn');
-  if(_resubBtn) _resubBtn.textContent=c.status==='submitted'?'Re-submit to ACGME':'Submit to ACGME';
+  if(_resubBtn) _resubBtn.textContent=isSubmittedCase(c)?'Re-submit to ACGME':'Submit to ACGME';
   const _statusBadge=(()=>{
-    if(c.status==='submitted') return`<div class="ce-status-badge ok"><span class="ce-status-dot"></span>Submitted to ACGME</div>`;
-    if(c.status==='pending') return`<div class="ce-status-badge warn"><span class="ce-status-dot"></span>Pending — not yet submitted</div>`;
+    if(isSubmittedCase(c)) return`<div class="ce-status-badge ok"><span class="ce-status-dot"></span>Submitted to ACGME</div>`;
+    if(normalizeCaseStatus(c.status)==='pending') return`<div class="ce-status-badge warn"><span class="ce-status-dot"></span>Pending — not yet submitted</div>`;
     return`<div class="ce-status-badge idle"><span class="ce-status-dot"></span>Status unknown</div>`;
   })();
   document.getElementById('case-edit-scroll').innerHTML=`
@@ -4337,7 +4371,7 @@ function renderCaseEditModal(){
     </div>
     <div class="ce-field">
       <div class="ce-label">Case ID</div>
-      <input type="text" class="ce-text-input" id="ce-caseid" maxlength="${CASE_ID_MAX_LEN}" placeholder="Optional case identifier" value="${escAttr(caseIdVal)}" oninput="setEditCaseId(this.value)">
+      <input type="text" class="ce-text-input" id="ce-caseid" maxlength="${CASE_ID_MAX_LEN}" placeholder="Optional case identifier" value="${escAttr(caseIdVal)}" enterkeyhint="done" oninput="setEditCaseId(this.value)" onkeydown="return handleCaseEditFieldKeydown(event)">
     </div>
     <div class="ce-field">
       <div class="ce-label">Procedures</div>
@@ -4355,8 +4389,8 @@ function renderCaseEditModal(){
     <div class="ce-field">
       <div class="ce-label">Site</div>
       <div class="ce-combo" data-which="site">
-        <input type="text" class="ce-sel-input" id="ce-site-inp" placeholder="Search or select site…" autocomplete="off" autocorrect="off" autocapitalize="words" value="${escAttr(c.site||'')}"
-          onfocus="ceComboOpen('site')" oninput="ceComboInputSync('site',this.value)" onblur="setTimeout(function(){ceComboClose('site');},350)">
+        <input type="text" class="ce-sel-input" id="ce-site-inp" placeholder="Search or select site…" autocomplete="off" autocorrect="off" autocapitalize="words" value="${escAttr(c.site||'')}" enterkeyhint="done"
+          onfocus="ceComboOpen('site')" oninput="ceComboInputSync('site',this.value)" onblur="setTimeout(function(){ceComboClose('site');},350)" onkeydown="return handleCaseEditFieldKeydown(event,'site')">
         <div class="ce-combo-panel" id="ce-site-panel"></div>
       </div>
       <div class="ce-combo-hint">${siteHint}</div>
@@ -4364,8 +4398,8 @@ function renderCaseEditModal(){
     <div class="ce-field">
       <div class="ce-label">Attending</div>
       <div class="ce-combo" data-which="att">
-        <input type="text" class="ce-sel-input" id="ce-att-inp" placeholder="Search or select attending…" autocomplete="off" autocorrect="off" autocapitalize="words" value="${escAttr(c.att||'')}"
-          onfocus="ceComboOpen('att')" oninput="ceComboInputSync('att',this.value)" onblur="setTimeout(function(){ceComboClose('att');},350)">
+        <input type="text" class="ce-sel-input" id="ce-att-inp" placeholder="Search or select attending…" autocomplete="off" autocorrect="off" autocapitalize="words" value="${escAttr(c.att||'')}" enterkeyhint="done"
+          onfocus="ceComboOpen('att')" oninput="ceComboInputSync('att',this.value)" onblur="setTimeout(function(){ceComboClose('att');},350)" onkeydown="return handleCaseEditFieldKeydown(event,'att')">
         <div class="ce-combo-panel" id="ce-att-panel"></div>
       </div>
       <div class="ce-combo-hint">${attHint}</div>
@@ -4449,6 +4483,7 @@ function deleteCase(){
 }
 async function resubmitCase(){
   if(!editingCase)return;
+  const priorStatus=normalizeCaseStatus(editingCase.status);
   const btn=document.getElementById('resubmit-btn');
   const overlay=document.getElementById('submit-overlay');
   const labelEl2=document.getElementById('submit-label');
@@ -4482,11 +4517,14 @@ async function resubmitCase(){
         caseId:editingCase.cid||editingCase.caseId||'',
       });
     } catch(e){
-      newStatus='pending';
+      newStatus=priorStatus==='submitted'?'submitted':'pending';
       const hint=/session expired|not authenticated|reconnect/i.test(e.message||'')
         ? '\n\nTip: Signing into CaseArc is separate from your ACGME browser session. Open Settings → ACGME and reconnect if this keeps happening.'
         : '';
-      showErrBanner('Re-submission failed. ACGME error:\n\n'+e.message+'\n\nCase status set to pending. Tap to dismiss.'+hint);
+      const statusNote=priorStatus==='submitted'
+        ? '\n\nYour previously submitted case was left as submitted.'
+        : '\n\nCase status set to pending.';
+      showErrBanner('Re-submission failed. ACGME error:\n\n'+e.message+statusNote+' Tap to dismiss.'+hint);
       console.warn('ACGME resubmit error:',e);
       sendClientLog({source:'case.resubmit',severity:'error',message:e.message||'ACGME resubmit failed',context:{caseId:editingCase?.id||null}});
     }
@@ -5637,6 +5675,8 @@ function applyUserMeta(meta){
     tosVersion:currentUserMeta.tosVersion,
     createdAt:currentUserMeta.createdAt,
     lastLoginAt:currentUserMeta.lastLoginAt,
+    specialty:currentUserMeta.specialty,
+    cptSyncedAt:currentUserMeta.cptSyncedAt,
   };
   localStorage.setItem('cf5-user-meta',JSON.stringify(stored));
   const tosVersionEl=document.getElementById('tos-version-label');
@@ -6333,13 +6373,18 @@ async function loadCasesFromDB(){
       pt:       r.patient_type||'',
       yr:       String(r.case_year||'').replace(/^Year\s+/i,'').trim(),
       notes:    r.notes||'',
-      status:   r.status||'pending',
+      status:   normalizeCaseStatus(r.status),
     }));
-    cases=dbCases;
+    cases=dbCases.filter(isSubmittedCase);
     localStorage.setItem('cf5-cases',JSON.stringify(cases));
   }catch(e){
     console.warn('[CaseFlow] Could not load cases from DB, using local cache:',e.message);
-    cases=JSON.parse(localStorage.getItem('cf5-cases')||'[]');
+    try{
+      const stored=JSON.parse(localStorage.getItem('cf5-cases')||'[]');
+      cases=(Array.isArray(stored)?stored:[]).map(c=>({...c,status:normalizeCaseStatus(c?.status)})).filter(isSubmittedCase);
+    }catch(_){
+      cases=[];
+    }
   }
 }
 
