@@ -21,6 +21,8 @@ const SPECIALTIES = [
       'carpal tunnel release',
       'DIEP flap',
     ],
+    voiceAliases: [],
+    cptRankingRules: [],
   },
   {
     code: 'physical-medicine-rehabilitation',
@@ -37,6 +39,46 @@ const SPECIALTIES = [
       'radiofrequency ablation lumbar facets',
       'chemodenervation extremity',
     ],
+    voiceAliases: [
+      { from: /\bpm&r\b/gi, to: 'physical medicine and rehabilitation' },
+      { from: /\bpmr\b/gi, to: 'physical medicine and rehabilitation' },
+      { from: /\bemg\b/gi, to: 'electromyography' },
+      { from: /\bncs\b/gi, to: 'nerve conduction study' },
+      { from: /\btpi\b/gi, to: 'trigger point injection' },
+      { from: /\besi\b/gi, to: 'epidural steroid injection' },
+      { from: /\btfesi\b/gi, to: 'transforaminal epidural steroid injection' },
+      { from: /\bmbb\b/gi, to: 'medial branch block' },
+      { from: /\brfa\b/gi, to: 'radiofrequency ablation' },
+      { from: /\bcsi\b/gi, to: 'corticosteroid injection' },
+      { from: /\bimage guidance\b/gi, to: 'imaging guidance fluoroscopy computed tomography' },
+    ],
+    cptRankingRules: [
+      {
+        queryAny: ['epidural', 'epidural steroid injection'],
+        boostAny: ['steroid', 'lumbar', 'sacral', 'imaging guidance', 'fluoroscopy', 'computed tomography'],
+        avoidAny: ['lysis', 'adhesion', 'blood patch', 'myelography'],
+      },
+      {
+        queryAny: ['transforaminal', 'tfesi'],
+        boostAny: ['transforaminal', 'lumbar', 'sacral', 'imaging guidance', 'fluoroscopy', 'computed tomography'],
+        avoidAny: ['lysis', 'adhesion', 'blood patch', 'myelography'],
+      },
+      {
+        queryAny: ['medial branch block', 'facet injection'],
+        boostAny: ['medial branch', 'facet', 'zygapophyseal', 'imaging guidance', 'fluoroscopy', 'computed tomography'],
+        avoidAny: ['epidural', 'blood patch', 'myelography'],
+      },
+      {
+        queryAny: ['radiofrequency ablation', 'rfa'],
+        boostAny: ['radiofrequency', 'ablation', 'facet', 'sacroiliac', 'imaging guidance', 'fluoroscopy', 'computed tomography'],
+        avoidAny: ['epidural', 'blood patch', 'myelography'],
+      },
+      {
+        queryAny: ['electromyography', 'nerve conduction study'],
+        boostAny: ['electromyography', 'nerve conduction', 'needle', 'study'],
+        avoidAny: ['injection', 'epidural'],
+      },
+    ],
   },
   {
     code: 'general-surgery',
@@ -52,6 +94,8 @@ const SPECIALTIES = [
       'pancreaticoduodenectomy Whipple',
       'Hartmann procedure',
     ],
+    voiceAliases: [],
+    cptRankingRules: [],
   },
   {
     code: 'orthopaedic-surgery',
@@ -67,6 +111,8 @@ const SPECIALTIES = [
       'lumbar spinal fusion',
       'knee arthroscopy meniscectomy',
     ],
+    voiceAliases: [],
+    cptRankingRules: [],
   },
   {
     code: 'neurosurgery',
@@ -81,6 +127,8 @@ const SPECIALTIES = [
       'deep brain stimulation',
       'carotid endarterectomy',
     ],
+    voiceAliases: [],
+    cptRankingRules: [],
   },
   {
     code: 'otolaryngology',
@@ -95,6 +143,8 @@ const SPECIALTIES = [
       'thyroidectomy total',
       'septoplasty',
     ],
+    voiceAliases: [],
+    cptRankingRules: [],
   },
   {
     code: 'urology',
@@ -109,6 +159,8 @@ const SPECIALTIES = [
       'ureteroscopy laser lithotripsy',
       'pyeloplasty',
     ],
+    voiceAliases: [],
+    cptRankingRules: [],
   },
   {
     code: 'vascular-surgery',
@@ -123,6 +175,8 @@ const SPECIALTIES = [
       'arterial thrombectomy',
       'aortobifemoral bypass',
     ],
+    voiceAliases: [],
+    cptRankingRules: [],
   },
 ];
 

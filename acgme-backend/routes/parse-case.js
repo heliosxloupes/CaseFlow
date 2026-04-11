@@ -13,24 +13,45 @@ function shouldUseStaticCatalog(specialty) {
 function expandSpecialtyVocabulary(text, specialty) {
   let out = String(text || '');
   if (!out) return out;
-  switch (normalizeSpecialtySlug(specialty)) {
-    case 'physical-medicine-rehabilitation':
-      out = out
-        .replace(/\bpm&r\b/gi, 'physical medicine and rehabilitation')
-        .replace(/\bpmr\b/gi, 'physical medicine and rehabilitation')
-        .replace(/\bemg\b/gi, 'electromyography')
-        .replace(/\bncs\b/gi, 'nerve conduction study')
-        .replace(/\btpi\b/gi, 'trigger point injection')
-        .replace(/\besi\b/gi, 'epidural steroid injection')
-        .replace(/\btfesi\b/gi, 'transforaminal epidural steroid injection')
-        .replace(/\bmbb\b/gi, 'medial branch block')
-        .replace(/\brfa\b/gi, 'radiofrequency ablation')
-        .replace(/\bcsi\b/gi, 'corticosteroid injection');
-      break;
-    default:
-      break;
+  const aliases = getSpecialty(specialty).voiceAliases || [];
+  for (const alias of aliases) {
+    if (alias?.from && alias.to != null) {
+      out = out.replace(alias.from, alias.to);
+    }
   }
   return out;
+}
+function tokenizeQuery(text) {
+  return String(text || '')
+    .toLowerCase()
+    .split(/\W+/)
+    .map(w => w.trim())
+    .filter(w => w.length > 2 && !STOPWORDS.has(w));
+}
+function buildQueryPhrases(words) {
+  const phrases = new Set();
+  for (let size = 2; size <= 4; size++) {
+    for (let i = 0; i <= words.length - size; i++) {
+      const phrase = words.slice(i, i + size).join(' ').trim();
+      if (phrase.length >= 8) phrases.add(phrase);
+    }
+  }
+  return [...phrases];
+}
+function scoreSpecialtyRules(queryText, descText, rules = []) {
+  let score = 0;
+  for (const rule of rules) {
+    const queryAny = (rule.queryAny || []).some(term => queryText.includes(term.toLowerCase()));
+    const queryAll = !(rule.queryAll || []).length || (rule.queryAll || []).every(term => queryText.includes(term.toLowerCase()));
+    if (!queryAny && !queryAll) continue;
+    for (const term of rule.boostAny || []) {
+      if (descText.includes(String(term).toLowerCase())) score += 8;
+    }
+    for (const term of rule.avoidAny || []) {
+      if (descText.includes(String(term).toLowerCase())) score -= 10;
+    }
+  }
+  return score;
 }
 
 // api/parse-case.js
@@ -125,10 +146,13 @@ function findCodesFromUserSet(procedureNames, userCodes, specialty = '') {
   if (!procedureNames.length || !userCodes.length) return [];
   const results = [];
   const seen = new Set();
+  const specialtyMeta = getSpecialty(specialty);
+  const rankingRules = specialtyMeta.cptRankingRules || [];
   for (const name of procedureNames) {
     const expandedName = expandSpecialtyVocabulary(name, specialty);
     const normalizedName = expandedName.toLowerCase();
-    const words = normalizedName.split(/\W+/).filter(w => w.length > 2 && !STOPWORDS.has(w));
+    const words = tokenizeQuery(normalizedName);
+    const phrases = buildQueryPhrases(words);
     if (!words.length) continue;
     const scored = [];
     for (const entry of userCodes) {
@@ -137,10 +161,14 @@ function findCodesFromUserSet(procedureNames, userCodes, specialty = '') {
       const haystack = `${entry.code || ''} ${desc} ${area}`;
       let score = 0;
       for (const w of words) {
-        if (haystack.includes(w)) score += w.length >= 8 ? 4 : 2;
+        if (haystack.includes(w)) score += w.length >= 8 ? 5 : 3;
+      }
+      for (const phrase of phrases) {
+        if (haystack.includes(phrase)) score += phrase.length >= 16 ? 12 : 8;
       }
       if (desc.includes(normalizedName)) score += 8;
       if (normalizedName.includes(desc) && desc.length > 10) score += 4;
+      score += scoreSpecialtyRules(normalizedName, haystack, rankingRules);
       if (score > 0) scored.push({ ...entry, score });
     }
     scored.sort((a, b) => b.score - a.score);
@@ -252,6 +280,7 @@ List each procedure separately.`,
       notes: parsed.notes || '',
       suggestedCodes,
       matchingMode: userCodes?.length ? 'user-synced' : (shouldUseStaticCatalog(specialty) ? 'legacy-static' : 'awaiting-sync'),
+      syncedCodeCount: Array.isArray(userCodes) ? userCodes.length : 0,
     });
 
   } catch (err) {

@@ -2994,8 +2994,11 @@ async function processDescription(text){
   let extracted=null;
   const localDate=extractSpokenDate(text);
   const spokenCodeHits=resolveSpokenCptHits(text);
+  const token=localStorage.getItem('cf5-token');
   try{
-    const res=await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:currentSpecialtySlug(),sites:getSitesForEdit(),attendings:getAttendingsForEdit()})});
+    const headers={'Content-Type':'application/json'};
+    if(token) headers['Authorization']=`Bearer ${token}`;
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers,body:JSON.stringify({transcript:text,specialty:currentSpecialtySlug(),sites:getSitesForEdit(),attendings:getAttendingsForEdit()})});
     if(!res.ok)throw new Error();extracted=await res.json()
   }
   catch(e){extracted=localExtract(text)}
@@ -3594,8 +3597,11 @@ async function stopAddMoreVoice(){
   const spokenCodeHits=resolveSpokenCptHits(text);
 
   let extracted = null;
+  const token=localStorage.getItem('cf5-token');
   try {
-    const res = await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:currentSpecialtySlug()})});
+    const headers={'Content-Type':'application/json'};
+    if(token) headers['Authorization']=`Bearer ${token}`;
+    const res = await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers,body:JSON.stringify({transcript:text,specialty:currentSpecialtySlug()})});
     if(!res.ok) throw new Error();
     extracted = await res.json();
   } catch(e) {

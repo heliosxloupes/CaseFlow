@@ -41,7 +41,7 @@ app.use('/api/transcribe', authenticate, transcribeRoutes);
 app.use('/api/milestones', authenticate, milestonesRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/parse-case', parseCaseRoutes);
+app.use('/api/parse-case', authenticate, parseCaseRoutes);
 app.use('/api/code-lookup', codeLookupRoutes);
 
 app.get('/health', (req, res) => {
