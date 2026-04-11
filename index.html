@@ -2624,6 +2624,16 @@ const SPECIALTY_LABELS={
   'urology':'Urology',
   'vascular-surgery':'Vascular Surgery',
 };
+const SPECIALTY_ID_TO_SLUG={
+  '158':'plastic-surgery',
+  '79':'physical-medicine-rehabilitation',
+  '220':'general-surgery',
+  '260':'orthopaedic-surgery',
+  '250':'neurosurgery',
+  '280':'otolaryngology',
+  '420':'urology',
+  '440':'vascular-surgery',
+};
 function normalizeSpecialtyValue(value){
   const raw=String(value||'').trim().toLowerCase();
   if(!raw) return 'plastic-surgery';
@@ -4978,6 +4988,7 @@ async function fetchAcgmeProfile(opts){
     const patientTypes = body.patientTypes || [];
     const rotations = body.rotations || [];
     const formFields = body.formFields || [];
+    const profileSpecialtySlug = SPECIALTY_ID_TO_SLUG[String(body.specialtyId||'')] || '';
     if(sites.length)        localStorage.setItem('cf5-sites',           JSON.stringify(sites));
     if(attendings.length)    localStorage.setItem('cf5-attendings',     JSON.stringify(attendings));
     if(roles.length)         localStorage.setItem('cf5-roles',           JSON.stringify(roles));
@@ -4985,6 +4996,10 @@ async function fetchAcgmeProfile(opts){
     if(rotations.length)    localStorage.setItem('cf5-rotations',      JSON.stringify(rotations));
     localStorage.setItem('cf5-form-fields', JSON.stringify(formFields));
     if(body.residentsId) localStorage.setItem('cf5-residents-id', String(body.residentsId));
+    if(body.specialtyId) localStorage.setItem('cf5-specialty-id', String(body.specialtyId));
+    if(profileSpecialtySlug && profileSpecialtySlug !== currentUserMeta.specialty){
+      applyUserMeta({ specialty: profileSpecialtySlug });
+    }
     _applyProfileToUI(sites, attendings, roles, patientTypes, rotations, formFields);
     acgmeServerSessionActive = true;
     return { ok: true, sitesLen: sites.length, attLen: attendings.length };
@@ -5378,12 +5393,13 @@ function doLogout(skipConfirm){
   if(!skipConfirm && !confirm('Sign out?'))return;
   sessionPassword='';
   adminDiagnostics=null;
-  currentUserMeta={id:null,email:'',name:'',isAdmin:false,betaKeyLabel:'',tosAcceptedAt:null,tosVersion:APP_TOS_VERSION,createdAt:null,lastLoginAt:null,specialty:'plastic-surgery',cptSyncedAt:null,cptCodes:null};
+  currentUserMeta={id:null,email:'',name:'',isAdmin:false,betaKeyLabel:'',tosAcceptedAt:null,tosVersion:APP_TOS_VERSION,createdAt:null,lastLoginAt:null,specialty:'',cptSyncedAt:null,cptCodes:null};
   localStorage.removeItem('cf5-token');
   localStorage.removeItem('cf5-name');
   localStorage.removeItem('cf5-vault');
   localStorage.removeItem('cf5-sites');
   localStorage.removeItem('cf5-attendings');
+  localStorage.removeItem('cf5-specialty-id');
   localStorage.removeItem('cf5-roles');
   localStorage.removeItem('cf5-patient-types');
   localStorage.removeItem('cf5-rotations');
@@ -6667,7 +6683,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   const name=localStorage.getItem('cf5-name')||'';
   const email=localStorage.getItem('cf5-email')||'';
   const storedMeta=JSON.parse(localStorage.getItem('cf5-user-meta')||'null');
+  const cachedSpecialtyId=localStorage.getItem('cf5-specialty-id')||'';
   if(storedMeta) applyUserMeta(storedMeta);
+  if(!currentUserMeta.specialty && cachedSpecialtyId && SPECIALTY_ID_TO_SLUG[cachedSpecialtyId]){
+    applyUserMeta({specialty:SPECIALTY_ID_TO_SLUG[cachedSpecialtyId]});
+  }
   if(token&&jwtValid(token)){
     launchApp(name,email);
   } else {
