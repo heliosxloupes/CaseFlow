@@ -2624,9 +2624,23 @@ const SPECIALTY_LABELS={
   'urology':'Urology',
   'vascular-surgery':'Vascular Surgery',
 };
-function getSpecialtyLabel(slug){return SPECIALTY_LABELS[slug]||'Residency';}
+function normalizeSpecialtyValue(value){
+  const raw=String(value||'').trim().toLowerCase();
+  if(!raw) return 'plastic-surgery';
+  if(raw in SPECIALTY_LABELS) return raw;
+  if(raw==='pmr'||raw==='pm&r'||raw==='physical medicine and rehabilitation'||raw==='physical medicine & rehabilitation') return 'physical-medicine-rehabilitation';
+  if(raw==='plastic surgery'||raw==='integrated-plastic surgery') return 'plastic-surgery';
+  if(raw==='general surgery') return 'general-surgery';
+  if(raw==='orthopaedic surgery'||raw==='orthopedic surgery') return 'orthopaedic-surgery';
+  if(raw==='vascular surgery') return 'vascular-surgery';
+  return raw.replace(/&/g,'and').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
+function getSpecialtyLabel(slug){
+  const normalized=normalizeSpecialtyValue(slug);
+  return SPECIALTY_LABELS[normalized]||'Residency';
+}
 function currentSpecialtySlug(){
-  return String(currentUserMeta?.specialty||'plastic-surgery').trim().toLowerCase()||'plastic-surgery';
+  return normalizeSpecialtyValue(currentUserMeta?.specialty||'plastic-surgery');
 }
 function isStaticCptFallbackAllowed(){
   return currentSpecialtySlug()==='plastic-surgery';
@@ -5731,9 +5745,11 @@ function fmtStamp(iso){
 
 function applyUserMeta(meta){
   if(!meta) return;
+  const normalizedSpecialty=meta.specialty!=null?normalizeSpecialtyValue(meta.specialty):currentSpecialtySlug();
   currentUserMeta={
     ...currentUserMeta,
     ...meta,
+    specialty:normalizedSpecialty,
   };
   const stored={
     email:currentUserMeta.email,
@@ -5966,6 +5982,8 @@ async function launchApp(name,email){
   const firstName = displayName.split(' ')[0];
   const menuName = document.getElementById('sm-hdr-u');
   if(menuName) menuName.textContent = firstName;
+  const specialtyEl=document.getElementById('sm-specialty-label');
+  if(specialtyEl) specialtyEl.textContent=getSpecialtyLabel(currentUserMeta.specialty);
   showPage('pg-app');
   requestAnimationFrame(syncAppBarHeight);
   setTimeout(syncAppBarHeight, 300);
