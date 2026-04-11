@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const pw = require('../services/playwrightService');
-const { generateMilestonesReport, REPORT_NAME } = require('../services/milestonesService');
+const { generateMilestonesReport, REPORT_NAME, cacheReportNameForSpecialty } = require('../services/milestonesService');
 const { logActivity } = require('../services/logService');
 
 async function getMilestonesSession(userId) {
@@ -13,14 +13,21 @@ async function getMilestonesSession(userId) {
   );
 }
 
+async function getUserSpecialty(userId) {
+  const { rows } = await db.query('SELECT specialty FROM users WHERE id = $1 LIMIT 1', [userId]);
+  return rows[0]?.specialty || 'plastic-surgery';
+}
+
 router.get('/latest', async (req, res, next) => {
   try {
+    const specialty = await getUserSpecialty(req.userId);
+    const reportCacheKey = cacheReportNameForSpecialty(specialty);
     const { rows } = await db.query(
       `SELECT report_data, generated_at, report_name
        FROM user_milestones_cache
-       WHERE user_id = $1 AND report_name = $2
-       LIMIT 1`,
-      [req.userId, REPORT_NAME]
+        WHERE user_id = $1 AND report_name = $2
+        LIMIT 1`,
+      [req.userId, reportCacheKey]
     );
 
     if (!rows.length || !rows[0].report_data) {
@@ -37,15 +44,17 @@ router.get('/latest', async (req, res, next) => {
 
 router.post('/generate', async (req, res, next) => {
   try {
+    const specialty = await getUserSpecialty(req.userId);
+    const reportCacheKey = cacheReportNameForSpecialty(specialty);
     const cookieHeader = await getMilestonesSession(req.userId);
-    const report = await generateMilestonesReport(cookieHeader);
+    const report = await generateMilestonesReport(cookieHeader, specialty);
 
     await db.query(
       `INSERT INTO user_milestones_cache (user_id, report_name, report_data, generated_at, updated_at)
        VALUES ($1, $2, $3::jsonb, NOW(), NOW())
        ON CONFLICT (user_id, report_name)
        DO UPDATE SET report_data = EXCLUDED.report_data, generated_at = NOW(), updated_at = NOW()`,
-      [req.userId, REPORT_NAME, JSON.stringify(report)]
+      [req.userId, reportCacheKey, JSON.stringify(report)]
     );
 
     await logActivity({
@@ -54,7 +63,9 @@ router.post('/generate', async (req, res, next) => {
       eventType: 'milestones.generate',
       message: 'Generated milestones report',
       context: {
-        reportName: REPORT_NAME,
+        reportName: reportCacheKey,
+        sourceReportName: report.sourceReportName || REPORT_NAME,
+        specialty,
         categoryCount: Array.isArray(report.categories) ? report.categories.length : 0,
       },
     });
