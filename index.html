@@ -6532,8 +6532,13 @@ document.addEventListener('DOMContentLoaded',()=>{
     updateHomeFloatingUi();
   }
 });
-function isoToday(){return new Date().toISOString().split('T')[0]}
 function pad2(n){return String(n).padStart(2,'0')}
+function localIsoDateValue(date){
+  const dt=date instanceof Date?date:new Date(date);
+  if(Number.isNaN(dt.getTime())) return '';
+  return `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}`;
+}
+function isoToday(){return localIsoDateValue(new Date())}
 function normalizeIsoDate(value){
   if(!value)return null;
   const txt=String(value).trim();
@@ -6551,8 +6556,8 @@ function extractSpokenDate(text){
   const raw=String(text);
   const lo=raw.toLowerCase();
   const now=new Date();
-  if(/\byesterday\b/.test(lo)){const dt=new Date(now);dt.setDate(dt.getDate()-1);return normalizeIsoDate(dt.toISOString().slice(0,10))}
-  if(/\btoday\b/.test(lo))return normalizeIsoDate(now.toISOString().slice(0,10));
+  if(/\byesterday\b/.test(lo)){const dt=new Date(now);dt.setDate(dt.getDate()-1);return normalizeIsoDate(localIsoDateValue(dt))}
+  if(/\btoday\b/.test(lo))return normalizeIsoDate(localIsoDateValue(now));
   const numeric=raw.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
   if(numeric){
     let year=numeric[3]?Number(numeric[3]):now.getFullYear();
