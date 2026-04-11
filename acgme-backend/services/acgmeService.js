@@ -1068,17 +1068,21 @@ function buildInsertFormPayload(token, hidden, caseData, insertHtml) {
     __RequestVerificationToken: token,
     Residents:       residentsVal,
     ProcedureDate:   caseData.procedureDate,
-    ProcedureYear:   caseData.procedureYear,
     ResidentRoles:   caseData.residentRoleId,
     Institutions:    caseData.institutionId,
     Attendings:      caseData.attendingId,
-    PatientTypes:    caseData.patientTypeId,
     HoldSelectedCodes: tupleLike ? 'False' : codes,
     SelectedCodes:     codes,
     CodeDescription: codeDesc,
     Comments:        mergeLocalCaseIdIntoComments(caseData),
     SearchTerm:      'False',
   };
+  if (String(caseData.procedureYear || '').trim()) {
+    body.ProcedureYear = String(caseData.procedureYear).trim();
+  }
+  if (String(caseData.patientTypeId || '').trim()) {
+    body.PatientTypes = String(caseData.patientTypeId).trim();
+  }
   if (caseData.extraFields && typeof caseData.extraFields === 'object') {
     for (const [fieldName, value] of Object.entries(caseData.extraFields)) {
       if (!fieldName) continue;
@@ -1407,7 +1411,8 @@ function standardFieldKeyFromLabel(label = '') {
   if (l === 'role' || l === 'resident role') return 'role';
   if (l === 'site' || l === 'institution') return 'site';
   if (l === 'attending') return 'attending';
-  if (l === 'patient age' || l === 'patient type') return 'patientType';
+  if (l === 'patient age') return 'patientAge';
+  if (l === 'patient type') return 'patientType';
   if (l === 'case id' || l === 'patient id') return 'caseId';
   if (l === 'setting' || l === 'rotation') return 'rotation';
   return null;
@@ -1466,7 +1471,7 @@ function scrapeVisibleFormFields(html) {
     const label = inferLabelForControl(html, name, id) || humanizeFieldName(name);
     const options = parseSelectOptions(html, name);
     if (!options.length) continue;
-    const standardKey = standardFieldKeyFromName(name) || standardFieldKeyFromLabel(label);
+    const standardKey = standardFieldKeyFromLabel(label) || standardFieldKeyFromName(name);
     fields.push({
       key: standardKey || `field:${name}`,
       name,
@@ -1489,7 +1494,7 @@ function scrapeVisibleFormFields(html) {
     seen.add(`input:${name}`);
     const label = inferLabelForControl(html, name, id) || humanizeFieldName(name);
     if (!label) continue;
-    const standardKey = standardFieldKeyFromName(name) || standardFieldKeyFromLabel(label) || (type === 'date' ? 'date' : null);
+    const standardKey = standardFieldKeyFromLabel(label) || standardFieldKeyFromName(name) || (type === 'date' ? 'date' : null);
     fields.push({
       key: standardKey || `field:${name}`,
       name,
@@ -1592,7 +1597,7 @@ async function getUserProfile(sessionCookie) {
     if ((field.standardKey === 'role' || field.name === 'ResidentRoles') && roles.length) {
       return residentRoleSelected ? { ...field, options: roles, selectedId: residentRoleSelected } : { ...field, options: roles };
     }
-    if ((field.standardKey === 'patientType' || field.name === 'PatientTypes') && patientTypes.length) {
+    if ((field.standardKey === 'patientType' || field.standardKey === 'patientAge' || field.name === 'PatientTypes') && patientTypes.length) {
       return patientTypeSelected ? { ...field, options: patientTypes, selectedId: patientTypeSelected } : { ...field, options: patientTypes };
     }
     if ((field.standardKey === 'rotation' || field.name === 'Rotations') && rotations.length) return { ...field, options: rotations };

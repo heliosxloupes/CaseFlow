@@ -19,11 +19,11 @@ function isRetryableAcgmeSessionError(err) {
  * Body shape:
  * {
  *   procedureDate:   "3/28/2026",
- *   procedureYear:   "4",
+ *   procedureYear:   optional, only when the Insert schema includes Procedure Year
  *   residentRoleId:  "119",      ← from /api/lookups/roles
  *   institutionId:   "29262",    ← from /api/lookups (hidden fields on Insert page)
  *   attendingId:     "633696",   ← from /api/lookups
- *   patientTypeId:   "474",      ← from /api/lookups
+ *   patientTypeId:   optional "474" ← from /api/lookups when the Insert schema includes Patient Type / Patient Age
  *   selectedCodes:   "30410" or "P,4780,1118932,1,1;"  ← bare CPT is resolved server-side via GetCodes; tuples pass through
  *   codeDescription: "Breast augmentation",
  *   comments:        ""
@@ -42,7 +42,7 @@ router.post('/submit', async (req, res, next) => {
       extraFields = {},
     } = req.body;
 
-    const required = { procedureDate, procedureYear, residentRoleId, institutionId, attendingId, patientTypeId, selectedCodes };
+    const required = { procedureDate, residentRoleId, institutionId, attendingId, selectedCodes };
     const missing = Object.entries(required).filter(([, v]) => !v).map(([k]) => k);
     if (missing.length) {
       return res.status(400).json({ error: `Missing required fields: ${missing.join(', ')}` });

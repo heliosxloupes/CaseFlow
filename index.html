@@ -187,8 +187,37 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .sm-account-mini .udot{width:6px;height:6px;opacity:.9}
 .sm-account-name{color:rgba(232,237,244,.74);font-weight:600}
 .sm-footer-note{font-size:11px;color:var(--text3);line-height:1.6;margin-bottom:14px}
-.sm-specialty-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25);font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.4px;text-transform:uppercase;margin-bottom:14px}
-.sm-specialty-badge::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--purple);flex-shrink:0}
+.sm-profile-card{
+  position:relative;overflow:hidden;
+  padding:16px 16px 15px;margin-bottom:14px;border-radius:18px;
+  border:1px solid rgba(126,177,255,.14);
+  background:
+    radial-gradient(circle at top right, rgba(99,214,255,.14), transparent 36%),
+    linear-gradient(180deg,rgba(16,23,35,.94) 0%,rgba(10,15,24,.98) 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 16px 36px rgba(0,0,0,.22);
+}
+.sm-profile-card::before{
+  content:"";position:absolute;inset:0 auto auto 0;width:100%;height:1px;
+  background:linear-gradient(90deg,rgba(99,214,255,.34),rgba(167,139,250,.2),transparent 74%);
+}
+.sm-profile-kicker{
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:rgba(177,213,255,.72);margin-bottom:9px;
+}
+.sm-profile-kicker::before{
+  content:"";width:6px;height:6px;border-radius:999px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--blue-soft) 0%,var(--violet-soft) 100%);
+  box-shadow:0 0 10px rgba(99,214,255,.34);
+}
+.sm-profile-name{
+  font-size:19px;font-weight:700;letter-spacing:-.8px;line-height:1.04;color:var(--text);
+}
+.sm-profile-name .muted{color:rgba(232,237,244,.42)}
+.sm-profile-meta{
+  margin-top:10px;font-size:11px;line-height:1.6;color:rgba(217,225,236,.64);
+}
+.sm-profile-meta b{font-weight:600;color:rgba(232,237,244,.84)}
 .sm-logout-btn{
   width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
   padding:13px 14px;border-radius:14px;
@@ -879,6 +908,16 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
   background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(221,180,255,.22) 26%,rgba(255,255,255,.5) 50%,rgba(221,180,255,.14) 74%,rgba(255,255,255,0) 100%);
   animation:submitLoad 1.5s ease-in-out infinite}
 .acgme-verify-status{font-size:11px;color:var(--text3);text-align:center;letter-spacing:.04em}
+.acgme-sync-wrap{display:none;margin-top:14px;padding:14px 12px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px}
+.acgme-sync-wrap.visible{display:block}
+.acgme-sync-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.acgme-sync-title{font-size:12px;font-weight:700;color:var(--text);letter-spacing:.01em}
+.acgme-sync-percent{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums}
+.acgme-sync-bar{height:10px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden;position:relative}
+.acgme-sync-fill{height:100%;width:0%;border-radius:inherit;background:linear-gradient(90deg,rgba(52,211,153,.78) 0%,rgba(96,165,250,.88) 55%,rgba(168,85,247,.92) 100%);box-shadow:0 0 18px rgba(96,165,250,.24);transition:width .38s ease}
+.acgme-sync-typing{min-height:18px;margin-top:10px;font-size:11px;color:var(--text2);letter-spacing:.01em}
+.acgme-sync-typing::after{content:"";display:inline-block;width:1px;height:12px;background:currentColor;margin-left:3px;vertical-align:-2px;animation:cfBlink 1s steps(1,end) infinite}
+@keyframes cfBlink{50%{opacity:0}}
 /* legacy compat */
 .acgme-form-collapse{overflow:hidden;transition:max-height .35s ease,opacity .3s ease;max-height:0;opacity:0}
 .acgme-form-collapse.open{max-height:700px;opacity:1}
@@ -2074,14 +2113,24 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
                   <div class="acgme-step-dot active"></div>
                 </div>
               </div>
-              <div class="acgme-step-title">Verify Identity</div>
-              <div class="acgme-step-desc">Check your email or phone for the ACGME verification code.</div>
+              <div class="acgme-step-title" id="s-step2-title">Verify Identity</div>
+              <div class="acgme-step-desc" id="s-step2-desc">Check your email or phone for the ACGME verification code.</div>
               <div class="acgme-otp-wrap">
                 <input class="acgme-otp-input" id="s-mfa-code" type="text" placeholder="· · · · · ·" autocomplete="one-time-code" inputmode="numeric" maxlength="10">
               </div>
               <!-- Loading ribbon — shown while verifying -->
               <div class="acgme-verify-ribbon" id="s-verify-ribbon" style="display:none"></div>
               <div class="acgme-verify-status" id="s-verify-status" style="display:none">Verifying with ACGME…</div>
+              <div class="acgme-sync-wrap" id="s-sync-wrap" aria-live="polite">
+                <div class="acgme-sync-head">
+                  <div class="acgme-sync-title">Loading your ACGME data</div>
+                  <div class="acgme-sync-percent" id="s-sync-percent">0%</div>
+                </div>
+                <div class="acgme-sync-bar">
+                  <div class="acgme-sync-fill" id="s-sync-fill"></div>
+                </div>
+                <div class="acgme-sync-typing" id="s-sync-typing"></div>
+              </div>
               <button class="acgme-continue-btn" onclick="completeMfaLogin()" id="s-verify-btn">Verify</button>
             </div>
           </div>
@@ -2189,7 +2238,11 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
         <div class="udot"></div>
         <span class="sm-account-name" id="sm-hdr-u">&#8212;</span>
       </div>
-      <div class="sm-specialty-badge" id="sm-specialty-label">Residency</div>
+      <div class="sm-profile-card">
+        <div class="sm-profile-kicker">ACGME Profile</div>
+        <div class="sm-profile-name" id="sm-profile-name">Resident<span class="muted">.</span></div>
+        <div class="sm-profile-meta" id="sm-profile-meta">Program details will appear here after milestones sync.</div>
+      </div>
       <button class="sm-logout-btn" onclick="doLogout()" type="button">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
         <span>Log Out</span>
@@ -2569,7 +2622,7 @@ function makeRec(onResult,onEnd){
   return r;
 }
 // CONVERSATION
-let caseData={description:'',procedures:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:'',rotation:null,extraFields:{}};
+let caseData={description:'',procedures:[],role:null,site:null,attending:null,patientType:null,patientAge:null,caseYear:null,date:null,caseId:'',notes:'',rotation:null,extraFields:{}};
 /** Matches ADS Case ID input (bootstrap-maxlength on apps.acgme.org). */
 const CASE_ID_MAX_LEN=25;
 const APP_TOS_VERSION='2026-03-31';
@@ -2650,13 +2703,41 @@ function getSpecialtyLabel(slug){
   const normalized=normalizeSpecialtyValue(slug);
   return SPECIALTY_LABELS[normalized]||'Residency';
 }
+function getCachedMilestoneIdentity(){
+  try{
+    const raw=localStorage.getItem('cf5-milestone-identity');
+    const parsed=raw?JSON.parse(raw):null;
+    return parsed&&typeof parsed==='object'?parsed:null;
+  }catch(_){
+    return null;
+  }
+}
+function cacheMilestoneIdentity(data){
+  if(!data||typeof data!=='object') return;
+  localStorage.setItem('cf5-milestone-identity',JSON.stringify({
+    residentName:String(data.residentName||'').trim(),
+    specialtyCode:String(data.specialtyCode||'').trim(),
+    sourceAsOf:String(data.sourceAsOf||'').trim(),
+  }));
+}
 function refreshMenuFooterIdentity(){
   const displayName=(currentUserMeta?.name||(currentUserMeta?.email||'').split('@')[0]||'—');
   const firstName = displayName.split(' ')[0] || '—';
   const menuName = document.getElementById('sm-hdr-u');
   if(menuName) menuName.textContent = firstName;
-  const specialtyEl=document.getElementById('sm-specialty-label');
-  if(specialtyEl) specialtyEl.textContent=getSpecialtyLabel(currentUserMeta?.specialty);
+  const profileNameEl=document.getElementById('sm-profile-name');
+  const profileMetaEl=document.getElementById('sm-profile-meta');
+  const cached=getCachedMilestoneIdentity();
+  const residentName=(cached?.residentName||currentUserMeta?.name||displayName||'Resident').trim();
+  if(profileNameEl) profileNameEl.innerHTML=`${escHtml(residentName)}<span class="muted">.</span>`;
+  const metaParts=[];
+  if(cached?.specialtyCode) metaParts.push(`Program <b>${escHtml(cached.specialtyCode)}</b>`);
+  if(cached?.sourceAsOf) metaParts.push(`ACGME as of <b>${escHtml(cached.sourceAsOf)}</b>`);
+  if(profileMetaEl){
+    profileMetaEl.innerHTML=metaParts.length
+      ? metaParts.join(' <span style="opacity:.4">·</span> ')
+      : 'Open <b>Milestones</b> to pull in your latest ACGME identity snapshot.';
+  }
 }
 function currentSpecialtySlug(){
   return normalizeSpecialtyValue(currentUserMeta?.specialty||'plastic-surgery');
@@ -2705,7 +2786,8 @@ function inferStandardFieldKey(field){
   if(label==='role'||name==='residentroles') return 'role';
   if(label==='site'||name==='institutions') return 'site';
   if(label==='attending'||name==='attendings') return 'attending';
-  if(label==='patient age'||label==='patient type'||name==='patienttypes') return 'patientType';
+  if(label==='patient age') return 'patientAge';
+  if(label==='patient type'||name==='patienttypes') return 'patientType';
   return '';
 }
 function getAcgmeFormFields(){
@@ -2719,11 +2801,22 @@ function getAcgmeFieldValue(key,name){
   if(key==='site') return caseData.site||'';
   if(key==='attending') return caseData.attending||'';
   if(key==='patientType') return caseData.patientType||'';
+  if(key==='patientAge') return caseData.patientAge||'';
   if(key==='caseYear') return caseData.caseYear||'';
   if(key==='date') return caseData.date||'';
   if(key==='caseId') return caseData.caseId||'';
   if(key==='rotation') return caseData.rotation||caseData.extraFields?.[name]||'';
   return caseData.extraFields?.[name]||'';
+}
+function normalizeQuestionOptionValue(questionKey, val){
+  const s=String(val||'').trim();
+  if(!s) return '';
+  const labels=((QUESTIONS.find(q=>q.key===questionKey)||{}).options||[]).map(String).filter(Boolean);
+  if(!labels.length) return s;
+  if(labels.includes(s)) return s;
+  const lo=s.toLowerCase();
+  const exact=labels.find(l=>l.toLowerCase()===lo);
+  return exact||'';
 }
 function normalizePatientTypeValue(val){
   const s=String(val||'').trim();
@@ -2743,6 +2836,9 @@ function normalizePatientTypeValue(val){
     if(pediatric) return pediatric;
   }
   return '';
+}
+function normalizePatientAgeValue(val){
+  return normalizeQuestionOptionValue('patientAge', val);
 }
 function normalizeCaseYearValue(val){
   const s=String(val||'').trim();
@@ -2769,6 +2865,44 @@ function getPreferredPatientTypeValue(){
   }
   const labels=((QUESTIONS.find(q=>q.key==='patientType')||{}).options||[]).map(String).filter(Boolean);
   return labels[0]||'';
+}
+function getPreferredPatientAgeValue(){
+  const normalized=normalizePatientAgeValue(caseData.patientAge);
+  if(normalized) return normalized;
+  const ageField=getAcgmeFormFields().find(f=>inferStandardFieldKey(f)==='patientAge');
+  if(ageField?.selectedId&&Array.isArray(ageField.options)){
+    const selected=ageField.options.find(o=>String(o.id||'')===String(ageField.selectedId));
+    const selectedLabel=normalizePatientAgeValue(selected?.label);
+    if(selectedLabel) return selectedLabel;
+  }
+  const labels=((QUESTIONS.find(q=>q.key==='patientAge')||{}).options||[]).map(String).filter(Boolean);
+  return labels[0]||'';
+}
+function getActivePatientFieldConfig(){
+  const fields=getAcgmeFormFields();
+  const patientTypeField=fields.find(f=>inferStandardFieldKey(f)==='patientType');
+  if(patientTypeField){
+    return {
+      key:'patientType',
+      label:patientTypeField.label||'Patient Type',
+      options:((QUESTIONS.find(q=>q.key==='patientType')||{}).options||[]).map(String).filter(Boolean),
+      get:()=>caseData.patientType||'',
+      set:v=>{ caseData.patientType=normalizePatientTypeValue(v); },
+      preferred:getPreferredPatientTypeValue,
+    };
+  }
+  const patientAgeField=fields.find(f=>inferStandardFieldKey(f)==='patientAge');
+  if(patientAgeField){
+    return {
+      key:'patientAge',
+      label:patientAgeField.label||'Patient Age',
+      options:((QUESTIONS.find(q=>q.key==='patientAge')||{}).options||[]).map(String).filter(Boolean),
+      get:()=>caseData.patientAge||'',
+      set:v=>{ caseData.patientAge=normalizePatientAgeValue(v); },
+      preferred:getPreferredPatientAgeValue,
+    };
+  }
+  return null;
 }
 function getPreferredRoleValue(){
   const current=String(caseData.role||'').trim();
@@ -2799,6 +2933,7 @@ function setAcgmeFieldValue(key,name,val){
   if(key==='site'){caseData.site=val;return;}
   if(key==='attending'){caseData.attending=val;return;}
   if(key==='patientType'){caseData.patientType=normalizePatientTypeValue(val);return;}
+  if(key==='patientAge'){caseData.patientAge=normalizePatientAgeValue(val);return;}
   if(key==='caseYear'){caseData.caseYear=normalizeCaseYearValue(val);return;}
   if(key==='date'){caseData.date=val;return;}
   if(key==='caseId'){caseData.caseId=String(val||'').slice(0,CASE_ID_MAX_LEN);return;}
@@ -2843,6 +2978,7 @@ function syncDynamicAcgmeFields(){
       });
       continue;
     }
+    if(['patientType','patientAge','caseYear'].includes(standardKey||'')) continue;
     if(standardKey||!field.required) continue;
     QUESTIONS.push({
       key:field.key,
@@ -2873,8 +3009,6 @@ const QUESTIONS=[
   {key:'role',isEmpty:()=>{ const q=QUESTIONS.find(x=>x.key==='role'); return !caseData.role || (q.options && !q.options.includes(caseData.role)); },question:'What was your role in this case?',type:'chips',options:['Surgeon','Assistant','Teaching Assistant','Observer']},
   {key:'site',isEmpty:()=>!caseData.site,question:'At which hospital or site was this performed?',type:'combo',combo:'site'},
   {key:'attending',isEmpty:()=>!caseData.attending,question:'Who was the attending physician?',type:'combo',combo:'att'},
-  {key:'patientType',isEmpty:()=>!caseData.patientType,question:'Was this an adult or pediatric patient?',type:'chips',options:['Adult','Pediatric']},
-  {key:'caseYear',isEmpty:()=>!caseData.caseYear,question:'What year of residency are you in?',type:'chips',options:['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6']},
 ];
 function hideTextInput(){
   // box is always visible on home; just reset its state
@@ -3036,7 +3170,11 @@ async function processDescription(text){
   }
   catch(e){extracted=localExtract(text)}
   if(extracted.role)caseData.role=extracted.role;
-  if(extracted.patientType)caseData.patientType=normalizePatientTypeValue(extracted.patientType);
+  if(extracted.patientType){
+    const patientField=getActivePatientFieldConfig();
+    if(patientField) patientField.set(extracted.patientType);
+    else caseData.patientType=normalizePatientTypeValue(extracted.patientType);
+  }
   if(extracted.caseYear)caseData.caseYear=normalizeCaseYearValue(extracted.caseYear);
   if(extracted.attending)caseData.attending=extracted.attending;
   if(extracted.site)caseData.site=extracted.site;
@@ -3723,8 +3861,6 @@ const SUMMARY_FIELDS = [
   {key:'role',      label:'Role',      type:'chips', get:()=>caseData.role,      set:v=>{caseData.role=v},      options:['Surgeon','Assistant','Teaching Assistant','Observer']},
   {key:'site',      label:'Site',      type:'combo', combo:'site', get:()=>caseData.site,      set:v=>{caseData.site=v}},
   {key:'attending', label:'Attending', type:'combo', combo:'att', get:()=>caseData.attending, set:v=>{caseData.attending=v}},
-  {key:'patient',   label:'Patient',   type:'chips', get:()=>caseData.patientType,set:v=>{caseData.patientType=v},options:['Adult','Pediatric']},
-  {key:'year',      label:'Year',      type:'chips', get:()=>caseData.caseYear,  set:v=>{caseData.caseYear=v},  options:['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6']},
   {key:'caseId',    label:'Case ID',   type:'caseid', get:()=>caseData.caseId,    set:v=>{caseData.caseId=v},    placeholder:'Maps to ACGME Case ID field (max 25 chars)'},
 ];
 let summaryEditKey = null;
@@ -4029,13 +4165,14 @@ async function submitCase(){
   // Final fallback: read directly from SUMMARY_FIELDS getter (always current)
   const _dateField=SUMMARY_FIELDS.find(f=>f.key==='date');
   const _finalDate=caseData.date||(_dateField&&_dateField.get())||isoToday();
+  const activePatientField=getActivePatientFieldConfig();
   const payload={
     date:_finalDate,
     procs:caseData.procedures,
     role:caseData.role||'Surgeon',
     site:caseData.site||'',
     att:caseData.attending||'',
-    pt:getPreferredPatientTypeValue(),
+    pt:activePatientField?activePatientField.preferred():'',
     yr:getPreferredCaseYearValue().replace(/^Year\s+/i,''),
     notes:caseData.notes||'',
     caseId:caseData.caseId||'',
@@ -4106,7 +4243,7 @@ function resetFlow(){
   stopMic();
   savedMicStream=null;
   txFinal='';txInt='';fuFinal='';fuInt='';addMoreFinal='';addMoreInt='';
-  caseData={description:'',procedures:[],alternatives:[],role:null,site:null,attending:null,patientType:null,caseYear:null,date:null,caseId:'',notes:'',rotation:null,extraFields:{}};
+  caseData={description:'',procedures:[],alternatives:[],role:null,site:null,attending:null,patientType:null,patientAge:null,caseYear:null,date:null,caseId:'',notes:'',rotation:null,extraFields:{}};
   pendingQs=[];currentQ=-1;
   orbState='idle';
   clearHomeFlowPanels();
@@ -4447,6 +4584,8 @@ function ceComboInputSync(which, val){
 function renderCaseEditModal(){
   if(!editingCase)return;
   const c=editingCase;
+  const activePatientField=getActivePatientFieldConfig();
+  const activeYearField=getAcgmeFormFields().find(f=>inferStandardFieldKey(f)==='caseYear');
   const caseIdVal=(c.caseId||c.cid||'').slice(0,CASE_ID_MAX_LEN);
   const siteHint=hasProfileCache('cf5-sites')
     ? 'Options from your ACGME program (saved on this device).'
@@ -4457,6 +4596,23 @@ function renderCaseEditModal(){
   // Update resubmit button label based on status
   const _resubBtn=document.getElementById('resubmit-btn');
   if(_resubBtn) _resubBtn.textContent=isSubmittedCase(c)?'Re-submit to ACGME':'Submit to ACGME';
+  const patientHtml=activePatientField&&CE_PATIENTS.length
+    ? `<div class="ce-field">
+      <div class="ce-label">${escHtml(activePatientField.label||'Patient')}</div>
+      <div class="ce-chips">${CE_PATIENTS.map(o=>`<div class="ce-chip${c.pt===o?' active':''}" onclick="setCeField('pt','${o}',this,'ce-pt')">${o}</div>`).join('')}</div>
+    </div>`
+    : '';
+  const yearHtml=CE_YEARS.length
+    ? `<div class="ce-field">
+      <div class="ce-label">${escHtml(activeYearField?.label||'Year of Residency')}</div>
+      <div class="ce-chips">${CE_YEARS.map(o=>{
+        const normalizedOption=normalizeCaseYearValue(o);
+        const normalizedCurrent=normalizeCaseYearValue(c.yr);
+        const submitValue=String(o).replace(/^Year\\s+/i,'');
+        return `<div class="ce-chip${normalizedCurrent===normalizedOption?' active':''}" onclick="setCeField('yr','${submitValue}',this,'ce-yr')">${o}</div>`;
+      }).join('')}</div>
+    </div>`
+    : '';
   const _statusBadge=(()=>{
     if(isSubmittedCase(c)) return`<div class="ce-status-badge ok"><span class="ce-status-dot"></span>Submitted to ACGME</div>`;
     if(normalizeCaseStatus(c.status)==='pending') return`<div class="ce-status-badge warn"><span class="ce-status-dot"></span>Pending — not yet submitted</div>`;
@@ -4503,19 +4659,8 @@ function renderCaseEditModal(){
       </div>
       <div class="ce-combo-hint">${attHint}</div>
     </div>
-    <div class="ce-field">
-      <div class="ce-label">Patient</div>
-      <div class="ce-chips">${CE_PATIENTS.map(o=>`<div class="ce-chip${c.pt===o?' active':''}" onclick="setCeField('pt','${o}',this,'ce-pt')">${o}</div>`).join('')}</div>
-    </div>
-    <div class="ce-field">
-      <div class="ce-label">Year of Residency</div>
-      <div class="ce-chips">${CE_YEARS.map(o=>{
-        const normalizedOption=normalizeCaseYearValue(o);
-        const normalizedCurrent=normalizeCaseYearValue(c.yr);
-        const submitValue=String(o).replace(/^Year\\s+/i,'');
-        return `<div class="ce-chip${normalizedCurrent===normalizedOption?' active':''}" onclick="setCeField('yr','${submitValue}',this,'ce-yr')">${o}</div>`;
-      }).join('')}</div>
-    </div>`;
+    ${patientHtml}
+    ${yearHtml}`;
   setTimeout(()=>{
     ceComboFilter('site', c.site||'');
     ceComboFilter('att', c.att||'');
@@ -4695,6 +4840,13 @@ async function decryptVault(blob, password){
 let sessionPassword = ''; // set on login, used as encryption key
 /** Set from GET /api/auth/acgme-status — false means Insert probe failed on server; sites/attendings won't load until reconnect/verify. */
 let acgmeServerSessionActive = true;
+let acgmeSyncState = {
+  active: false,
+  progress: 0,
+  typingTimer: null,
+  closingTimer: null,
+  messageNonce: 0,
+};
 function loadSettingsUI(){
   const blob = JSON.parse(localStorage.getItem('cf5-vault')||'null');
   const dot = document.getElementById('s-status-dot');
@@ -4798,11 +4950,74 @@ function toggleAcgmeForm(){
     if(vb){vb.style.display='block';vb.textContent='Verify';}
     const cred=document.getElementById('s-cred-status');
     if(cred){cred.textContent='';cred.className='settings-cred-status';}
+    const step2Title=document.getElementById('s-step2-title');
+    const step2Desc=document.getElementById('s-step2-desc');
+    if(step2Title) step2Title.textContent='Verify Identity';
+    if(step2Desc) step2Desc.textContent='Check your email or phone for the ACGME verification code.';
+    resetAcgmeSyncUi();
     loadSettingsUI();
   }
 }
 // Stores the MFA sessionId while we wait for the user's OTP code
 let _pendingMfaSessionId = null;
+
+function resetAcgmeSyncUi(){
+  acgmeSyncState.active = false;
+  acgmeSyncState.progress = 0;
+  acgmeSyncState.messageNonce += 1;
+  if(acgmeSyncState.typingTimer){
+    clearTimeout(acgmeSyncState.typingTimer);
+    acgmeSyncState.typingTimer = null;
+  }
+  if(acgmeSyncState.closingTimer){
+    clearTimeout(acgmeSyncState.closingTimer);
+    acgmeSyncState.closingTimer = null;
+  }
+  const wrap=document.getElementById('s-sync-wrap');
+  const fill=document.getElementById('s-sync-fill');
+  const pct=document.getElementById('s-sync-percent');
+  const typing=document.getElementById('s-sync-typing');
+  if(wrap) wrap.classList.remove('visible');
+  if(fill) fill.style.width='0%';
+  if(pct) pct.textContent='0%';
+  if(typing) typing.textContent='';
+}
+
+function setAcgmeSyncProgress(progress, message){
+  const wrap=document.getElementById('s-sync-wrap');
+  const fill=document.getElementById('s-sync-fill');
+  const pct=document.getElementById('s-sync-percent');
+  if(wrap) wrap.classList.add('visible');
+  const safe=Math.max(0,Math.min(100,Math.round(progress||0)));
+  acgmeSyncState.progress = safe;
+  if(fill) fill.style.width=`${safe}%`;
+  if(pct) pct.textContent=`${safe}%`;
+  if(message) typeAcgmeSyncMessage(message);
+}
+
+function typeAcgmeSyncMessage(message){
+  const el=document.getElementById('s-sync-typing');
+  if(!el) return;
+  const text=String(message||'').trim();
+  const nonce=++acgmeSyncState.messageNonce;
+  if(acgmeSyncState.typingTimer){
+    clearTimeout(acgmeSyncState.typingTimer);
+    acgmeSyncState.typingTimer = null;
+  }
+  el.textContent='';
+  let idx=0;
+  const tick=()=>{
+    if(nonce!==acgmeSyncState.messageNonce) return;
+    el.textContent=text.slice(0, idx);
+    if(idx<text.length){
+      idx += 1;
+      acgmeSyncState.typingTimer=setTimeout(tick, 18);
+    } else {
+      acgmeSyncState.typingTimer = null;
+    }
+  };
+  tick();
+}
 
 function setAcgmeLoadingStatus(kicker, text){
   const statusEl = document.getElementById('s-cred-status');
@@ -4898,7 +5113,7 @@ async function saveAcgmeCredentials(){
       throw new Error('No backend configured and session expired. Please sign out and back in.');
     }
 
-    _finishAcgmeConnect();
+    await _finishAcgmeConnect();
   } catch(e){
     statusEl.textContent = e.message;
     statusEl.className = 'settings-cred-status err';
@@ -4934,7 +5149,7 @@ async function completeMfaLogin(){
     if(!resp.ok) throw new Error(data.error||'MFA verification failed');
     localStorage.setItem('cf5-vault', JSON.stringify({saved:true}));
     _pendingMfaSessionId = null;
-    _finishAcgmeConnect();
+    await _finishAcgmeConnect();
   } catch(e){
     // Hide ribbon, restore button
     if(ribbon) ribbon.style.display = 'none';
@@ -4946,20 +5161,38 @@ async function completeMfaLogin(){
   }
 }
 
-function _finishAcgmeConnect(){
+async function _finishAcgmeConnect(){
+  const mfaWrap=document.getElementById('s-mfa-section');
+  const step1=document.getElementById('s-step1-card');
+  const step2=document.getElementById('s-step2-card');
+  const step2Title=document.getElementById('s-step2-title');
+  const step2Desc=document.getElementById('s-step2-desc');
+  if(mfaWrap) mfaWrap.style.display = 'block';
+  if(step1) step1.style.display = 'none';
+  if(step2) step2.classList.add('visible');
+  if(step2Title) step2Title.textContent = 'Syncing ACGME Profile';
+  if(step2Desc) step2Desc.textContent = 'We are loading your tracked CPT codes, attendings, sites, and program fields.';
   document.getElementById('s-acgme-user').value = '';
   document.getElementById('s-acgme-pass').value = '';
   document.getElementById('s-mfa-code').value = '';
   document.getElementById('s-cred-status').textContent = '';
-  document.getElementById('s-mfa-section').style.display = 'none';
   _pendingMfaSessionId = null;
-  document.getElementById('s-acgme-form').classList.remove('open');
+  acgmeServerSessionActive = true;
   loadSettingsUI();
   toast('ACGME account connected ✓','ok');
-  acgmeServerSessionActive = true;
-  fetchAcgmeProfile({ afterNewLogin: true });
-  // Refresh user meta (specialty, cptSyncedAt) then re-render status card with live data
-  syncUserMetaFromServer().then(() => loadSettingsUI()).catch(() => {});
+  const verifyStatus=document.getElementById('s-verify-status');
+  if(verifyStatus){
+    verifyStatus.style.display = 'block';
+    verifyStatus.textContent = 'Verified with ACGME. Syncing your profile…';
+  }
+  const ribbon=document.getElementById('s-verify-ribbon');
+  if(ribbon) ribbon.style.display = 'block';
+  const verifyBtn=document.getElementById('s-verify-btn');
+  if(verifyBtn) verifyBtn.style.display = 'none';
+  resetAcgmeSyncUi();
+  acgmeSyncState.active = true;
+  setAcgmeSyncProgress(12, 'Preparing your ACGME connection for program sync');
+  await runAcgmePostConnectSync();
 }
 
 /**
@@ -5014,10 +5247,35 @@ async function fetchAcgmeProfile(opts){
     } else if(afterNew && !result.sitesLen && !result.attLen){
       toast('Connected, but ACGME returned no sites/attendings. Try Edit → Save again, or check Railway logs.', '');
     }
+    loadSettingsUI();
+    return result;
   } catch(e){ console.warn('fetchAcgmeProfile:', e.message); toast(e.message, ''); }
+  return { ok:false, error:'Could not load ACGME profile.' };
 }
 
 /** Patches QUESTIONS and SUMMARY_FIELDS with fetched profile data */
+function upsertQuestion(def){
+  const idx=QUESTIONS.findIndex(q=>q.key===def.key);
+  if(idx>=0) QUESTIONS[idx]={...QUESTIONS[idx],...def};
+  else QUESTIONS.push(def);
+}
+function removeQuestion(key){
+  const idx=QUESTIONS.findIndex(q=>q.key===key);
+  if(idx>=0) QUESTIONS.splice(idx,1);
+}
+function upsertSummaryField(def){
+  const idx=SUMMARY_FIELDS.findIndex(f=>f.key===def.key);
+  if(idx>=0) SUMMARY_FIELDS[idx]={...SUMMARY_FIELDS[idx],...def};
+  else{
+    const caseIdIdx=SUMMARY_FIELDS.findIndex(f=>f.key==='caseId');
+    if(caseIdIdx>=0) SUMMARY_FIELDS.splice(caseIdIdx,0,def);
+    else SUMMARY_FIELDS.push(def);
+  }
+}
+function removeSummaryField(key){
+  const idx=SUMMARY_FIELDS.findIndex(f=>f.key===key);
+  if(idx>=0) SUMMARY_FIELDS.splice(idx,1);
+}
 function _applyProfileToUI(sites, attendings, roles, patientTypes, rotations, formFields){
   const siteLabels = (sites||[]).map(s=>s.label);
   const attLabels  = (attendings||[]).map(a=>a.label);
@@ -5061,36 +5319,80 @@ function _applyProfileToUI(sites, attendings, roles, patientTypes, rotations, fo
       caseData.role=roleLabels[0];
     }
   }
-  if(ptLabels.length){
-    const qPt = QUESTIONS.find(q=>q.key==='patientType');
-    const sPt = SUMMARY_FIELDS.find(f=>f.key==='patient');
-    if(qPt) qPt.options = ptLabels;
-    if(sPt) sPt.options = ptLabels;
-    const ptField=fields.find(f=>inferStandardFieldKey(f)==='patientType');
-    if(qPt&&ptField?.label) qPt.question=`What ${ptField.label.replace(/\*+$/,'').trim().toLowerCase()} applies to this case?`;
-    if(sPt&&ptField?.label) sPt.label=ptField.label;
-    CE_PATIENTS.length=0;
+  const patientTypeField=fields.find(f=>inferStandardFieldKey(f)==='patientType');
+  const patientAgeField=fields.find(f=>inferStandardFieldKey(f)==='patientAge');
+  const activePatientField=patientTypeField||patientAgeField;
+  CE_PATIENTS.length=0;
+  if(activePatientField&&ptLabels.length){
+    const patientKey=patientTypeField?'patientType':'patientAge';
+    const normalizePatientValue=patientKey==='patientType'?normalizePatientTypeValue:normalizePatientAgeValue;
+    const getPatientValue=()=>patientKey==='patientType'?caseData.patientType:caseData.patientAge;
+    const setPatientValue=v=>{
+      if(patientKey==='patientType') caseData.patientType=normalizePatientTypeValue(v);
+      else caseData.patientAge=normalizePatientAgeValue(v);
+    };
+    upsertQuestion({
+      key:patientKey,
+      isEmpty:()=>!getPatientValue(),
+      question:`What ${activePatientField.label.replace(/\*+$/,'').trim().toLowerCase()} applies to this case?`,
+      type:shouldUseChipsForField(activePatientField)?'chips':'select',
+      options:ptLabels,
+      set:setPatientValue,
+    });
+    upsertSummaryField({
+      key:patientKey,
+      label:activePatientField.label||'Patient',
+      type:shouldUseChipsForField(activePatientField)?'chips':'select',
+      options:ptLabels,
+      get:getPatientValue,
+      set:setPatientValue,
+    });
+    removeQuestion(patientKey==='patientType'?'patientAge':'patientType');
+    removeSummaryField(patientKey==='patientType'?'patientAge':'patientType');
     ptLabels.forEach(l=>CE_PATIENTS.push(l));
-    if(ptField?.selectedId&&ptField?.options?.length){
-      const selected=ptField.options.find(o=>String(o.id||'')===String(ptField.selectedId));
-      const normalized=normalizePatientTypeValue(selected?.label);
-      if(normalized && (!caseData.patientType || !ptLabels.includes(caseData.patientType))) caseData.patientType=normalized;
-    } else if(!caseData.patientType || !ptLabels.includes(caseData.patientType)){
-      caseData.patientType=ptLabels[0];
+    if(activePatientField?.selectedId&&activePatientField?.options?.length){
+      const selected=activePatientField.options.find(o=>String(o.id||'')===String(activePatientField.selectedId));
+      const normalized=normalizePatientValue(selected?.label);
+      if(normalized && (!getPatientValue() || !ptLabels.includes(getPatientValue()))) setPatientValue(normalized);
+    } else if(!getPatientValue() || !ptLabels.includes(getPatientValue())){
+      setPatientValue(ptLabels[0]);
     }
+  } else {
+    removeQuestion('patientType');
+    removeQuestion('patientAge');
+    removeSummaryField('patientType');
+    removeSummaryField('patientAge');
+    caseData.patientType='';
+    caseData.patientAge='';
   }
   const yearField=fields.find(f=>inferStandardFieldKey(f)==='caseYear');
-  const qYear=QUESTIONS.find(q=>q.key==='caseYear');
-  const sYear=SUMMARY_FIELDS.find(f=>f.key==='year');
   const yearLabels=optionLabelsForField(yearField);
-  if(qYear&&yearLabels.length) qYear.options=yearLabels;
-  if(sYear&&yearLabels.length) sYear.options=yearLabels;
+  if(yearField&&yearLabels.length){
+    upsertQuestion({
+      key:'caseYear',
+      isEmpty:()=>!caseData.caseYear,
+      question:`What ${yearField.label.replace(/\*+$/,'').trim().toLowerCase()} applies?`,
+      type:shouldUseChipsForField(yearField)?'chips':'select',
+      options:yearLabels,
+      set:v=>{caseData.caseYear=normalizeCaseYearValue(v);},
+    });
+    upsertSummaryField({
+      key:'caseYear',
+      label:yearField.label||'Year',
+      type:shouldUseChipsForField(yearField)?'chips':'select',
+      options:yearLabels,
+      get:()=>caseData.caseYear,
+      set:v=>{caseData.caseYear=normalizeCaseYearValue(v);},
+    });
+  } else {
+    removeQuestion('caseYear');
+    removeSummaryField('caseYear');
+    caseData.caseYear='';
+  }
+  CE_YEARS.length=0;
   if(yearLabels.length){
-    CE_YEARS.length=0;
     yearLabels.forEach(l=>CE_YEARS.push(l));
   }
-  if(qYear&&yearField?.label) qYear.question=`What ${yearField.label.replace(/\*+$/,'').trim().toLowerCase()} applies?`;
-  if(sYear&&yearField?.label) sYear.label=yearField.label;
   if(yearField?.selectedId&&yearField?.options?.length){
     const selected=yearField.options.find(o=>String(o.id||'')===String(yearField.selectedId));
     if(selected){
@@ -5146,7 +5448,7 @@ function buildAcgmeExtraFieldsPayload(){
   for(const field of getAcgmeFormFields()){
     if(!field||!field.name) continue;
     const standardKey=inferStandardFieldKey(field);
-    if(['role','site','attending','patientType','caseYear','date','caseId','resident'].includes(standardKey||'')) continue;
+    if(['role','site','attending','patientType','patientAge','caseYear','date','caseId','resident'].includes(standardKey||'')) continue;
     const raw=getAcgmeFieldValue(standardKey||field.key,field.name);
     if(raw==null||String(raw).trim()==='') continue;
     if(field.type==='select'){
@@ -5196,24 +5498,22 @@ async function callSubmitAcgme(casePayload){
   const procs = casePayload.procs || [];
   if(!procs.length) throw new Error('No procedures to submit');
 
-  const preferredRole = getPreferredRoleValue();
-  const preferredPatientType = getPreferredPatientTypeValue();
-  const preferredCaseYear = getPreferredCaseYearValue();
+  const preferredRole = String(casePayload.role||getPreferredRoleValue()||'').trim();
+  const activePatientField = getActivePatientFieldConfig();
+  const preferredPatientValue = activePatientField ? String(casePayload.pt||activePatientField.preferred()||'').trim() : '';
+  const preferredCaseYear = normalizeCaseYearValue(casePayload.yr||getPreferredCaseYearValue());
   const roleIdRaw = resolveProfileId('cf5-roles', preferredRole) || '';
-  const ptIdRaw   = resolveProfileId('cf5-patient-types', preferredPatientType) || '';
+  const ptIdRaw   = activePatientField ? (resolveProfileId('cf5-patient-types', preferredPatientValue) || '') : '';
   const siteIdRaw = resolveProfileId('cf5-sites',      casePayload.site) || '';
   const attIdRaw  = resolveProfileId('cf5-attendings', casePayload.att) || '';
   const roleId    = assertNumericAcgmeId(roleIdRaw, 'role');
-  const ptId      = assertNumericAcgmeId(ptIdRaw, 'patient type');
   const institutionId = assertNumericAcgmeId(siteIdRaw, 'site');
   const attendingId   = assertNumericAcgmeId(attIdRaw, 'attending');
   const body={
     procedureDate:   formatAcgmeDate(casePayload.date),
-    procedureYear:   String(preferredCaseYear).replace(/^Year\s+/i,''),
     residentRoleId:  roleId,
     institutionId:   institutionId,
     attendingId:     attendingId,
-    patientTypeId:   ptId,
     selectedCodes:   procs.map(p=>p.c).join(','),
     codeDescription: procs.map(p=>p.d).join(', '),
     comments:        casePayload.notes||'',
@@ -5221,6 +5521,12 @@ async function callSubmitAcgme(casePayload){
     residentsId:     localStorage.getItem('cf5-residents-id') || '',
     extraFields:     buildAcgmeExtraFieldsPayload(),
   };
+  if(activePatientField){
+    body.patientTypeId = assertNumericAcgmeId(ptIdRaw, activePatientField.label||'patient field');
+  }
+  if(getAcgmeFormFields().find(f=>inferStandardFieldKey(f)==='caseYear')){
+    body.procedureYear = String(preferredCaseYear).replace(/^Year\s+/i,'');
+  }
 
   const resp=await fetch(`${ACGME_BACKEND_URL}/api/cases/submit`,{
     method:'POST',
@@ -5825,6 +6131,7 @@ async function syncUserMetaFromServer(){
       });
       // Load cached CPT codes from server (non-blocking)
       loadUserCptCodes();
+      loadSettingsUI();
     }
     return payload;
   }catch(e){
@@ -5843,13 +6150,91 @@ async function loadUserCptCodes(){
     });
     if(!res.ok) return;
     const data=await res.json();
+    currentUserMeta.cptCodes=Array.isArray(data.codes)?data.codes:[];
+    if(data.syncedAt) currentUserMeta.cptSyncedAt=data.syncedAt;
     if(data.codes?.length){
-      currentUserMeta.cptCodes=data.codes;
       console.log(`[CPT] Loaded ${data.codes.length} user-synced codes`);
     }
+    loadSettingsUI();
+    return data;
   }catch(e){
     console.warn('loadUserCptCodes:',e.message);
   }
+  return null;
+}
+
+async function runAcgmePostConnectSync(){
+  const initialSyncedAt = currentUserMeta.cptSyncedAt || null;
+  let profileResult = null;
+  let metaPayload = null;
+  let cptPayload = null;
+  try{
+    setAcgmeSyncProgress(22, 'Loading your ACGME sites, attendings, and form fields');
+    profileResult = await fetchAcgmeProfile({ afterNewLogin: true });
+
+    setAcgmeSyncProgress(54, 'Refreshing your specialty and CPT sync status');
+    metaPayload = await syncUserMetaFromServer();
+
+    setAcgmeSyncProgress(72, 'Checking for tracked CPT codes from your ACGME report');
+    cptPayload = await waitForAcgmeCptSync(initialSyncedAt);
+
+    const sites = JSON.parse(localStorage.getItem('cf5-sites')||'[]');
+    const atts = JSON.parse(localStorage.getItem('cf5-attendings')||'[]');
+    const cptCount = Array.isArray(currentUserMeta.cptCodes) ? currentUserMeta.cptCodes.length : 0;
+    const doneMessage = cptCount
+      ? `Loaded ${cptCount} CPT codes, ${atts.length} attendings, and ${sites.length} sites`
+      : `Loaded ${atts.length} attendings and ${sites.length} sites from ACGME`;
+    setAcgmeSyncProgress(100, doneMessage);
+    const verifyStatus=document.getElementById('s-verify-status');
+    if(verifyStatus){
+      verifyStatus.style.display='block';
+      verifyStatus.textContent='ACGME profile synced successfully.';
+    }
+    loadSettingsUI();
+    acgmeSyncState.closingTimer=setTimeout(()=>{
+      const form=document.getElementById('s-acgme-form');
+      if(form) form.classList.remove('open');
+      resetAcgmeSyncUi();
+      loadSettingsUI();
+    }, 900);
+  } catch(e){
+    console.warn('runAcgmePostConnectSync:', e.message);
+    setAcgmeSyncProgress(Math.max(acgmeSyncState.progress, 100), 'Connection verified. Some ACGME data is still finishing in the background');
+    const verifyStatus=document.getElementById('s-verify-status');
+    if(verifyStatus){
+      verifyStatus.style.display='block';
+      verifyStatus.textContent='Verified. Some profile items may finish syncing in a moment.';
+    }
+    loadSettingsUI();
+    acgmeSyncState.closingTimer=setTimeout(()=>{
+      const form=document.getElementById('s-acgme-form');
+      if(form) form.classList.remove('open');
+      resetAcgmeSyncUi();
+      loadSettingsUI();
+    }, 1200);
+  }
+  return { profileResult, metaPayload, cptPayload };
+}
+
+async function waitForAcgmeCptSync(initialSyncedAt){
+  let lastMeta = null;
+  for(let attempt=0; attempt<6; attempt += 1){
+    if(attempt>0){
+      const progress = 72 + Math.round(((attempt) / 5) * 20);
+      setAcgmeSyncProgress(progress, 'Still loading tracked CPT codes from ACGME');
+      await new Promise(resolve => setTimeout(resolve, 1200));
+    }
+    lastMeta = await syncUserMetaFromServer();
+    const syncedAt = lastMeta?.user?.cptSyncedAt || currentUserMeta.cptSyncedAt || null;
+    const changed = syncedAt && (!initialSyncedAt || String(syncedAt) !== String(initialSyncedAt));
+    const hasCodes = Array.isArray(currentUserMeta.cptCodes) && currentUserMeta.cptCodes.length > 0;
+    if(changed || hasCodes){
+      setAcgmeSyncProgress(94, 'Applying your tracked CPT codes to CaseArc');
+      return await loadUserCptCodes();
+    }
+  }
+  setAcgmeSyncProgress(94, 'Wrapping up your ACGME program sync');
+  return await loadUserCptCodes();
 }
 
 async function sendClientLog(payload){
@@ -6353,6 +6738,8 @@ async function fetchMilestonesLatest(force=false){
     const payload = await res.json().catch(()=>({}));
     if(!res.ok) throw new Error(payload.error || 'Could not load your latest Milestones snapshot.');
     milestonesState.data = payload;
+    cacheMilestoneIdentity(payload);
+    refreshMenuFooterIdentity();
     milestonesState.error = '';
     return payload;
   }catch(e){
@@ -6412,6 +6799,8 @@ async function generateMilestonesReportUI(){
     }
     milestonesState.stage = 2;
     milestonesState.data = payload;
+    cacheMilestoneIdentity(payload);
+    refreshMenuFooterIdentity();
     milestonesState.latestChecked = true;
     milestonesState.error = '';
   }catch(e){
