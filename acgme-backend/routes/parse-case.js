@@ -207,8 +207,8 @@ ${siteList.map((s, i) => `${i + 1}. ${s}`).join('\n')}
 
 Return ONLY valid JSON, no markdown:
 {
-  "role": "Surgeon" | "Assistant" | "Teaching Assistant" | "Observer",
-  "patientType": "Adult" | "Pediatric",
+  "role": string exact best-match from the residency role options when mentioned, or null,
+  "patientType": string exact best-match from the residency patient type / patient age options when mentioned, or null,
   "caseYear": 1-6,
   "attending": exact string from attendings list above, or null if not mentioned,
   "site": exact string from sites list above, or null if not mentioned,
@@ -244,8 +244,8 @@ List each procedure separately.`,
       : (shouldUseStaticCatalog(specialty) ? findCodes(parsedProcedures) : []);
 
     return res.status(200).json({
-      role: parsed.role || 'Surgeon',
-      patientType: parsed.patientType || 'Adult',
+      role: parsed.role || null,
+      patientType: parsed.patientType || null,
       caseYear: parsed.caseYear || null,
       attending: parsed.attending || null,
       site: parsed.site || null,

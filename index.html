@@ -2733,6 +2733,18 @@ function getPreferredPatientTypeValue(){
   const labels=((QUESTIONS.find(q=>q.key==='patientType')||{}).options||[]).map(String).filter(Boolean);
   return labels[0]||'';
 }
+function getPreferredRoleValue(){
+  const current=String(caseData.role||'').trim();
+  const labels=((QUESTIONS.find(q=>q.key==='role')||{}).options||[]).map(String).filter(Boolean);
+  if(current && (!labels.length || labels.includes(current))) return current;
+  const roleField=getAcgmeFormFields().find(f=>inferStandardFieldKey(f)==='role');
+  if(roleField?.selectedId&&Array.isArray(roleField.options)){
+    const selected=roleField.options.find(o=>String(o.id||'')===String(roleField.selectedId));
+    const label=String(selected?.label||'').trim();
+    if(label) return label;
+  }
+  return labels[0]||current||'';
+}
 function getPreferredCaseYearValue(){
   const normalized=normalizeCaseYearValue(caseData.caseYear);
   if(normalized) return normalized;
@@ -4899,6 +4911,13 @@ function _applyProfileToUI(sites, attendings, roles, patientTypes, rotations, fo
     // Also update case edit modal roles list
     CE_ROLES.length = 0;
     roleLabels.forEach(l=>CE_ROLES.push(l));
+    if(roleField?.selectedId&&roleField?.options?.length){
+      const selected=roleField.options.find(o=>String(o.id||'')===String(roleField.selectedId));
+      const normalized=String(selected?.label||'').trim();
+      if(normalized && (!caseData.role || !roleLabels.includes(caseData.role))) caseData.role=normalized;
+    } else if(!caseData.role || !roleLabels.includes(caseData.role)){
+      caseData.role=roleLabels[0];
+    }
   }
   if(ptLabels.length){
     const qPt = QUESTIONS.find(q=>q.key==='patientType');
@@ -4963,19 +4982,6 @@ function togglePassVis(){
 // Set this to your Railway backend URL after deploying.
 // e.g. "https://acgme-backend-production.up.railway.app"
 const ACGME_BACKEND_URL = 'https://caseflow-production.up.railway.app';
-
-// Static ID maps for role and patient type (program-independent).
-// Site and attending IDs are resolved dynamically from cf5-sites / cf5-attendings.
-const ROLE_IDS = {
-  'Surgeon':            '',  // e.g. "119"
-  'Assistant':          '',
-  'Teaching Assistant': '',
-  'Observer':           '',
-};
-const PATIENT_IDS = {
-  'Adult':     '474',  // Universal ACGME patient type IDs (confirmed from HAR)
-  'Pediatric': '475',
-};
 
 /** Resolve a label to an ACGME ID using cached profile rows from Insert page selects */
 function resolveProfileId(cacheKey, label){
@@ -5048,8 +5054,11 @@ async function callSubmitAcgme(casePayload){
   const procs = casePayload.procs || [];
   if(!procs.length) throw new Error('No procedures to submit');
 
-  const roleIdRaw = resolveProfileId('cf5-roles', casePayload.role) || ROLE_IDS[casePayload.role] || '';
-  const ptIdRaw   = resolveProfileId('cf5-patient-types', casePayload.pt) || PATIENT_IDS[casePayload.pt] || '';
+  const preferredRole = getPreferredRoleValue();
+  const preferredPatientType = getPreferredPatientTypeValue();
+  const preferredCaseYear = getPreferredCaseYearValue();
+  const roleIdRaw = resolveProfileId('cf5-roles', preferredRole) || '';
+  const ptIdRaw   = resolveProfileId('cf5-patient-types', preferredPatientType) || '';
   const siteIdRaw = resolveProfileId('cf5-sites',      casePayload.site) || '';
   const attIdRaw  = resolveProfileId('cf5-attendings', casePayload.att) || '';
   const roleId    = assertNumericAcgmeId(roleIdRaw, 'role');
@@ -5058,7 +5067,7 @@ async function callSubmitAcgme(casePayload){
   const attendingId   = assertNumericAcgmeId(attIdRaw, 'attending');
   const body={
     procedureDate:   formatAcgmeDate(casePayload.date),
-    procedureYear:   String(casePayload.yr||'4').replace('Year ',''),
+    procedureYear:   String(preferredCaseYear).replace(/^Year\s+/i,''),
     residentRoleId:  roleId,
     institutionId:   institutionId,
     attendingId:     attendingId,
@@ -6321,8 +6330,8 @@ async function loadCasesFromDB(){
       role:     r.role||'',
       site:     r.site||'',
       att:      r.attending||'',
-      pt:       r.patient_type||'Adult',
-      yr:       String(r.case_year||'4').replace(/^Year\s+/i,'').trim()||'4',
+      pt:       r.patient_type||'',
+      yr:       String(r.case_year||'').replace(/^Year\s+/i,'').trim(),
       notes:    r.notes||'',
       status:   r.status||'pending',
     }));
