@@ -1576,12 +1576,19 @@ async function getUserProfile(sessionCookie) {
   }
 
   const residentsId = parseSelectSelectedValue(html, 'Residents');
+  const patientTypeSelected =
+    parseSelectSelectedValue(html, 'PatientTypes') ||
+    parseSelectSelectedValue(html, 'PatientType') ||
+    hidden.DefaultPatientTypes ||
+    '';
   const procedureYearSelected = parseSelectSelectedValue(html, 'ProcedureYear');
   const formFields = scrapeVisibleFormFields(html).map(field => {
     if ((field.standardKey === 'site' || field.name === 'Institutions') && sites.length) return { ...field, options: sites };
     if ((field.standardKey === 'attending' || field.name === 'Attendings') && attendings.length) return { ...field, options: attendings };
     if ((field.standardKey === 'role' || field.name === 'ResidentRoles') && roles.length) return { ...field, options: roles };
-    if ((field.standardKey === 'patientType' || field.name === 'PatientTypes') && patientTypes.length) return { ...field, options: patientTypes };
+    if ((field.standardKey === 'patientType' || field.name === 'PatientTypes') && patientTypes.length) {
+      return patientTypeSelected ? { ...field, options: patientTypes, selectedId: patientTypeSelected } : { ...field, options: patientTypes };
+    }
     if ((field.standardKey === 'rotation' || field.name === 'Rotations') && rotations.length) return { ...field, options: rotations };
     if (field.standardKey === 'caseYear' && procedureYearSelected) return { ...field, selectedId: procedureYearSelected };
     return field;
@@ -1595,7 +1602,7 @@ async function getUserProfile(sessionCookie) {
       (residentsId ? `, residentsId: set` : `, residentsId: (none)`) +
       (specialtyId ? `, specialtyId: ${specialtyId}` : `, specialtyId: (not found)`)
   );
-  return { sites, attendings, roles, patientTypes, rotations, residentsId, specialtyId, procedureYearSelected, formFields };
+  return { sites, attendings, roles, patientTypes, rotations, residentsId, specialtyId, patientTypeSelected, procedureYearSelected, formFields };
 }
 
 async function getLookupData(sessionCookie, type, params = {}) {

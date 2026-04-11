@@ -2,6 +2,37 @@ const router = require('express').Router();
 const db = require('../db');
 const { getSpecialty } = require('../config/specialties');
 
+function normalizeSpecialtySlug(specialty) {
+  return String(specialty || '').trim().toLowerCase();
+}
+
+function shouldUseStaticCatalog(specialty) {
+  return normalizeSpecialtySlug(specialty) === 'plastic-surgery';
+}
+
+function expandSpecialtyVocabulary(text, specialty) {
+  let out = String(text || '');
+  if (!out) return out;
+  switch (normalizeSpecialtySlug(specialty)) {
+    case 'physical-medicine-rehabilitation':
+      out = out
+        .replace(/\bpm&r\b/gi, 'physical medicine and rehabilitation')
+        .replace(/\bpmr\b/gi, 'physical medicine and rehabilitation')
+        .replace(/\bemg\b/gi, 'electromyography')
+        .replace(/\bncs\b/gi, 'nerve conduction study')
+        .replace(/\btpi\b/gi, 'trigger point injection')
+        .replace(/\besi\b/gi, 'epidural steroid injection')
+        .replace(/\btfesi\b/gi, 'transforaminal epidural steroid injection')
+        .replace(/\bmbb\b/gi, 'medial branch block')
+        .replace(/\brfa\b/gi, 'radiofrequency ablation')
+        .replace(/\bcsi\b/gi, 'corticosteroid injection');
+      break;
+    default:
+      break;
+  }
+  return out;
+}
+
 // api/parse-case.js
 // Vercel serverless function — works at any scale
 // CPT data is inlined as JS constants, cached in memory per instance
@@ -90,25 +121,43 @@ function findCodes(procedureNames, topPerProc = 3) {
  * Match procedure names against a user's ACGME-synced code set.
  * Same scoring approach as findCodes() but operates on the user's own codes.
  */
-function findCodesFromUserSet(procedureNames, userCodes) {
+function findCodesFromUserSet(procedureNames, userCodes, specialty = '') {
   if (!procedureNames.length || !userCodes.length) return [];
   const results = [];
+  const seen = new Set();
   for (const name of procedureNames) {
-    const words = name.toLowerCase().split(/\W+/).filter(w => w.length > 2 && !STOPWORDS.has(w));
+    const expandedName = expandSpecialtyVocabulary(name, specialty);
+    const normalizedName = expandedName.toLowerCase();
+    const words = normalizedName.split(/\W+/).filter(w => w.length > 2 && !STOPWORDS.has(w));
     if (!words.length) continue;
     const scored = [];
     for (const entry of userCodes) {
-      const desc = entry.description.toLowerCase();
+      const desc = String(entry.description || '').toLowerCase();
+      const area = String(entry.area || '').toLowerCase();
+      const haystack = `${entry.code || ''} ${desc} ${area}`;
       let score = 0;
       for (const w of words) {
-        if (desc.includes(w)) score += 2;
+        if (haystack.includes(w)) score += w.length >= 8 ? 4 : 2;
       }
+      if (desc.includes(normalizedName)) score += 8;
+      if (normalizedName.includes(desc) && desc.length > 10) score += 4;
       if (score > 0) scored.push({ ...entry, score });
     }
     scored.sort((a, b) => b.score - a.score);
+    let firstForProc = true;
     for (const c of scored.slice(0, 3)) {
-      if (!results.find(r => r.code === c.code)) {
-        results.push({ code: c.code, description: c.description, area: c.area || '' });
+      if (!seen.has(c.code)) {
+        seen.add(c.code);
+        results.push({
+          code: c.code,
+          desc: c.description,
+          area: c.area || '',
+          confidence: c.score >= 8 ? 'high' : 'medium',
+          primary: firstForProc,
+          procedureName: name,
+          source: 'user-synced',
+        });
+        firstForProc = false;
       }
     }
   }
@@ -187,11 +236,12 @@ List each procedure separately.`,
     const rawText = aiData.content.filter(b => b.type === 'text').map(b => b.text).join('');
     const parsed = JSON.parse(rawText.replace(/```json|```/g, '').trim());
 
-    // Map procedure names → CPT codes
-    // Uses user's ACGME-synced codes if available; falls back to built-in plastic surgery index
-    const suggestedCodes = userCodes
-      ? findCodesFromUserSet(parsed.procedures || [], userCodes)
-      : findCodes(parsed.procedures || []);
+    const parsedProcedures = (parsed.procedures || []).map(name => expandSpecialtyVocabulary(name, specialty));
+    // Map procedure names → CPT codes.
+    // Non-plastic specialties must rely on the user's synced CPT universe instead of the plastic legacy corpus.
+    const suggestedCodes = userCodes?.length
+      ? findCodesFromUserSet(parsedProcedures, userCodes, specialty)
+      : (shouldUseStaticCatalog(specialty) ? findCodes(parsedProcedures) : []);
 
     return res.status(200).json({
       role: parsed.role || 'Surgeon',
@@ -200,7 +250,8 @@ List each procedure separately.`,
       attending: parsed.attending || null,
       site: parsed.site || null,
       notes: parsed.notes || '',
-      suggestedCodes
+      suggestedCodes,
+      matchingMode: userCodes?.length ? 'user-synced' : (shouldUseStaticCatalog(specialty) ? 'legacy-static' : 'awaiting-sync'),
     });
 
   } catch (err) {

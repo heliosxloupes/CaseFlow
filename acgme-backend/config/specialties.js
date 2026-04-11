@@ -23,6 +23,22 @@ const SPECIALTIES = [
     ],
   },
   {
+    code: 'physical-medicine-rehabilitation',
+    label: 'Physical Medicine & Rehabilitation',
+    acgmeId: '79',
+    whisperHint: 'Physical medicine and rehabilitation PM&R case log. Procedures: EMG, nerve conduction study, trigger point injection, large joint injection, epidural steroid injection, transforaminal epidural injection, medial branch block, radiofrequency ablation, chemodenervation, baclofen pump refill.',
+    parseCaseExamples: [
+      'electromyography nerve conduction study',
+      'trigger point injection',
+      'large joint aspiration injection',
+      'epidural steroid injection lumbar',
+      'transforaminal epidural injection',
+      'medial branch block lumbar',
+      'radiofrequency ablation lumbar facets',
+      'chemodenervation extremity',
+    ],
+  },
+  {
     code: 'general-surgery',
     label: 'General Surgery',
     acgmeId: '220',

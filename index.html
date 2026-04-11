@@ -2323,6 +2323,34 @@ function searchCPT(query,limit=12){
   }
   return results.slice(0,limit);
 }
+function searchSyncedCptCodes(query,limit=12){
+  const q=expandSpecialtySearchText(query).toLowerCase().trim();
+  const codes=Array.isArray(currentUserMeta?.cptCodes)?currentUserMeta.cptCodes:[];
+  if(!q||!codes.length)return[];
+  const terms=q.split(/\s+/).filter(Boolean);
+  const results=[];
+  for(const entry of codes){
+    const code=String(entry.code||'').trim();
+    const desc=String(entry.description||'');
+    const area=String(entry.area||'');
+    const haystack=expandSpecialtySearchText(`${code} ${desc} ${area}`).toLowerCase();
+    if(code===q){results.unshift({c:code,d:desc,a:area});continue}
+    let score=0;
+    for(const term of terms){if(haystack.includes(term))score+=term.length>=8?4:2;}
+    if(score>0)results.push({c:code,d:desc,a:area,score});
+  }
+  return results.sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,limit).map(({score,...rest})=>rest);
+}
+function searchCurrentCptUniverse(query,limit=12){
+  const synced=searchSyncedCptCodes(query,limit);
+  if(synced.length||!isStaticCptFallbackAllowed())return synced;
+  return searchCPT(query,limit);
+}
+function getNoCptSyncMessage(){
+  return isStaticCptFallbackAllowed()
+    ? 'No results — try a different term'
+    : 'Your ACGME CPT codes are still syncing for this specialty. Try again after sync completes.';
+}
 function extractSpokenCptCodes(text){
   const raw=String(text||'');
   if(!raw.trim())return[];
@@ -2350,7 +2378,7 @@ function resolveSpokenCptHits(text,limit=6){
       const entry=currentUserMeta.cptCodes.find(e=>String(e.code||'').trim()===code);
       if(entry)match={c:String(entry.code).trim(),d:entry.description||'',a:entry.area||''};
     }
-    if(!match){
+    if(!match&&isStaticCptFallbackAllowed()){
       const exact=searchCPT(code,1).find(e=>e.c===code);
       if(exact)match=exact;
     }
@@ -2362,6 +2390,7 @@ function resolveSpokenCptHits(text,limit=6){
   return hits.slice(0,limit);
 }
 function kwMatch(text){
+  if(!isStaticCptFallbackAllowed())return[];
   const lo=text.toLowerCase();
   const matched=[];
   buildIndex();
@@ -2493,7 +2522,7 @@ function getGroqTranscript(mr, chunks, fallback){
         fd.append('audio',blob,`recording.${ext}`);
         fd.append('sites',JSON.stringify(getSitesForEdit()));
         fd.append('attendings',JSON.stringify(getAttendingsForEdit()));
-        fd.append('specialty',currentUserMeta.specialty||'plastic-surgery');
+        fd.append('specialty',currentSpecialtySlug());
         const resp=await fetch(`${ACGME_BACKEND_URL}/api/transcribe`,{
           method:'POST',
           headers:{'Authorization':`Bearer ${token}`},
@@ -2583,6 +2612,7 @@ let currentUserMeta={
 };
 const SPECIALTY_LABELS={
   'plastic-surgery':'Plastic Surgery',
+  'physical-medicine-rehabilitation':'Physical Medicine & Rehabilitation',
   'general-surgery':'General Surgery',
   'orthopaedic-surgery':'Orthopaedic Surgery',
   'neurosurgery':'Neurosurgery',
@@ -2591,6 +2621,32 @@ const SPECIALTY_LABELS={
   'vascular-surgery':'Vascular Surgery',
 };
 function getSpecialtyLabel(slug){return SPECIALTY_LABELS[slug]||'Residency';}
+function currentSpecialtySlug(){
+  return String(currentUserMeta?.specialty||'plastic-surgery').trim().toLowerCase()||'plastic-surgery';
+}
+function isStaticCptFallbackAllowed(){
+  return currentSpecialtySlug()==='plastic-surgery';
+}
+function expandSpecialtySearchText(text, specialty=currentSpecialtySlug()){
+  let out=String(text||'');
+  if(!out)return out;
+  switch(String(specialty||'').toLowerCase()){
+    case 'physical-medicine-rehabilitation':
+      out=out
+        .replace(/\bpm&r\b/gi,'physical medicine and rehabilitation')
+        .replace(/\bpmr\b/gi,'physical medicine and rehabilitation')
+        .replace(/\bemg\b/gi,'electromyography')
+        .replace(/\bncs\b/gi,'nerve conduction study')
+        .replace(/\btpi\b/gi,'trigger point injection')
+        .replace(/\besi\b/gi,'epidural steroid injection')
+        .replace(/\btfesi\b/gi,'transforaminal epidural steroid injection')
+        .replace(/\bmbb\b/gi,'medial branch block')
+        .replace(/\brfa\b/gi,'radiofrequency ablation')
+        .replace(/\bcsi\b/gi,'corticosteroid injection');
+      break;
+  }
+  return out;
+}
 function humanizeKey(s){
   return String(s||'')
     .replace(/^field:/,'')
@@ -2632,6 +2688,25 @@ function getAcgmeFieldValue(key,name){
   if(key==='rotation') return caseData.rotation||caseData.extraFields?.[name]||'';
   return caseData.extraFields?.[name]||'';
 }
+function normalizePatientTypeValue(val){
+  const s=String(val||'').trim();
+  if(!s)return'';
+  const labels=((QUESTIONS.find(q=>q.key==='patientType')||{}).options||[]).map(String).filter(Boolean);
+  if(!labels.length) return s;
+  if(labels.includes(s)) return s;
+  const lo=s.toLowerCase();
+  const exact=labels.find(l=>l.toLowerCase()===lo);
+  if(exact) return exact;
+  if(/adult/.test(lo)){
+    const adult=labels.find(l=>/adult|>=?\s*18|18\s*\+|65/.test(l.toLowerCase()));
+    if(adult) return adult;
+  }
+  if(/pediatric|child|infant/.test(lo)){
+    const pediatric=labels.find(l=>/pediatric|child|infant|<\s*18|0\s*-\s*17/.test(l.toLowerCase()));
+    if(pediatric) return pediatric;
+  }
+  return '';
+}
 function normalizeCaseYearValue(val){
   const s=String(val||'').trim();
   if(!s)return'';
@@ -2645,6 +2720,18 @@ function normalizeCaseYearValue(val){
     return digits;
   }
   return s;
+}
+function getPreferredPatientTypeValue(){
+  const normalized=normalizePatientTypeValue(caseData.patientType);
+  if(normalized) return normalized;
+  const ptField=getAcgmeFormFields().find(f=>inferStandardFieldKey(f)==='patientType');
+  if(ptField?.selectedId&&Array.isArray(ptField.options)){
+    const selected=ptField.options.find(o=>String(o.id||'')===String(ptField.selectedId));
+    const selectedLabel=normalizePatientTypeValue(selected?.label);
+    if(selectedLabel) return selectedLabel;
+  }
+  const labels=((QUESTIONS.find(q=>q.key==='patientType')||{}).options||[]).map(String).filter(Boolean);
+  return labels[0]||'';
 }
 function getPreferredCaseYearValue(){
   const normalized=normalizeCaseYearValue(caseData.caseYear);
@@ -2662,7 +2749,7 @@ function setAcgmeFieldValue(key,name,val){
   if(key==='role'){caseData.role=val;return;}
   if(key==='site'){caseData.site=val;return;}
   if(key==='attending'){caseData.attending=val;return;}
-  if(key==='patientType'){caseData.patientType=val;return;}
+  if(key==='patientType'){caseData.patientType=normalizePatientTypeValue(val);return;}
   if(key==='caseYear'){caseData.caseYear=normalizeCaseYearValue(val);return;}
   if(key==='date'){caseData.date=val;return;}
   if(key==='caseId'){caseData.caseId=String(val||'').slice(0,CASE_ID_MAX_LEN);return;}
@@ -2892,12 +2979,12 @@ async function processDescription(text){
   const localDate=extractSpokenDate(text);
   const spokenCodeHits=resolveSpokenCptHits(text);
   try{
-    const res=await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:currentUserMeta.specialty||'plastic-surgery',sites:getSitesForEdit(),attendings:getAttendingsForEdit()})});
+    const res=await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:currentSpecialtySlug(),sites:getSitesForEdit(),attendings:getAttendingsForEdit()})});
     if(!res.ok)throw new Error();extracted=await res.json()
   }
   catch(e){extracted=localExtract(text)}
   if(extracted.role)caseData.role=extracted.role;
-  if(extracted.patientType)caseData.patientType=extracted.patientType;
+  if(extracted.patientType)caseData.patientType=normalizePatientTypeValue(extracted.patientType);
   if(extracted.caseYear)caseData.caseYear=normalizeCaseYearValue(extracted.caseYear);
   if(extracted.attending)caseData.attending=extracted.attending;
   if(extracted.site)caseData.site=extracted.site;
@@ -2932,30 +3019,21 @@ async function processDescription(text){
   }
 }
 function localExtract(text){
-  const lo=text.toLowerCase();
+  const lo=expandSpecialtySearchText(text).toLowerCase();
   const role=lo.includes('assist')?'Assistant':lo.includes('observer')?'Observer':'Surgeon';
   const pt=(lo.includes('pediatric')||lo.includes('child')||lo.includes('infant'))?'Pediatric':'Adult';
   const spokenCodeHits=resolveSpokenCptHits(text);
-  // Use user's ACGME-synced codes if available, else fall back to built-in plastic surgery index
+  // Use the user's synced ACGME CPT universe. Only plastic surgery keeps the static legacy fallback.
   let suggestedCodes=[];
   if(spokenCodeHits.length){
     suggestedCodes=spokenCodeHits.map(e=>({code:e.c,desc:e.d,area:e.a}));
-  } else if(currentUserMeta.cptCodes?.length){
-    const words=lo.split(/\W+/).filter(w=>w.length>3);
-    const scored=[];
-    for(const entry of currentUserMeta.cptCodes){
-      const d=(entry.description||'').toLowerCase();
-      let score=0;
-      for(const w of words){if(d.includes(w))score+=2;}
-      if(score>0)scored.push({score,...entry});
-    }
-    scored.sort((a,b)=>b.score-a.score);
-    suggestedCodes=scored.slice(0,6).map(e=>({code:e.code,desc:e.description,area:e.area||''}));
   } else {
-    const matched=kwMatch(lo);
-    suggestedCodes=matched.map(e=>({code:e.c,desc:e.d,area:e.a}));
+    suggestedCodes=searchCurrentCptUniverse(lo,6).map(e=>({code:e.c,desc:e.d,area:e.a}));
+    if(!suggestedCodes.length&&!isStaticCptFallbackAllowed()){
+      console.log('[voice.cpt] awaiting specialty CPT sync', { specialty: currentSpecialtySlug() });
+    }
   }
-  return{role,patientType:pt,caseYear:'',date:extractSpokenDate(text),suggestedCodes};
+  return{role,patientType:normalizePatientTypeValue(pt),caseYear:'',date:extractSpokenDate(text),suggestedCodes};
 }
 function nextQuestion(){
   AudioFX.stopThink();
@@ -2994,18 +3072,8 @@ function liveSearch(q){
   const box=document.getElementById('srch-results-box');
   if(!q.trim()){box.innerHTML='';return}
   let hits;
-  if(currentUserMeta.cptCodes?.length){
-    // Search user's ACGME-synced codes
-    const lo=q.toLowerCase();
-    const scored=currentUserMeta.cptCodes
-      .filter(e=>(e.code+' '+e.description).toLowerCase().includes(lo))
-      .slice(0,12)
-      .map(e=>({c:e.code,d:e.description,a:e.area||''}));
-    hits=scored;
-  } else {
-    hits=searchCPT(q,12);
-  }
-  if(!hits.length){box.innerHTML='<div class="no-results">No results — try a different term</div>';return}
+  hits=searchCurrentCptUniverse(q,12);
+  if(!hits.length){box.innerHTML=`<div class="no-results">${getNoCptSyncMessage()}</div>`;return}
   box.innerHTML=`<div class="srch-count">${hits.length} result${hits.length!==1?'s':''} — tap to add</div>`
     +hits.map(h=>`<div class="srch-row" onclick="addCptFromSearch('${h.c}','${esc(h.d)}','${esc(h.a)}')"><div class="srch-code">${h.c}</div><div class="srch-info"><div class="srch-desc">${h.d}</div><div class="srch-area">${h.a}</div></div><div class="srch-add">+</div></div>`).join('');
 }
@@ -3407,16 +3475,8 @@ function modalSearch(q){
   const res = document.getElementById('search-modal-results');
   if(!q.trim()){res.innerHTML='';return}
   let hits;
-  if(currentUserMeta.cptCodes?.length){
-    const lo=q.toLowerCase();
-    hits=currentUserMeta.cptCodes
-      .filter(e=>(e.code+' '+e.description).toLowerCase().includes(lo))
-      .slice(0,10)
-      .map(e=>({c:e.code,d:e.description,a:e.area||''}));
-  } else {
-    hits=searchCPT(q, 10);
-  }
-  if(!hits.length){res.innerHTML='<div class="no-results">No results</div>';return}
+  hits=searchCurrentCptUniverse(q,10);
+  if(!hits.length){res.innerHTML=`<div class="no-results">${getNoCptSyncMessage()}</div>`;return}
   res.innerHTML = hits.map(h => `
     <div class="srch-row" onclick="addMoreCode('${h.c}','${esc(h.d)}','${esc(h.a)}')">
       <div class="srch-code">${h.c}</div>
@@ -3519,13 +3579,12 @@ async function stopAddMoreVoice(){
 
   let extracted = null;
   try {
-    const res = await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:currentUserMeta.specialty||'plastic-surgery'})});
+    const res = await fetch(`${ACGME_BACKEND_URL}/api/parse-case`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:text,specialty:currentSpecialtySlug()})});
     if(!res.ok) throw new Error();
     extracted = await res.json();
   } catch(e) {
-    // Fallback: local keyword match
-    buildIndex();
-    const matched = spokenCodeHits.length ? spokenCodeHits : kwMatch(text);
+    // Fallback: local specialty-aware match
+    const matched = spokenCodeHits.length ? spokenCodeHits : searchCurrentCptUniverse(text,6);
     orbState='idle';
     document.getElementById('q-bubble').classList.remove('show');
     document.getElementById('orb-hint').classList.remove('hide');
@@ -3539,7 +3598,7 @@ async function stopAddMoreVoice(){
       startAddMoreSearch();
       document.getElementById('search-modal-input').value=text;
       modalSearch(text);
-      toast('No exact match — refine in search','');
+      toast(isStaticCptFallbackAllowed()?'No exact match — refine in search':'No exact synced match yet — refine in search or wait for CPT sync','');
     }
     return;
   }
@@ -3911,7 +3970,7 @@ async function submitCase(){
     role:caseData.role||'Surgeon',
     site:caseData.site||'',
     att:caseData.attending||'',
-    pt:caseData.patientType||'Adult',
+    pt:getPreferredPatientTypeValue(),
     yr:getPreferredCaseYearValue().replace(/^Year\s+/i,''),
     notes:caseData.notes||'',
     caseId:caseData.caseId||'',
@@ -4849,6 +4908,15 @@ function _applyProfileToUI(sites, attendings, roles, patientTypes, rotations, fo
     const ptField=fields.find(f=>inferStandardFieldKey(f)==='patientType');
     if(qPt&&ptField?.label) qPt.question=`What ${ptField.label.replace(/\*+$/,'').trim().toLowerCase()} applies to this case?`;
     if(sPt&&ptField?.label) sPt.label=ptField.label;
+    CE_PATIENTS.length=0;
+    ptLabels.forEach(l=>CE_PATIENTS.push(l));
+    if(ptField?.selectedId&&ptField?.options?.length){
+      const selected=ptField.options.find(o=>String(o.id||'')===String(ptField.selectedId));
+      const normalized=normalizePatientTypeValue(selected?.label);
+      if(normalized && (!caseData.patientType || !ptLabels.includes(caseData.patientType))) caseData.patientType=normalized;
+    } else if(!caseData.patientType || !ptLabels.includes(caseData.patientType)){
+      caseData.patientType=ptLabels[0];
+    }
   }
   const yearField=fields.find(f=>inferStandardFieldKey(f)==='caseYear');
   const qYear=QUESTIONS.find(q=>q.key==='caseYear');
