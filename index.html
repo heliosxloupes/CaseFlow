@@ -2189,7 +2189,7 @@ body.submit-active #orb-wrap{opacity:0!important;visibility:hidden!important;poi
         <div class="udot"></div>
         <span class="sm-account-name" id="sm-hdr-u">&#8212;</span>
       </div>
-      <div class="sm-specialty-badge" id="sm-specialty-label">Plastic Surgery</div>
+      <div class="sm-specialty-badge" id="sm-specialty-label">Residency</div>
       <button class="sm-logout-btn" onclick="doLogout()" type="button">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
         <span>Log Out</span>
@@ -2610,7 +2610,7 @@ let currentUserMeta={
   tosVersion:APP_TOS_VERSION,
   createdAt:null,
   lastLoginAt:null,
-  specialty:'plastic-surgery',
+  specialty:'',
   cptSyncedAt:null,
   cptCodes:null,
 };
@@ -2636,8 +2636,17 @@ function normalizeSpecialtyValue(value){
   return raw.replace(/&/g,'and').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
 }
 function getSpecialtyLabel(slug){
+  if(!String(slug||'').trim()) return 'Residency';
   const normalized=normalizeSpecialtyValue(slug);
   return SPECIALTY_LABELS[normalized]||'Residency';
+}
+function refreshMenuFooterIdentity(){
+  const displayName=(currentUserMeta?.name||(currentUserMeta?.email||'').split('@')[0]||'—');
+  const firstName = displayName.split(' ')[0] || '—';
+  const menuName = document.getElementById('sm-hdr-u');
+  if(menuName) menuName.textContent = firstName;
+  const specialtyEl=document.getElementById('sm-specialty-label');
+  if(specialtyEl) specialtyEl.textContent=getSpecialtyLabel(currentUserMeta?.specialty);
 }
 function currentSpecialtySlug(){
   return normalizeSpecialtyValue(currentUserMeta?.specialty||'plastic-surgery');
@@ -5745,7 +5754,12 @@ function fmtStamp(iso){
 
 function applyUserMeta(meta){
   if(!meta) return;
-  const normalizedSpecialty=meta.specialty!=null?normalizeSpecialtyValue(meta.specialty):currentSpecialtySlug();
+  const specialtySource = Object.prototype.hasOwnProperty.call(meta,'specialty')
+    ? meta.specialty
+    : currentUserMeta.specialty;
+  const normalizedSpecialty=String(specialtySource||'').trim()
+    ? normalizeSpecialtyValue(specialtySource)
+    : '';
   currentUserMeta={
     ...currentUserMeta,
     ...meta,
@@ -5766,8 +5780,7 @@ function applyUserMeta(meta){
   localStorage.setItem('cf5-user-meta',JSON.stringify(stored));
   const tosVersionEl=document.getElementById('tos-version-label');
   if(tosVersionEl) tosVersionEl.textContent=currentUserMeta.tosVersion||APP_TOS_VERSION;
-  const specialtyEl=document.getElementById('sm-specialty-label');
-  if(specialtyEl) specialtyEl.textContent=getSpecialtyLabel(currentUserMeta.specialty);
+  refreshMenuFooterIdentity();
 }
 
 async function syncUserMetaFromServer(){
@@ -5791,7 +5804,7 @@ async function syncUserMetaFromServer(){
         tosVersion:payload.user.tosVersion||APP_TOS_VERSION,
         createdAt:payload.user.createdAt||null,
         lastLoginAt:payload.user.lastLoginAt||null,
-        specialty:payload.user.specialty||'plastic-surgery',
+        specialty:payload.user.specialty||'',
         cptSyncedAt:payload.user.cptSyncedAt||null,
       });
       // Load cached CPT codes from server (non-blocking)
@@ -5980,10 +5993,8 @@ async function loadAdminUserLogs(userId){
 async function launchApp(name,email){
   const displayName=(name||(email||'').split('@')[0]||'—');
   const firstName = displayName.split(' ')[0];
-  const menuName = document.getElementById('sm-hdr-u');
-  if(menuName) menuName.textContent = firstName;
-  const specialtyEl=document.getElementById('sm-specialty-label');
-  if(specialtyEl) specialtyEl.textContent=getSpecialtyLabel(currentUserMeta.specialty);
+  currentUserMeta={...currentUserMeta,name:currentUserMeta.name||displayName,email:currentUserMeta.email||email||''};
+  refreshMenuFooterIdentity();
   showPage('pg-app');
   requestAnimationFrame(syncAppBarHeight);
   setTimeout(syncAppBarHeight, 300);
@@ -5996,6 +6007,7 @@ async function launchApp(name,email){
   document.getElementById('hdr-n').textContent=cases.length;
   renderHistory();
   await syncUserMetaFromServer();
+  refreshMenuFooterIdentity();
   await syncAcgmeSettingsFromServer();
   const cachedSites      = JSON.parse(localStorage.getItem('cf5-sites')||'[]');
   const cachedAttendants = JSON.parse(localStorage.getItem('cf5-attendings')||'[]');

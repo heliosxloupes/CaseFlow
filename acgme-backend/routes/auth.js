@@ -329,7 +329,7 @@ router.get('/me', authenticate, async (req, res, next) => {
         tosVersion: user.tos_version || null,
         createdAt: user.created_at,
         lastLoginAt: user.last_login_at,
-        specialty: user.specialty || 'plastic-surgery',
+        specialty: user.specialty || null,
         cptSyncedAt,
       },
       app: {
