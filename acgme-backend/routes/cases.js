@@ -39,7 +39,13 @@ router.post('/submit', async (req, res, next) => {
       selectedCodes, codeDescription, comments,
       caseId = '',
       residentsId = '',
+      role = '',
+      site = '',
+      attending = '',
+      patientType = '',
+      caseYear = '',
       extraFields = {},
+      procedures = [],
     } = req.body;
 
     const required = { procedureDate, residentRoleId, institutionId, attendingId, selectedCodes };
@@ -54,7 +60,13 @@ router.post('/submit', async (req, res, next) => {
       selectedCodes, codeDescription, comments,
       caseId,
       residentsId,
+      role,
+      site,
+      attending,
+      patientType,
+      caseYear,
       extraFields,
+      procedures,
     };
 
     let result;
@@ -81,9 +93,27 @@ router.post('/submit', async (req, res, next) => {
     let warning = null;
     try {
       await db.query(
-        `INSERT INTO case_submissions (user_id, procedure_date, procedure_year, selected_codes, code_description, status, submitted_at)
-         VALUES ($1, $2, $3, $4, $5, 'success', NOW())`,
-        [req.userId, procedureDate, procedureYear, selectedCodes, codeDescription]
+        `INSERT INTO case_submissions (
+           user_id, procedure_date, procedure_year, selected_codes, code_description,
+           role, site, attending, patient_type, case_year,
+           notes, procedures, extra_fields, status, submitted_at
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'success', NOW())`,
+        [
+          req.userId,
+          procedureDate,
+          procedureYear,
+          selectedCodes,
+          codeDescription,
+          role,
+          site,
+          attending,
+          patientType,
+          caseYear,
+          comments,
+          JSON.stringify(procedures || []),
+          JSON.stringify(extraFields || {}),
+        ]
       );
       await logActivity({
         userId: req.userId,
@@ -146,7 +176,7 @@ router.get('/history', async (req, res, next) => {
   try {
     const { rows } = await db.query(
       `SELECT id, local_id, procedure_date, procedure_year, selected_codes, code_description,
-              role, site, attending, patient_type, case_year, notes, procedures,
+              role, site, attending, patient_type, case_year, notes, procedures, extra_fields,
               status, error_message, submitted_at
        FROM case_submissions
        WHERE user_id = $1
@@ -174,7 +204,7 @@ router.post('/save', async (req, res, next) => {
   try {
     const {
       localId, procedureDate, procedures = [], role, site,
-      attending, patientType, caseYear, notes = '',
+      attending, patientType, caseYear, notes = '', extraFields = {},
     } = req.body;
 
     const codeDescription = procedures.map(p => p.d).join(', ');
@@ -183,13 +213,13 @@ router.post('/save', async (req, res, next) => {
     const { rows } = await db.query(
       `INSERT INTO case_submissions
         (user_id, local_id, procedure_date, selected_codes, code_description,
-         role, site, attending, patient_type, case_year, notes, procedures, status, submitted_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'pending',NOW())
+         role, site, attending, patient_type, case_year, notes, procedures, extra_fields, status, submitted_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'pending',NOW())
        ON CONFLICT DO NOTHING
        RETURNING id`,
       [
         req.userId, localId || null, procedureDate, selectedCodes, codeDescription,
-        role, site, attending, patientType, caseYear, notes, JSON.stringify(procedures),
+        role, site, attending, patientType, caseYear, notes, JSON.stringify(procedures), JSON.stringify(extraFields || {}),
       ]
     );
     await logActivity({

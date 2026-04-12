@@ -715,11 +715,12 @@ function scrapeSpecialtyIdFromHtml(html) {
  * ADS Insert SelectedCodes tuple from GetCodes Payload row (matches browser / HAR).
  * Example: P,4780,1118932,1,1; for CodeId 4780, TypeToCodeId 1118932, Quantity 1.
  */
-function buildAdsSelectedCodesTupleFromPayloadRow(row) {
+function buildAdsSelectedCodesTupleFromPayloadRow(row, prefix = 'P') {
   if (!row || row.CodeId == null || row.TypeToCodeId == null) return '';
   const q = row.Quantity != null ? Number(row.Quantity) : 1;
   // HAR: SelectedCodes ends with `;` (e.g. P,4780,1118932,1,1;) — ADS model expects this delimiter.
-  return `P,${row.CodeId},${row.TypeToCodeId},${q},1;`;
+  const normalizedPrefix = String(prefix || 'P').trim().toUpperCase() === 'S' ? 'S' : 'P';
+  return `${normalizedPrefix},${row.CodeId},${row.TypeToCodeId},${q},1;`;
 }
 
 /** Ensure tuple ends with `;` (legacy / manual paste may omit it). */
@@ -973,6 +974,9 @@ async function resolveSelectedCodesIfNeeded(sessionCookie, hidden, caseData) {
   if (looksLikeAdsSelectedCodesTuple(raw)) return caseData;
 
   const specialtyId = specialtyIdFromInsertHidden(hidden);
+  const procedures = Array.isArray(caseData.procedures) ? caseData.procedures : [];
+  const usePrimaryCredit = /^true$/i.test(String(hidden?.SpecialtyUsesPrimaryCredit || ''));
+  const selectedCodeAttributes = [];
 
   // Split by comma to support multi-code submissions (e.g. "30410,19325")
   const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
@@ -981,19 +985,33 @@ async function resolveSelectedCodesIfNeeded(sessionCookie, hidden, caseData) {
   const payloadRows = [];
   let lastCodeValue = '';
 
-  for (const cpt of parts) {
+  for (let idx = 0; idx < parts.length; idx++) {
+    const cpt = parts[idx];
     const { tuple, payloadRow, codeValue } = await resolveOneCpt(
       sessionCookie, specialtyId, cpt, caseData.procedureDate
     );
-    tuples.push(tuple);
+    const matchingProc = procedures[idx] && String(procedures[idx]?.c || '').trim() === String(cpt).trim()
+      ? procedures[idx]
+      : procedures.find(p => String(p?.c || '').trim() === String(cpt).trim());
+    const prefix = usePrimaryCredit && parts.length > 1
+      ? (matchingProc?.isPrimary ? 'P' : 'S')
+      : 'P';
+    tuples.push(payloadRow ? buildAdsSelectedCodesTupleFromPayloadRow(payloadRow, prefix) : tuple);
     if (payloadRow) payloadRows.push(payloadRow);
     lastCodeValue = codeValue;
+    const attrIds = Array.isArray(matchingProc?.selectedAttributeIds)
+      ? matchingProc.selectedAttributeIds.map(v => String(v).trim()).filter(Boolean)
+      : [];
+    for (const attrId of attrIds) {
+      selectedCodeAttributes.push(`${idx},${attrId};`);
+    }
   }
 
   const out = {
     ...caseData,
     selectedCodes: tuples.join(''),   // "P,a,b,1,1;P,c,d,1,1;"
     _adsCodeValueForInsert: lastCodeValue,
+    _adsSelectedCodeAttributes: selectedCodeAttributes.join(''),
   };
   if (payloadRows.length === 1) {
     out._adsPayloadRow = payloadRows[0];
@@ -1091,6 +1109,9 @@ function buildInsertFormPayload(token, hidden, caseData, insertHtml) {
       if (normalized === '') continue;
       body[fieldName] = normalized;
     }
+  }
+  if (String(caseData._adsSelectedCodeAttributes || '').trim()) {
+    body.SelectedCodeAttributes = String(caseData._adsSelectedCodeAttributes).trim();
   }
   if (caseDateFieldName) {
     body[caseDateFieldName] = caseData.procedureDate;
@@ -1456,9 +1477,70 @@ function inferLabelForControl(html, controlName, controlId = '') {
   return '';
 }
 
+function inferChoiceOptionLabel(html, controlName, controlId = '', fallback = '', inputIndex = 0) {
+  const explicit = inferLabelForControl(html, controlId || controlName, controlId);
+  if (explicit) return explicit;
+  const markerRe = new RegExp(
+    `<input\\b[^>]*?(?:name=["']${String(controlName || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']|id=["']${String(controlId || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'])[^>]*>`,
+    'ig'
+  );
+  let match;
+  let seen = 0;
+  while ((match = markerRe.exec(html))) {
+    if (seen !== inputIndex) {
+      seen += 1;
+      continue;
+    }
+    const tail = html.slice(match.index + match[0].length, match.index + match[0].length + 220);
+    const text = decodeHtmlLite(tail.replace(/<[^>]+>/g, ' ').trim());
+    if (text) return text;
+    break;
+  }
+  return decodeHtmlLite(fallback || '').trim();
+}
+
+function requiredFlagForChoiceGroup(hidden, name) {
+  const caseTypeMatch = String(name || '').match(/^CaseTypes\[(\d+)\]$/i);
+  if (caseTypeMatch) {
+    return /^true$/i.test(String(hidden?.[`IsCaseType_${caseTypeMatch[1]}_Required`] || ''));
+  }
+  return false;
+}
+
+function scrapeChoiceGroups(html, hidden = {}) {
+  const groups = new Map();
+  const inputRe = /<input\b([^>]*)>/gi;
+  let m;
+  while ((m = inputRe.exec(html)) !== null) {
+    const attrs = m[1];
+    const type = (attrs.match(/\btype="([^"]+)"/i)?.[1] || 'text').toLowerCase();
+    if (type !== 'checkbox' && type !== 'radio') continue;
+    const name = attrs.match(/\bname="([^"]+)"/i)?.[1] || attrs.match(/\bid="([^"]+)"/i)?.[1] || '';
+    const id = attrs.match(/\bid="([^"]+)"/i)?.[1] || '';
+    const value = attrs.match(/\bvalue="([^"]*)"/i)?.[1] || '';
+    if (!name || !value || shouldIgnoreSchemaField(name)) continue;
+    const label = inferChoiceOptionLabel(html, name, id, humanizeFieldName(value), (groups.get(name)?.options.length || 0));
+    const existing = groups.get(name) || {
+      key: `field:${name}`,
+      name,
+      label: inferLabelForControl(html, name, id) || humanizeFieldName(name.replace(/\[\d+\]/g, '')),
+      type,
+      required: requiredFlagForChoiceGroup(hidden, name),
+      options: [],
+      standardKey: standardFieldKeyFromLabel(inferLabelForControl(html, name, id)) || standardFieldKeyFromName(name),
+    };
+    if (!existing.options.find(opt => String(opt.id) === String(value))) {
+      existing.options.push({ id: String(value), label: label || String(value) });
+    }
+    groups.set(name, existing);
+  }
+  return [...groups.values()].filter(group => group.options.length);
+}
+
 function scrapeVisibleFormFields(html) {
   const fields = [];
   const seen = new Set();
+  const hidden = scrapeHiddenFields(html);
 
   const selectRe = /<select\b([^>]*)>([\s\S]*?)<\/select>/gi;
   let m;
@@ -1503,6 +1585,13 @@ function scrapeVisibleFormFields(html) {
       required: /\*/.test(label) || /required/i.test(attrs),
       standardKey,
     });
+  }
+
+  const choiceGroups = scrapeChoiceGroups(html, hidden);
+  for (const field of choiceGroups) {
+    if (!field?.name || seen.has(`choice:${field.name}`)) continue;
+    seen.add(`choice:${field.name}`);
+    fields.push(field);
   }
 
   return fields;
@@ -1591,6 +1680,10 @@ async function getUserProfile(sessionCookie) {
     hidden.DefaultPatientTypes ||
     '';
   const procedureYearSelected = parseSelectSelectedValue(html, 'ProcedureYear');
+  const capabilities = {
+    specialtyUsesPrimaryCredit: /^true$/i.test(String(hidden.SpecialtyUsesPrimaryCredit || '')),
+    caseTypeLength: Number(hidden.CaseTypeLength || 0) || 0,
+  };
   const formFields = scrapeVisibleFormFields(html).map(field => {
     if ((field.standardKey === 'site' || field.name === 'Institutions') && sites.length) return { ...field, options: sites };
     if ((field.standardKey === 'attending' || field.name === 'Attendings') && attendings.length) return { ...field, options: attendings };
@@ -1613,7 +1706,7 @@ async function getUserProfile(sessionCookie) {
       (residentsId ? `, residentsId: set` : `, residentsId: (none)`) +
       (specialtyId ? `, specialtyId: ${specialtyId}` : `, specialtyId: (not found)`)
   );
-  return { sites, attendings, roles, patientTypes, rotations, residentsId, specialtyId, residentRoleSelected, patientTypeSelected, procedureYearSelected, formFields };
+  return { sites, attendings, roles, patientTypes, rotations, residentsId, specialtyId, residentRoleSelected, patientTypeSelected, procedureYearSelected, formFields, capabilities };
 }
 
 async function getLookupData(sessionCookie, type, params = {}) {

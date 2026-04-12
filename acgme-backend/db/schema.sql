@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS case_submissions (
   case_year        TEXT,
   notes            TEXT,
   procedures       JSONB,
+  extra_fields     JSONB,
   local_id         VARCHAR(50),
   error_message    TEXT,
   submitted_at     TIMESTAMP DEFAULT NOW()

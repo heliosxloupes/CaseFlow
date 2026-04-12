@@ -32,6 +32,7 @@ const schema = `
     case_year        TEXT,
     notes            TEXT,
     procedures       JSONB,
+    extra_fields     JSONB,
     local_id         VARCHAR(50),
     error_message    TEXT,
     submitted_at     TIMESTAMP DEFAULT NOW()
@@ -132,6 +133,7 @@ const alterStatements = [
   `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS case_year TEXT`,
   `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS notes TEXT`,
   `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS procedures JSONB`,
+  `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS extra_fields JSONB`,
   `ALTER TABLE case_submissions ADD COLUMN IF NOT EXISTS local_id VARCHAR(50)`,
   `ALTER TABLE case_submissions ALTER COLUMN selected_codes TYPE TEXT`,
   `ALTER TABLE case_submissions ALTER COLUMN code_description TYPE TEXT`,

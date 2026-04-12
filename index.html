@@ -685,6 +685,9 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .cpt-found-item.removing{opacity:0}
 .cpt-found-code{font-size:12px;font-weight:600;color:var(--blue);min-width:46px;padding-top:2px}
 .cpt-found-desc{flex:1;font-size:13px;color:var(--text);line-height:1.35}
+.cpt-proc-meta{display:inline-flex;align-items:center;gap:6px;margin-top:8px;margin-right:10px;font-size:11px;color:var(--text2)}
+.cpt-proc-meta input{accent-color:var(--blue)}
+.cpt-proc-attrs{display:flex;flex-wrap:wrap;gap:4px 10px}
 .cpt-found-actions{display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:6px;flex-shrink:0;align-self:stretch;padding:2px 0}
 .cpt-found-dup{background:rgba(100,160,255,.13);border:1px solid rgba(100,160,255,.3);border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--blue);font-size:22px;font-weight:400;line-height:1;transition:background .15s}
 .cpt-found-dup:active{background:rgba(100,160,255,.28)}
@@ -2638,6 +2641,183 @@ function makeRec(onResult,onEnd){
 }
 // CONVERSATION
 let caseData={description:'',procedures:[],role:null,site:null,attending:null,patientType:null,patientAge:null,caseYear:null,date:null,caseId:'',notes:'',rotation:null,extraFields:{}};
+const procedureMetaInflight=new Set();
+function getAcgmeCapabilities(){
+  try{
+    const obj=JSON.parse(localStorage.getItem('cf5-form-capabilities')||'{}');
+    return obj&&typeof obj==='object'?obj:{};
+  }catch(_){return{};}
+}
+function specialtyUsesPrimaryCredit(){
+  return !!getAcgmeCapabilities().specialtyUsesPrimaryCredit;
+}
+function normalizeProcedureEntry(proc){
+  if(!proc||typeof proc!=='object') return {c:'',d:'',a:'',isPrimary:false,availableAttributes:[],selectedAttributeIds:[]};
+  const selectedIds=Array.isArray(proc.selectedAttributeIds)?proc.selectedAttributeIds.map(v=>String(v)):[];
+  const attrs=Array.isArray(proc.availableAttributes)?proc.availableAttributes.map(attr=>({id:String(attr.id),name:String(attr.name||attr.label||attr.id)})):[];
+  return {
+    ...proc,
+    c:String(proc.c||proc.code||'').trim(),
+    d:String(proc.d||proc.desc||'').trim(),
+    a:String(proc.a||proc.area||'').trim(),
+    isPrimary:!!proc.isPrimary,
+    availableAttributes:attrs,
+    selectedAttributeIds:selectedIds,
+    _metaLoaded:proc._metaLoaded===true,
+  };
+}
+function normalizeProcedureState(){
+  caseData.procedures=(Array.isArray(caseData.procedures)?caseData.procedures:[]).map(normalizeProcedureEntry).filter(p=>p.c);
+  if(specialtyUsesPrimaryCredit()&&caseData.procedures.length){
+    let primaryIdx=caseData.procedures.findIndex(p=>p.isPrimary);
+    if(primaryIdx<0) primaryIdx=0;
+    caseData.procedures=caseData.procedures.map((p,i)=>({...p,isPrimary:i===primaryIdx}));
+  } else {
+    caseData.procedures=caseData.procedures.map(p=>({...p,isPrimary:false}));
+  }
+}
+function getRotationsForEdit(){
+  try{
+    const arr=JSON.parse(localStorage.getItem('cf5-rotations')||'[]');
+    if(Array.isArray(arr)&&arr.length){
+      return arr.map(x=>(x&&typeof x==='object'&&x.label!=null)?String(x.label):String(x)).filter(Boolean);
+    }
+  }catch(e){}
+  return [];
+}
+function getComboLabels(which){
+  if(which==='site') return getSitesForEdit();
+  if(which==='att') return getAttendingsForEdit();
+  if(which==='rotation') return getRotationsForEdit();
+  return [];
+}
+function getComboFieldState(which){
+  if(which==='site') return { value: caseData.site||'', set(v){ caseData.site=v; }, placeholder:'Search or select site…', missing:'No sites loaded. Open Settings and connect ACGME.' };
+  if(which==='att') return { value: caseData.attending||'', set(v){ caseData.attending=v; }, placeholder:'Search or select attending…', missing:'No attendings loaded. Open Settings and connect ACGME.' };
+  if(which==='rotation') return { value: caseData.rotation||'', set(v){ setAcgmeFieldValue('rotation','Rotations',v); }, placeholder:'Search or select rotation…', missing:'No rotations loaded. Connect ACGME to sync your program rotations.' };
+  return { value:'', set(){} , placeholder:'Search or select…', missing:'No options loaded.' };
+}
+function ensureProcedurePrimaryConsistency(list){
+  const procs=(Array.isArray(list)?list:[]).map(normalizeProcedureEntry).filter(p=>p.c);
+  if(!specialtyUsesPrimaryCredit()||procs.length<2){
+    return procs.map((p,idx)=>({...p,isPrimary:specialtyUsesPrimaryCredit() ? idx===0 : false}));
+  }
+  let primaryIdx=procs.findIndex(p=>p.isPrimary);
+  if(primaryIdx<0) primaryIdx=0;
+  return procs.map((p,idx)=>({...p,isPrimary:idx===primaryIdx}));
+}
+function setCaseProcedures(list){
+  caseData.procedures=ensureProcedurePrimaryConsistency(list);
+  Promise.resolve().then(()=>hydrateProcedureMetadata().catch(e=>console.warn('[CaseFlow] procedure metadata hydrate failed:',e.message)));
+}
+function upsertCaseProcedure(proc,{allowDuplicate=false}={}){
+  const normalized=normalizeProcedureEntry(proc);
+  if(!normalized.c) return false;
+  if(!allowDuplicate&&caseData.procedures.find(p=>p.c===normalized.c)) return false;
+  setCaseProcedures([...(caseData.procedures||[]), normalized]);
+  return true;
+}
+function getAcgmeActiveDateForLookups(){
+  const iso=caseData.date||isoToday();
+  return formatAcgmeDate(iso);
+}
+function getCurrentSpecialtyId(){
+  const explicit=localStorage.getItem('cf5-specialty-id');
+  if(explicit&&/^\d+$/.test(String(explicit).trim())) return String(explicit).trim();
+  const formFields=getAcgmeFormFields();
+  for(const field of formFields){
+    const opts=Array.isArray(field?.options)?field.options:[];
+    const selected=opts.find(opt=>String(opt?.selected||'').toLowerCase()==='true');
+    if(selected?.specialtyId) return String(selected.specialtyId);
+  }
+  return '';
+}
+async function fetchProcedureMetadataForCode(code){
+  const specialtyId=getCurrentSpecialtyId();
+  const token=localStorage.getItem('cf5-token');
+  if(!code||!specialtyId||!token||!ACGME_BACKEND_URL) return null;
+  const params=new URLSearchParams({
+    specialtyId:String(specialtyId),
+    codeDesc:String(code),
+    activeAsOfDate:getAcgmeActiveDateForLookups(),
+  });
+  const res=await fetch(`${ACGME_BACKEND_URL}/api/lookups/codes?${params.toString()}`,{
+    headers:{Authorization:`Bearer ${token}`}
+  });
+  if(!res.ok) throw new Error(`code lookup ${res.status}`);
+  const data=await res.json().catch(()=>({}));
+  const rows=Array.isArray(data?.Payload)?data.Payload:(Array.isArray(data?.d)?data.d:[]);
+  const target=rows.find(row=>String(row?.CodeValue||'').trim()===String(code).trim())||null;
+  if(!target) return null;
+  const attrs=(Array.isArray(target.CodeAttributes)?target.CodeAttributes:[]).map(attr=>({
+    id:String(attr?.Id??attr?.id??'').trim(),
+    name:String(attr?.Name??attr?.name??'').trim(),
+  })).filter(attr=>attr.id&&attr.name);
+  return {
+    area:String(target.AreaName||target.Area||target.DefCatShortLabel||'').trim(),
+    availableAttributes:attrs,
+    _metaLoaded:true,
+  };
+}
+async function hydrateProcedureMetadata(){
+  const procs=Array.isArray(caseData.procedures)?caseData.procedures:[];
+  const tasks=procs.map(async(proc,idx)=>{
+    const p=normalizeProcedureEntry(proc);
+    if(!p.c||p._metaLoaded||procedureMetaInflight.has(p.c)) return;
+    procedureMetaInflight.add(p.c);
+    try{
+      const meta=await fetchProcedureMetadataForCode(p.c);
+      if(!meta) return;
+      const current=caseData.procedures[idx];
+      if(!current||String(current.c)!==String(p.c)) return;
+      const merged=normalizeProcedureEntry({
+        ...current,
+        a: current.a||meta.area||'',
+        availableAttributes: meta.availableAttributes||current.availableAttributes,
+        _metaLoaded:true,
+      });
+      caseData.procedures[idx]=merged;
+      setCaseProcedures(caseData.procedures);
+      showCptFound(caseData.procedures);
+      if(document.getElementById('add-more-box')?.classList.contains('show')) showAddMoreScreen();
+    }catch(e){
+      console.warn('[CaseFlow] metadata lookup failed for CPT', p.c, e.message);
+    }finally{
+      procedureMetaInflight.delete(p.c);
+    }
+  });
+  await Promise.all(tasks);
+}
+function setProcedurePrimary(idx){
+  setCaseProcedures((caseData.procedures||[]).map((p,i)=>({...p,isPrimary:i===idx})));
+  showCptFound(caseData.procedures);
+  if(document.getElementById('add-more-box')?.classList.contains('show')) showAddMoreScreen();
+}
+function toggleProcedureAttribute(idx, attrId){
+  const proc=caseData.procedures[idx];
+  if(!proc) return;
+  const ids=new Set((proc.selectedAttributeIds||[]).map(String));
+  const key=String(attrId);
+  if(ids.has(key)) ids.delete(key); else ids.add(key);
+  caseData.procedures[idx]=normalizeProcedureEntry({...proc, selectedAttributeIds:[...ids]});
+  setCaseProcedures(caseData.procedures);
+  showCptFound(caseData.procedures);
+  if(document.getElementById('add-more-box')?.classList.contains('show')) showAddMoreScreen();
+}
+function renderProcedureDetailBadges(proc, idx){
+  const lines=[];
+  if(specialtyUsesPrimaryCredit()&&caseData.procedures.length>1){
+    lines.push(
+      `<label class="cpt-proc-meta"><input type="radio" name="cpt-primary-credit" ${proc.isPrimary?'checked':''} onchange="setProcedurePrimary(${idx})">Primary credit</label>`
+    );
+  }
+  const attrs=(proc.availableAttributes||[]).map(attr=>{
+    const checked=(proc.selectedAttributeIds||[]).includes(String(attr.id));
+    return `<label class="cpt-proc-meta"><input type="checkbox" ${checked?'checked':''} onchange="toggleProcedureAttribute(${idx},'${escAttr(attr.id)}')">${escHtml(attr.name)}</label>`;
+  }).join('');
+  if(attrs) lines.push(`<div class="cpt-proc-attrs">${attrs}</div>`);
+  return lines.join('');
+}
 /** Matches ADS Case ID input (bootstrap-maxlength on apps.acgme.org). */
 const CASE_ID_MAX_LEN=25;
 const APP_TOS_VERSION='2026-03-31';
@@ -2970,21 +3150,25 @@ function syncDynamicAcgmeFields(){
   for(const field of fields){
     const standardKey=inferStandardFieldKey(field);
     const labels=optionLabelsForField(field);
-    const qType=field.type==='select'?(shouldUseChipsForField(field)?'chips':'select'):(field.type==='date'?'date':'text');
+    const qType=(field.type==='select'||field.type==='radio'||field.type==='checkbox')
+      ? (shouldUseChipsForField(field)?'chips':'select')
+      : (field.type==='date'?'date':'text');
     if(standardKey==='rotation'){
       QUESTIONS.push({
         key:'rotation',
         isDynamicAcgme:true,
         isEmpty:()=>!getAcgmeFieldValue('rotation',field.name),
         question:`What ${String(field.label||'rotation').replace(/\*+$/,'').trim().toLowerCase()} applies to this case?`,
-        type:qType,
+        type:'combo',
+        combo:'rotation',
         options:labels,
         set:v=>setAcgmeFieldValue('rotation',field.name,v),
       });
       SUMMARY_FIELDS.push({
         key:'rotation',
         label:field.label||'Rotation',
-        type:qType,
+        type:'combo',
+        combo:'rotation',
         isDynamicAcgme:true,
         options:labels,
         get:()=>getAcgmeFieldValue('rotation',field.name),
@@ -2994,6 +3178,18 @@ function syncDynamicAcgmeFields(){
       continue;
     }
     if(['patientType','patientAge','caseYear'].includes(standardKey||'')) continue;
+    if(!standardKey){
+      SUMMARY_FIELDS.push({
+        key:field.key,
+        label:field.label||humanizeKey(field.name||field.key),
+        type:qType,
+        isDynamicAcgme:true,
+        options:labels,
+        get:()=>getAcgmeFieldValue(field.key,field.name),
+        set:v=>setAcgmeFieldValue(field.key,field.name,v),
+        fieldName:field.name,
+      });
+    }
     if(standardKey||!field.required) continue;
     QUESTIONS.push({
       key:field.key,
@@ -3003,16 +3199,6 @@ function syncDynamicAcgmeFields(){
       type:qType,
       options:labels,
       set:v=>setAcgmeFieldValue(field.key,field.name,v),
-    });
-    SUMMARY_FIELDS.push({
-      key:field.key,
-      label:field.label||humanizeKey(field.name||field.key),
-      type:qType,
-      isDynamicAcgme:true,
-      options:labels,
-      get:()=>getAcgmeFieldValue(field.key,field.name),
-      set:v=>setAcgmeFieldValue(field.key,field.name,v),
-      fieldName:field.name,
     });
   }
 }
@@ -3202,7 +3388,7 @@ async function processDescription(text){
     // Primary codes go straight into procedures
     const primaries = extracted.suggestedCodes.filter(s=>s.primary!==false);
     const alternatives = extracted.suggestedCodes.filter(s=>s.primary===false);
-    caseData.procedures = primaries.map(s=>({c:s.code,d:s.desc,a:s.area}));
+    setCaseProcedures(primaries.map((s,idx)=>({c:s.code,d:s.desc,a:s.area,isPrimary:idx===0})));
     caseData.alternatives = alternatives; // store for display
   }
   orbState='idle';
@@ -3279,7 +3465,7 @@ function liveSearch(q){
     +hits.map(h=>`<div class="srch-row" onclick="addCptFromSearch('${h.c}','${esc(h.d)}','${esc(h.a)}')"><div class="srch-code">${h.c}</div><div class="srch-info"><div class="srch-desc">${h.d}</div><div class="srch-area">${h.a}</div></div><div class="srch-add">+</div></div>`).join('');
 }
 function addCptFromSearch(code,desc,area){
-  if(!caseData.procedures.find(p=>p.c===code)){caseData.procedures.push({c:code,d:desc,a:area});showCptFound(caseData.procedures)}
+  if(upsertCaseProcedure({c:code,d:desc,a:area})){showCptFound(caseData.procedures)}
   else toast('Code already added','');
   hideAnswerUI();nextQuestion();
 }
@@ -3386,16 +3572,17 @@ function submitDateQuestion(){
 }
 /** Site / attending: searchable combo (same data as ACGME profile lists) */
 function showFlowCombo(which){
-  const labels=which==='site'?getSitesForEdit():getAttendingsForEdit();
-  const cur=which==='site'?(caseData.site||''):(caseData.attending||'');
-  const hint=hasProfileCache(which==='site'?'cf5-sites':'cf5-attendings')
+  const state=getComboFieldState(which);
+  const cur=state.value;
+  const cacheKey=which==='site'?'cf5-sites':which==='att'?'cf5-attendings':'cf5-rotations';
+  const hint=hasProfileCache(cacheKey)
     ? 'Type to filter or open the list — from your ACGME program.'
     : 'Connect ACGME in Settings to load your program list. Defaults shown below.';
   const ph=which==='site'?'Search or select site…':'Search or select attending…';
   const wrap=document.getElementById('a-combo-wrap');
   wrap.innerHTML=
     '<div class="ce-combo flow-combo" data-which="'+which+'">'+
-    '<input type="text" class="ce-sel-input" id="flow-'+which+'-inp" placeholder="'+ph+'" autocomplete="off" autocorrect="off" autocapitalize="off" value="'+escAttr(cur)+'" '+
+    '<input type="text" class="ce-sel-input" id="flow-'+which+'-inp" placeholder="'+state.placeholder+'" autocomplete="off" autocorrect="off" autocapitalize="off" value="'+escAttr(cur)+'" '+
     'onfocus="flowComboOpen(\''+which+'\')" oninput="flowComboInput(\''+which+'\',this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();flowComboTrySubmit(\''+which+'\');}">'+
     '<div class="ce-combo-panel" id="flow-'+which+'-panel"></div></div>'+
     '<div class="flow-combo-hint">'+escHtml(hint)+'</div>';
@@ -3415,13 +3602,13 @@ function flowComboClose(which){
   if(p) p.classList.remove('open');
 }
 function flowComboFilter(which, q){
-  const labels=which==='site'?getSitesForEdit():getAttendingsForEdit();
+  const labels=getComboLabels(which);
   const needle=(q||'').toLowerCase().trim();
   const filtered=needle?labels.filter(function(l){return l.toLowerCase().indexOf(needle)!==-1;}):labels;
   const panel=document.getElementById('flow-'+which+'-panel');
   if(!panel)return;
   if(!labels.length){
-    panel.innerHTML='<div class="ce-combo-empty">No sites/attendings loaded. Open Settings and connect ACGME.</div>';
+    panel.innerHTML='<div class="ce-combo-empty">'+escHtml(getComboFieldState(which).missing)+'</div>';
     return;
   }
   const slice=filtered.slice(0,150);
@@ -3432,13 +3619,13 @@ function flowComboFilter(which, q){
     : '<div class="ce-combo-empty">No matches — clear the search to see all.</div>';
 }
 function flowComboInput(which, val){
-  if(which==='site') caseData.site=val; else caseData.attending=val;
+  getComboFieldState(which).set(val);
   flowComboFilter(which, val);
 }
 function flowComboPick(which, label){
   const inp=document.getElementById('flow-'+which+'-inp');
   if(inp) inp.value=label;
-  if(which==='site') caseData.site=label; else caseData.attending=label;
+  getComboFieldState(which).set(label);
   flowComboClose(which);
   answerQuestion(label);
 }
@@ -3573,7 +3760,7 @@ function confirmCptSelection(){
   const box = document.getElementById('cpt-select-box');
   if(!box._procs || !box._selected || box._selected.size === 0) return;
   const chosen = [...box._selected].map(i => box._procs[i]);
-  caseData.procedures = chosen;
+  setCaseProcedures(chosen);
   box.classList.remove('show');
   box.innerHTML = '';
   setStateLabel('');
@@ -3638,8 +3825,7 @@ function showAddMoreScreen(){
 }
 
 function addAltCode(code, desc, area){
-  if(!caseData.procedures.find(p=>p.c===code)){
-    caseData.procedures.push({c:code,d:desc,a:area});
+  if(upsertCaseProcedure({c:code,d:desc,a:area})){
     // Remove from alternatives
     caseData.alternatives = (caseData.alternatives||[]).filter(s=>s.code!==code);
     showCptFound(caseData.procedures);
@@ -3661,6 +3847,7 @@ function renderCodesReview(){
 
 function removeFromReview(i){
   caseData.procedures.splice(i,1);
+  setCaseProcedures(caseData.procedures);
   showCptFound(caseData.procedures);
   renderCodesReview();
 }
@@ -3688,7 +3875,7 @@ function modalSearch(q){
 
 function addMoreCode(code, desc, area){
   closeSearchModal();
-  caseData.procedures.push({c:code, d:desc, a:area});
+  upsertCaseProcedure({c:code, d:desc, a:area});
   showCptFound(caseData.procedures);
   showAddMoreScreen();
   toast('Code added','ok');
@@ -3794,7 +3981,7 @@ async function stopAddMoreVoice(){
     document.getElementById('orb-hint').classList.remove('hide');
     showAddMoreScreen();
     if(matched.length){
-      matched.forEach(e=>{if(!caseData.procedures.find(p=>p.c===e.c))caseData.procedures.push({c:e.c,d:e.d,a:e.a});});
+      matched.forEach(e=>{upsertCaseProcedure({c:e.c,d:e.d,a:e.a});});
       showCptFound(caseData.procedures);
       toast(`${matched.length} code${matched.length>1?'s':''} added`,'ok');
     } else {
@@ -3814,8 +4001,7 @@ async function stopAddMoreVoice(){
     const alternatives = extracted.suggestedCodes.filter(s=>s.primary===false);
     let added=0;
     primaries.forEach(s=>{
-      if(!caseData.procedures.find(p=>p.c===s.code)){
-        caseData.procedures.push({c:s.code,d:s.desc,a:s.area});
+      if(upsertCaseProcedure({c:s.code,d:s.desc,a:s.area})){
         added++;
       }
     });
@@ -3846,19 +4032,23 @@ function doneAddingCodes(){
 
 function showCptFound(procs){
   const box=document.getElementById('cpt-found-box');
+  procs=ensureProcedurePrimaryConsistency(procs);
+  caseData.procedures=procs;
   if(!procs.length){box.classList.remove('show');return}
-  box.innerHTML=`<div class="cpt-found-label">&#10022; CPT codes identified (${procs.length})</div>`+procs.map((p,i)=>`<div class="cpt-found-item" id="cpt-found-item-${i}"><div class="cpt-found-code">${p.c}</div><div class="cpt-found-desc">${p.d}<br><span style="font-size:11px;color:var(--text3)">${p.a}</span></div><div class="cpt-found-actions"><button class="cpt-found-dup" onclick="dupCptFound(${i})" aria-label="Duplicate">+</button><button class="cpt-found-remove" onclick="removeCptFound(${i})" aria-label="Remove">&#8722;</button></div></div>`).join('');
+  box.innerHTML=`<div class="cpt-found-label">&#10022; CPT codes identified (${procs.length})</div>`+procs.map((p,i)=>`<div class="cpt-found-item" id="cpt-found-item-${i}"><div class="cpt-found-code">${p.c}</div><div class="cpt-found-desc">${p.d}<br><span style="font-size:11px;color:var(--text3)">${p.a}</span>${renderProcedureDetailBadges(p,i)}</div><div class="cpt-found-actions"><button class="cpt-found-dup" onclick="dupCptFound(${i})" aria-label="Duplicate">+</button><button class="cpt-found-remove" onclick="removeCptFound(${i})" aria-label="Remove">&#8722;</button></div></div>`).join('');
   box.classList.add('show');
 }
 function removeCptFound(idx){
   const item=document.getElementById(`cpt-found-item-${idx}`);
-  if(item){item.classList.add('removing');setTimeout(()=>{caseData.procedures.splice(idx,1);showCptFound(caseData.procedures);},200);}
-  else{caseData.procedures.splice(idx,1);showCptFound(caseData.procedures);}
+  if(item){item.classList.add('removing');setTimeout(()=>{caseData.procedures.splice(idx,1);setCaseProcedures(caseData.procedures);showCptFound(caseData.procedures);},200);}
+  else{caseData.procedures.splice(idx,1);setCaseProcedures(caseData.procedures);showCptFound(caseData.procedures);}
 }
 function dupCptFound(idx){
   const p=caseData.procedures[idx];
   if(!p)return;
-  caseData.procedures.splice(idx+1,0,{c:p.c,d:p.d,a:p.a});
+  const dup=normalizeProcedureEntry({...p,isPrimary:false});
+  caseData.procedures.splice(idx+1,0,dup);
+  setCaseProcedures(caseData.procedures);
   showCptFound(caseData.procedures);
   toast('Code duplicated','ok');
 }
@@ -3913,7 +4103,7 @@ function renderSummaryCard(){
         const w=f.combo;
         html += `<div class="sum-edit-panel sum-edit-combo" onclick="event.stopPropagation()">
           <div class="ce-combo flow-combo" data-which="${w}">
-            <input type="text" class="ce-sel-input" id="sum-edit-${f.key}-inp" placeholder="${w==='site'?'Search or select site…':'Search or select attending…'}" autocomplete="off" value="${escAttr(val||'')}"
+            <input type="text" class="ce-sel-input" id="sum-edit-${f.key}-inp" placeholder="${escAttr(getComboFieldState(w).placeholder)}" autocomplete="off" value="${escAttr(val||'')}"
               onfocus="sumFlowComboOpen('${f.key}')" oninput="sumFlowComboInput('${f.key}',this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();sumFlowComboPickExact('${f.key}');}">
             <div class="ce-combo-panel" id="sum-edit-${f.key}-panel"></div>
           </div>
@@ -3939,9 +4129,10 @@ function renderSummaryCard(){
     }
   }
   document.getElementById('summary-card').innerHTML = html;
-  if(summaryEditKey && (summaryEditKey==='site'||summaryEditKey==='attending')){
+  const editingField=SUMMARY_FIELDS.find(function(x){return x.key===summaryEditKey;});
+  if(summaryEditKey && editingField && editingField.type==='combo'){
     setTimeout(function(){
-      sumFlowComboFilter(summaryEditKey, (SUMMARY_FIELDS.find(function(x){return x.key===summaryEditKey;})||{}).get()||'');
+      sumFlowComboFilter(summaryEditKey, (editingField||{}).get()||'');
       var inp=document.getElementById('sum-edit-'+summaryEditKey+'-inp');
       if(inp){ inp.focus(); }
     }, 0);
@@ -3972,14 +4163,15 @@ function sumFlowComboClose(key){
   if(p) p.classList.remove('open');
 }
 function sumFlowComboFilter(key, q){
-  const which=key==='site'?'site':'att';
-  const labels=which==='site'?getSitesForEdit():getAttendingsForEdit();
+  const field=SUMMARY_FIELDS.find(function(x){return x.key===key;});
+  const which=field?.combo||'att';
+  const labels=getComboLabels(which);
   const needle=(q||'').toLowerCase().trim();
   const filtered=needle?labels.filter(function(l){return l.toLowerCase().indexOf(needle)!==-1;}):labels;
   const panel=document.getElementById('sum-edit-'+key+'-panel');
   if(!panel)return;
   if(!labels.length){
-    panel.innerHTML='<div class="ce-combo-empty">No list loaded. Connect ACGME in Settings.</div>';
+    panel.innerHTML='<div class="ce-combo-empty">'+escHtml(getComboFieldState(which).missing)+'</div>';
     return;
   }
   const slice=filtered.slice(0,120);
@@ -4009,8 +4201,9 @@ function sumFlowComboPickExact(key){
   if(!inp)return;
   const v=inp.value.trim();
   if(!v)return;
-  const which=key==='site'?'site':'att';
-  const labels=which==='site'?getSitesForEdit():getAttendingsForEdit();
+  const field=SUMMARY_FIELDS.find(function(x){return x.key===key;});
+  const which=field?.combo||'att';
+  const labels=getComboLabels(which);
   const exact=labels.find(function(l){return l.toLowerCase()===v.toLowerCase();});
   sumFlowComboPick(key, exact||v);
 }
@@ -4183,6 +4376,8 @@ async function submitCase(){
     yr:getPreferredCaseYearValue().replace(/^Year\s+/i,''),
     notes:caseData.notes||'',
     caseId:caseData.caseId||'',
+    rotation:caseData.rotation||'',
+    extraFields:{...(caseData.extraFields||{})},
   };
 
   let status='submitted';
@@ -4557,7 +4752,7 @@ function positionCeComboPanel(which){
   panel.style.maxHeight=`${Math.round(maxHeight)}px`;
 }
 function ceComboFilter(which, q){
-  const labels=which==='site'?getSitesForEdit():getAttendingsForEdit();
+  const labels=getComboLabels(which);
   const needle=(q||'').toLowerCase().trim();
   const filtered=needle?labels.filter(l=>l.toLowerCase().includes(needle)):labels;
   const panel=document.getElementById('ce-'+which+'-panel');
@@ -4715,13 +4910,13 @@ function addMoreCode(code,desc,area){
   if(searchModalMode==='editcase'){
     closeSearchModal();
     if(!editingCase.procs)editingCase.procs=[];
-    editingCase.procs.push({c:code,d:desc,a:area});
+    editingCase.procs.push(normalizeProcedureEntry({c:code,d:desc,a:area,isPrimary:editingCase.procs.length===0}));
     document.getElementById('ce-procs').innerHTML=renderCeProcs();
     toast('Procedure added to case','ok');
     return;
   }
   closeSearchModal();
-  caseData.procedures.push({c:code,d:desc,a:area});
+  upsertCaseProcedure({c:code,d:desc,a:area});
   showCptFound(caseData.procedures);
   showAddMoreScreen();
   toast('Code added','ok');
@@ -4771,6 +4966,8 @@ async function resubmitCase(){
         yr:editingCase.yr,
         notes:editingCase.notes||'',
         caseId:editingCase.cid||editingCase.caseId||'',
+        rotation:editingCase.rotation||'',
+        extraFields:editingCase.extraFields||{},
       });
     } catch(e){
       newStatus=priorStatus==='submitted'?'submitted':'pending';
@@ -5236,6 +5433,7 @@ async function fetchAcgmeProfile(opts){
     const patientTypes = body.patientTypes || [];
     const rotations = body.rotations || [];
     const formFields = body.formFields || [];
+    const capabilities = body.capabilities || {};
     const profileSpecialtySlug = SPECIALTY_ID_TO_SLUG[String(body.specialtyId||'')] || '';
     if(sites.length)        localStorage.setItem('cf5-sites',           JSON.stringify(sites));
     if(attendings.length)    localStorage.setItem('cf5-attendings',     JSON.stringify(attendings));
@@ -5243,6 +5441,7 @@ async function fetchAcgmeProfile(opts){
     if(patientTypes.length) localStorage.setItem('cf5-patient-types',  JSON.stringify(patientTypes));
     if(rotations.length)    localStorage.setItem('cf5-rotations',      JSON.stringify(rotations));
     localStorage.setItem('cf5-form-fields', JSON.stringify(formFields));
+    localStorage.setItem('cf5-form-capabilities', JSON.stringify(capabilities));
     if(body.residentsId) localStorage.setItem('cf5-residents-id', String(body.residentsId));
     if(body.specialtyId) localStorage.setItem('cf5-specialty-id', String(body.specialtyId));
     if(profileSpecialtySlug && profileSpecialtySlug !== currentUserMeta.specialty){
@@ -5458,15 +5657,19 @@ function resolveSchemaOptionId(field, displayValue){
   const found=(field.options||[]).find(opt=>String(opt.label||'').trim().toLowerCase()===needle);
   return found?String(found.id||''):'';
 }
-function buildAcgmeExtraFieldsPayload(){
+function buildAcgmeExtraFieldsPayload(sourceCase=caseData){
   const out={};
   for(const field of getAcgmeFormFields()){
     if(!field||!field.name) continue;
     const standardKey=inferStandardFieldKey(field);
     if(['role','site','attending','patientType','patientAge','caseYear','date','caseId','resident'].includes(standardKey||'')) continue;
-    const raw=getAcgmeFieldValue(standardKey||field.key,field.name);
+    const raw=(()=>{
+      if(sourceCase===caseData) return getAcgmeFieldValue(standardKey||field.key,field.name);
+      if(standardKey==='rotation') return sourceCase.rotation||sourceCase.extraFields?.[field.name]||'';
+      return sourceCase.extraFields?.[field.name]||'';
+    })();
     if(raw==null||String(raw).trim()==='') continue;
-    if(field.type==='select'){
+    if(field.type==='select'||field.type==='radio'||field.type==='checkbox'){
       const resolved=resolveSchemaOptionId(field, raw);
       out[field.name]=resolved||String(raw).trim();
     } else {
@@ -5534,7 +5737,13 @@ async function callSubmitAcgme(casePayload){
     comments:        casePayload.notes||'',
     caseId:          casePayload.caseId||'',
     residentsId:     localStorage.getItem('cf5-residents-id') || '',
-    extraFields:     buildAcgmeExtraFieldsPayload(),
+    role:            preferredRole,
+    site:            casePayload.site||'',
+    attending:       casePayload.att||'',
+    patientType:     preferredPatientValue,
+    caseYear:        preferredCaseYear,
+    extraFields:     buildAcgmeExtraFieldsPayload(casePayload),
+    procedures:      procs.map(normalizeProcedureEntry),
   };
   if(activePatientField){
     body.patientTypeId = assertNumericAcgmeId(ptIdRaw, activePatientField.label||'patient field');
@@ -5726,6 +5935,7 @@ function doLogout(skipConfirm){
   localStorage.removeItem('cf5-patient-types');
   localStorage.removeItem('cf5-rotations');
   localStorage.removeItem('cf5-form-fields');
+  localStorage.removeItem('cf5-form-capabilities');
   localStorage.removeItem('cf5-user-meta');
   syncDynamicAcgmeFields();
   resetFlow();
@@ -6851,6 +7061,7 @@ async function syncAcgmeSettingsFromServer(){
       localStorage.removeItem('cf5-patient-types');
       localStorage.removeItem('cf5-rotations');
       localStorage.removeItem('cf5-form-fields');
+      localStorage.removeItem('cf5-form-capabilities');
       syncDynamicAcgmeFields();
     } else {
       localStorage.setItem('cf5-vault', JSON.stringify({ saved: true }));
@@ -6880,28 +7091,38 @@ async function loadCasesFromDB(){
       return hasDate||hasCodes;
     });
     // Convert DB rows to frontend case format
-    const dbCases=cleanRows.map(r=>({
+    const dbCases=cleanRows.map(r=>{
+      const extraFields=r.extra_fields||{};
+      const rotationKey=Object.keys(extraFields).find(k=>String(k).toLowerCase()==='rotations'||String(k).toLowerCase()==='rotation');
+      return ({
       id:       String(r.id),
       dbId:     r.id,
       localId:  r.local_id,
       ts:       r.submitted_at,
       date:     r.procedure_date,
-      procs:    r.procedures||r.selected_codes?.split(',').map(c=>c.trim()).filter(Boolean).map(c=>({c,d:r.code_description||c,a:''})),
+      procs:    (r.procedures||r.selected_codes?.split(',').map(c=>c.trim()).filter(Boolean).map(c=>({c,d:r.code_description||c,a:''}))||[]).map(normalizeProcedureEntry),
       role:     r.role||'',
       site:     r.site||'',
       att:      r.attending||'',
       pt:       r.patient_type||'',
       yr:       String(r.case_year||'').replace(/^Year\s+/i,'').trim(),
       notes:    r.notes||'',
+      rotation: rotationKey?String(extraFields[rotationKey]||''):'',
+      extraFields:extraFields,
       status:   normalizeCaseStatus(r.status),
-    }));
+    })});
     cases=dbCases.filter(isSubmittedCase);
     localStorage.setItem('cf5-cases',JSON.stringify(cases));
   }catch(e){
     console.warn('[CaseFlow] Could not load cases from DB, using local cache:',e.message);
     try{
       const stored=JSON.parse(localStorage.getItem('cf5-cases')||'[]');
-      cases=(Array.isArray(stored)?stored:[]).map(c=>({...c,status:normalizeCaseStatus(c?.status)})).filter(isSubmittedCase);
+      cases=(Array.isArray(stored)?stored:[]).map(c=>({
+        ...c,
+        procs:(Array.isArray(c?.procs)?c.procs:[]).map(normalizeProcedureEntry),
+        extraFields:c?.extraFields||{},
+        status:normalizeCaseStatus(c?.status)
+      })).filter(isSubmittedCase);
     }catch(_){
       cases=[];
     }
@@ -6925,6 +7146,7 @@ async function saveCaseToDB(caseObj){
         patientType:  caseObj.pt,
         caseYear:     caseObj.yr,
         notes:        caseObj.notes||'',
+        extraFields:  caseObj.extraFields||{},
       }),
     });
   }catch(e){
