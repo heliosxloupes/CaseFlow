@@ -1445,7 +1445,15 @@ function shouldIgnoreSchemaField(name = '') {
   if (/^(?:__RequestVerificationToken|SelectedCodes|SelectedCodeAttributes|Comments|CodeDescription|CodeIdToAddToFavList|TypeToCodeIdToAddToFavList|FavoriteLists|FavoriteListIdToAddCode|CategoriesShortLabel|GetSelectedCodePartial|GetYearOptionsUrl|UrlGetLastFive|UrlGetLastCase|SearchTerm|HoldSelectedCodes|HiddenUrls|Areas|Types|Categories|CategoryCodeDescription|NewFavoriteListName|NewFavListIds|NewFavListNames|SelectedCodesTab|MaxProcedureCaseTemplate|CountProcedureCaseTemplate|ResidentProcedureCaseTemplateId|TemplateNewName|TemplateSaveType|ProgramId|SpecialtyCode|SpecialtyId|SpecialtyTypeId|CPTBasedCase|TypeBasedCase|SpecialtyUsesPrimaryCredit|IsOrthopaedicSubspecialty|IsProcedureCaseTemplateEnabled|IsSpecialtyContainsCodeMessage|PatientIdDisplayName|DefaultInstitutions|DefaultAttendings|DefaultResidentRoles|DefaultRotations|DefaultGenders|DefaultPatientTypes|DefaultProcedureYear)$/i.test(n)) {
     return true;
   }
+  if (/^(?:txtcodequantity|typetoareamapping)$/i.test(n)) return true;
   if (/^Favorite/i.test(n) || /^HiddenUrls$/i.test(n)) return true;
+  return false;
+}
+
+function shouldIgnoreSchemaLabel(label = '') {
+  const l = String(label || '').replace(/\*+/g, '').trim().toLowerCase();
+  if (!l) return false;
+  if (/^(?:txtcode quantity|typeto area mapping)$/.test(l)) return true;
   return false;
 }
 
@@ -1520,21 +1528,32 @@ function scrapeChoiceGroups(html, hidden = {}) {
     const value = attrs.match(/\bvalue="([^"]*)"/i)?.[1] || '';
     if (!name || !value || shouldIgnoreSchemaField(name)) continue;
     const label = inferChoiceOptionLabel(html, name, id, humanizeFieldName(value), (groups.get(name)?.options.length || 0));
+    const explicitGroupLabel = inferLabelForControl(html, name, id);
     const existing = groups.get(name) || {
       key: `field:${name}`,
       name,
-      label: inferLabelForControl(html, name, id) || humanizeFieldName(name.replace(/\[\d+\]/g, '')),
+      label: explicitGroupLabel || '',
       type,
       required: requiredFlagForChoiceGroup(hidden, name),
       options: [],
-      standardKey: standardFieldKeyFromLabel(inferLabelForControl(html, name, id)) || standardFieldKeyFromName(name),
+      standardKey: standardFieldKeyFromLabel(explicitGroupLabel) || standardFieldKeyFromName(name),
     };
     if (!existing.options.find(opt => String(opt.id) === String(value))) {
       existing.options.push({ id: String(value), label: label || String(value) });
     }
+    if (!existing.label) {
+      if (existing.options.length === 1 && type === 'checkbox') existing.label = existing.options[0].label || '';
+      else if (existing.standardKey) existing.label = humanizeFieldName(name.replace(/\[\d+\]/g, ''));
+      else if (/^CaseTypes\[\d+\]$/i.test(name) && type === 'checkbox' && existing.options.length === 1) existing.label = existing.options[0].label || '';
+    }
     groups.set(name, existing);
   }
-  return [...groups.values()].filter(group => group.options.length);
+  return [...groups.values()].filter(group => {
+    if (!group.options.length) return false;
+    if (shouldIgnoreSchemaLabel(group.label)) return false;
+    if (!group.label && !group.standardKey) return false;
+    return true;
+  });
 }
 
 function scrapeVisibleFormFields(html) {
@@ -1550,9 +1569,12 @@ function scrapeVisibleFormFields(html) {
     const id = attrs.match(/\bid="([^"]+)"/i)?.[1] || '';
     if (!name || shouldIgnoreSchemaField(name) || seen.has(`select:${name}`)) continue;
     seen.add(`select:${name}`);
-    const label = inferLabelForControl(html, name, id) || humanizeFieldName(name);
+    const explicitLabel = inferLabelForControl(html, name, id);
+    const fallbackStandard = standardFieldKeyFromName(name);
+    const label = explicitLabel || (fallbackStandard ? humanizeFieldName(name) : '');
     const options = parseSelectOptions(html, name);
     if (!options.length) continue;
+    if (!label || shouldIgnoreSchemaLabel(label)) continue;
     const standardKey = standardFieldKeyFromLabel(label) || standardFieldKeyFromName(name);
     fields.push({
       key: standardKey || `field:${name}`,
@@ -1574,8 +1596,11 @@ function scrapeVisibleFormFields(html) {
     const id = attrs.match(/\bid="([^"]+)"/i)?.[1] || '';
     if (!name || shouldIgnoreSchemaField(name) || seen.has(`input:${name}`)) continue;
     seen.add(`input:${name}`);
-    const label = inferLabelForControl(html, name, id) || humanizeFieldName(name);
+    const explicitLabel = inferLabelForControl(html, name, id);
+    const fallbackStandard = standardFieldKeyFromName(name);
+    const label = explicitLabel || (fallbackStandard ? humanizeFieldName(name) : '');
     if (!label) continue;
+    if (shouldIgnoreSchemaLabel(label)) continue;
     const standardKey = standardFieldKeyFromLabel(label) || standardFieldKeyFromName(name) || (type === 'date' ? 'date' : null);
     fields.push({
       key: standardKey || `field:${name}`,

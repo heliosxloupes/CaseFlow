@@ -685,9 +685,19 @@ body.sm-menu-open .sm-panel-wrap{z-index:303}
 .cpt-found-item.removing{opacity:0}
 .cpt-found-code{font-size:12px;font-weight:600;color:var(--blue);min-width:46px;padding-top:2px}
 .cpt-found-desc{flex:1;font-size:13px;color:var(--text);line-height:1.35}
-.cpt-proc-meta{display:inline-flex;align-items:center;gap:6px;margin-top:8px;margin-right:10px;font-size:11px;color:var(--text2)}
-.cpt-proc-meta input{accent-color:var(--blue)}
-.cpt-proc-attrs{display:flex;flex-wrap:wrap;gap:4px 10px}
+.cpt-proc-meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.cpt-proc-pill{appearance:none;border:none;display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--text2);font-size:11px;font-weight:600;letter-spacing:.02em;cursor:pointer;transition:transform .16s ease,background .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease}
+.cpt-proc-pill:active{transform:scale(.98)}
+.cpt-proc-pill.is-active{background:rgba(84,143,255,.18);border-color:rgba(104,160,255,.5);color:#dbe8ff;box-shadow:0 8px 22px rgba(50,90,180,.18)}
+.cpt-proc-pill.is-accent.is-active{background:rgba(78,232,178,.16);border-color:rgba(78,232,178,.42);color:#dbfff3;box-shadow:0 8px 22px rgba(24,124,95,.18)}
+.cpt-proc-pill-dot{width:14px;height:14px;border-radius:999px;border:1.5px solid currentColor;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(255,255,255,.02)}
+.cpt-proc-pill-dot::after{content:'';width:6px;height:6px;border-radius:999px;background:currentColor;opacity:0;transform:scale(.45);transition:opacity .16s ease,transform .16s ease}
+.cpt-proc-pill.is-active .cpt-proc-pill-dot::after{opacity:1;transform:scale(1)}
+.cpt-proc-pill-check{width:14px;height:14px;border-radius:4px;border:1.5px solid currentColor;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(255,255,255,.02);font-size:10px;font-weight:800;line-height:1}
+.cpt-proc-pill-check::after{content:'✓';opacity:0;transform:scale(.7);transition:opacity .16s ease,transform .16s ease}
+.cpt-proc-pill.is-active .cpt-proc-pill-check::after{opacity:1;transform:scale(1)}
+.summary-bool-pill{display:inline-flex;align-items:center;justify-content:center;min-width:62px;padding:6px 10px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.03em;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--text2)}
+.summary-bool-pill.is-active{background:rgba(78,232,178,.16);border-color:rgba(78,232,178,.42);color:#dbfff3}
 .cpt-found-actions{display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:6px;flex-shrink:0;align-self:stretch;padding:2px 0}
 .cpt-found-dup{background:rgba(100,160,255,.13);border:1px solid rgba(100,160,255,.3);border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--blue);font-size:22px;font-weight:400;line-height:1;transition:background .15s}
 .cpt-found-dup:active{background:rgba(100,160,255,.28)}
@@ -2808,15 +2818,15 @@ function renderProcedureDetailBadges(proc, idx){
   const lines=[];
   if(specialtyUsesPrimaryCredit()&&caseData.procedures.length>1){
     lines.push(
-      `<label class="cpt-proc-meta"><input type="radio" name="cpt-primary-credit" ${proc.isPrimary?'checked':''} onchange="setProcedurePrimary(${idx})">Primary credit</label>`
+      `<button type="button" class="cpt-proc-pill ${proc.isPrimary?'is-active is-accent':''}" onclick="setProcedurePrimary(${idx})" aria-pressed="${proc.isPrimary?'true':'false'}"><span class="cpt-proc-pill-dot" aria-hidden="true"></span><span>Primary credit</span></button>`
     );
   }
   const attrs=(proc.availableAttributes||[]).map(attr=>{
     const checked=(proc.selectedAttributeIds||[]).includes(String(attr.id));
-    return `<label class="cpt-proc-meta"><input type="checkbox" ${checked?'checked':''} onchange="toggleProcedureAttribute(${idx},'${escAttr(attr.id)}')">${escHtml(attr.name)}</label>`;
+    return `<button type="button" class="cpt-proc-pill ${checked?'is-active':''}" onclick="toggleProcedureAttribute(${idx},'${escAttr(attr.id)}')" aria-pressed="${checked?'true':'false'}"><span class="cpt-proc-pill-check" aria-hidden="true"></span><span>${escHtml(attr.name)}</span></button>`;
   }).join('');
-  if(attrs) lines.push(`<div class="cpt-proc-attrs">${attrs}</div>`);
-  return lines.join('');
+  if(attrs) lines.push(attrs);
+  return lines.length?`<div class="cpt-proc-meta-row">${lines.join('')}</div>`:'';
 }
 /** Matches ADS Case ID input (bootstrap-maxlength on apps.acgme.org). */
 const CASE_ID_MAX_LEN=25;
@@ -3001,6 +3011,8 @@ function getAcgmeFieldValue(key,name){
   if(key==='date') return caseData.date||'';
   if(key==='caseId') return caseData.caseId||'';
   if(key==='rotation') return caseData.rotation||caseData.extraFields?.[name]||'';
+  const raw=caseData.extraFields?.[name];
+  if(raw===true||raw===false) return raw;
   return caseData.extraFields?.[name]||'';
 }
 function normalizeQuestionOptionValue(questionKey, val){
@@ -3134,6 +3146,13 @@ function setAcgmeFieldValue(key,name,val){
   if(key==='caseId'){caseData.caseId=String(val||'').slice(0,CASE_ID_MAX_LEN);return;}
   if(key==='rotation') caseData.rotation=val;
   if(!caseData.extraFields||typeof caseData.extraFields!=='object') caseData.extraFields={};
+  const field=getAcgmeFormFields().find(f=>String(f?.name||'')===String(name||''));
+  if(field?.type==='checkbox'&&Array.isArray(field.options)&&field.options.length===1){
+    if(val===true||/^yes$/i.test(String(val||''))) caseData.extraFields[name]=field.options[0].label||field.options[0].id||true;
+    else if(val===false||/^no$/i.test(String(val||''))) caseData.extraFields[name]='';
+    else caseData.extraFields[name]=val;
+    return;
+  }
   caseData.extraFields[name]=val;
 }
 function optionLabelsForField(field){
@@ -3150,6 +3169,7 @@ function syncDynamicAcgmeFields(){
   for(const field of fields){
     const standardKey=inferStandardFieldKey(field);
     const labels=optionLabelsForField(field);
+    const singleCheckbox=(field.type==='checkbox'&&labels.length===1);
     const qType=(field.type==='select'||field.type==='radio'||field.type==='checkbox')
       ? (shouldUseChipsForField(field)?'chips':'select')
       : (field.type==='date'?'date':'text');
@@ -3179,6 +3199,31 @@ function syncDynamicAcgmeFields(){
     }
     if(['patientType','patientAge','caseYear'].includes(standardKey||'')) continue;
     if(!standardKey){
+      if(singleCheckbox){
+        const optionLabel=labels[0]||field.label||humanizeKey(field.name||field.key);
+        const questionText=/^involved trauma$/i.test(optionLabel)
+          ? 'Did this case involve trauma?'
+          : `Does ${String(optionLabel).replace(/\*+$/,'').trim().toLowerCase()} apply to this case?`;
+        SUMMARY_FIELDS.push({
+          key:field.key,
+          label:optionLabel,
+          type:'boolean',
+          isDynamicAcgme:true,
+          get:()=>!!getAcgmeFieldValue(field.key,field.name),
+          set:v=>setAcgmeFieldValue(field.key,field.name,v),
+          fieldName:field.name,
+        });
+        QUESTIONS.push({
+          key:field.key,
+          isDynamicAcgme:true,
+          isEmpty:()=>getAcgmeFieldValue(field.key,field.name)==='',
+          question:questionText,
+          type:'chips',
+          options:['No','Yes'],
+          set:v=>setAcgmeFieldValue(field.key,field.name,v),
+        });
+        continue;
+      }
       SUMMARY_FIELDS.push({
         key:field.key,
         label:field.label||humanizeKey(field.name||field.key),
@@ -4088,16 +4133,21 @@ function renderSummaryCard(){
     }
     const val = f.get();
     const isEditing = summaryEditKey === f.key;
-    const displayVal = f.type==='date' && val ? formatDate(val) : (val || '');
+    const displayVal = f.type==='date' && val ? formatDate(val) : (f.type==='boolean' ? (val===''?'':(val?'Yes':'No')) : (val || ''));
     html += `<div class="sum-row sum-editable ${isEditing?'sum-editing':''}" onclick="toggleSummaryEdit('${f.key}')">
       <div class="sum-lbl">${f.label}</div>
-      <div class="sum-val ${val?'':'empty'}" style="flex:1">${displayVal||'&#8212;'}</div>
+      <div class="sum-val ${displayVal?'':'empty'}" style="flex:1">${f.type==='boolean'&&displayVal?`<span class="summary-bool-pill ${val?'is-active':''}">${displayVal}</span>`:(displayVal||'&#8212;')}</div>
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="opacity:.35;flex-shrink:0;margin-left:6px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
     </div>`;
     if(isEditing){
       if(f.type==='date'){
         html += `<div class="sum-edit-panel" onclick="event.stopPropagation()">
           <input type="date" class="sum-date-input" value="${val||''}" onchange="saveSummaryDateField('${f.key}',this.value)">
+        </div>`;
+      } else if(f.type==='boolean'){
+        html += `<div class="sum-edit-panel" onclick="event.stopPropagation()">
+          <div class="chip-opt sum-chip ${val?'':'selected'}" onclick="saveSummaryChip('${f.key}','No',event)">No</div>
+          <div class="chip-opt sum-chip ${val?'selected':''}" onclick="saveSummaryChip('${f.key}','Yes',event)">Yes</div>
         </div>`;
       } else if(f.type==='combo'){
         const w=f.combo;
@@ -5669,7 +5719,12 @@ function buildAcgmeExtraFieldsPayload(sourceCase=caseData){
       return sourceCase.extraFields?.[field.name]||'';
     })();
     if(raw==null||String(raw).trim()==='') continue;
-    if(field.type==='select'||field.type==='radio'||field.type==='checkbox'){
+    if(field.type==='checkbox'&&Array.isArray(field.options)&&field.options.length===1){
+      const yesLike=raw===true||/^yes$/i.test(String(raw||''))||String(raw||'').trim().toLowerCase()===String(field.options[0]?.label||'').trim().toLowerCase();
+      if(yesLike){
+        out[field.name]=String(field.options[0]?.id||'').trim();
+      }
+    } else if(field.type==='select'||field.type==='radio'||field.type==='checkbox'){
       const resolved=resolveSchemaOptionId(field, raw);
       out[field.name]=resolved||String(raw).trim();
     } else {
