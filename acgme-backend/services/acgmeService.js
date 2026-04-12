@@ -1486,8 +1486,17 @@ function inferLabelForControl(html, controlName, controlId = '') {
 }
 
 function inferChoiceOptionLabel(html, controlName, controlId = '', fallback = '', inputIndex = 0) {
-  const explicit = inferLabelForControl(html, controlId || controlName, controlId);
-  if (explicit) return explicit;
+  function cleanCandidate(raw) {
+    const text = decodeHtmlLite(String(raw || '').replace(/\s+/g, ' ').trim());
+    if (!text) return '';
+    const parts = text
+      .split(/\s{2,}|[\r\n]+|(?<=:)\s+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+    const filtered = parts.filter(part => !/^case type$/i.test(part));
+    if (filtered.length) return filtered[filtered.length - 1];
+    return text.replace(/^case type\s+/i, '').trim() || text;
+  }
   const markerRe = new RegExp(
     `<input\\b[^>]*?(?:name=["']${String(controlName || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']|id=["']${String(controlId || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'])[^>]*>`,
     'ig'
@@ -1499,9 +1508,46 @@ function inferChoiceOptionLabel(html, controlName, controlId = '', fallback = ''
       seen += 1;
       continue;
     }
+    const inputHtml = match[0] || '';
+    const exactId = inputHtml.match(/\bid="([^"]+)"/i)?.[1] || controlId || '';
+    if (exactId) {
+      const exactFor = new RegExp(
+        `<label\\b[^>]*for=["']${String(exactId).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'][^>]*>([\\s\\S]*?)<\\/label>`,
+        'i'
+      );
+      const explicit = html.match(exactFor);
+      if (explicit && explicit[1]) {
+        const labelText = cleanCandidate(explicit[1].replace(inputHtml, ' ').replace(/<[^>]+>/g, ' ').trim());
+        if (labelText) return labelText;
+      }
+    }
+    const before = html.slice(Math.max(0, match.index - 250), match.index);
+    const openLabelIdx = before.toLowerCase().lastIndexOf('<label');
+    const after = html.slice(match.index, Math.min(html.length, match.index + 500));
+    const closeLabelIdx = after.toLowerCase().indexOf('</label>');
+    if (openLabelIdx !== -1 && closeLabelIdx !== -1) {
+      const wrapped = before.slice(openLabelIdx) + after.slice(0, closeLabelIdx + 8);
+      const wrappedText = cleanCandidate(
+        wrapped
+          .replace(inputHtml, ' ')
+          .replace(/<svg[\s\S]*?<\/svg>/gi, ' ')
+          .replace(/<[^>]+>/g, ' ')
+          .trim()
+      );
+      if (wrappedText) return wrappedText;
+    }
     const tail = html.slice(match.index + match[0].length, match.index + match[0].length + 220);
-    const text = decodeHtmlLite(tail.replace(/<[^>]+>/g, ' ').trim());
+    const text = cleanCandidate(tail.replace(/<[^>]+>/g, ' ').trim());
     if (text) return text;
+    const container = html.slice(Math.max(0, match.index - 40), Math.min(html.length, match.index + 320));
+    const nearbyText = cleanCandidate(
+      container
+        .replace(inputHtml, ' ')
+        .replace(/<svg[\s\S]*?<\/svg>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .trim()
+    );
+    if (nearbyText) return nearbyText;
     break;
   }
   return decodeHtmlLite(fallback || '').trim();
