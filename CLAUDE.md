@@ -363,59 +363,41 @@ Bad changes:
 
 ## Skills And Plugins
 
-Claude should **actively use all available skills and plugins when relevant to the task**.
-Do not ignore them.
-Prefer them over ad hoc workflows when they match the work.
+Use available skills and plugins when they materially improve speed, correctness, or quality. Do not invoke them performatively.
 
-### Use available skills
-If a task matches an available skill, use it.
-This includes the system and plugin-provided skills that are available in the environment.
+### Installed Skills (`~/.claude/skills/`)
 
-Especially relevant for this project:
-- `build-ios-apps:ios-debugger-agent`
-- `build-ios-apps:swiftui-ui-patterns`
-- `build-ios-apps:swiftui-view-refactor`
-- `build-ios-apps:swiftui-performance-audit`
-- `build-ios-apps:ios-app-intents`
-- `github:github`
-- `github:gh-fix-ci`
-- `github:gh-address-comments`
-- `github:yeet`
-- `vercel:agent-browser`
-- `vercel:agent-browser-verify`
-- `vercel:investigation-mode`
-- `vercel:verification`
-- `vercel:nextjs`
-- `vercel:observability`
-- `vercel:vercel-api`
-- `vercel:vercel-cli`
-- `frontend-skill`
+| Skill | Invoke | Purpose |
+|---|---|---|
+| **Obsidian** | `/obsidian` | Interact with Obsidian vault — notes, canvas, markdown, CLI, bases |
+| **Get Shit Done (GSD)** | `/gsd` | Meta-prompting, context engineering, spec-driven dev, workstreams — combats context rot on long sessions |
+| **UI UX Pro Max** | `/ui-ux-pro-max` | 161 design reasoning rules, 67 UI styles — use for any significant UI/UX work on this app |
 
-Also use system skills when relevant:
-- `openai-docs`
-- `skill-creator`
-- `plugin-creator`
-- `skill-installer`
+### Installed Plugins (`~/.claude/plugins/`)
 
-### Use available plugins
-Prefer the enabled plugins when they help:
-- `Build iOS Apps`
-- `GitHub`
-- `Vercel`
+| Plugin | Purpose |
+|---|---|
+| **claude-mem** | Persistent memory across sessions — stores recent activity context |
+| **frontend-design** | Frontend design skill — use for component and layout work |
 
-Plugin expectations:
-- use **Build iOS Apps** tools/skills for simulator, iOS runtime, and native debugging work
-- use **GitHub** tools/skills for repo, PR, issue, comment, and CI workflows
-- use **Vercel** tools/skills for browser verification, deployment context, docs, and platform debugging
+### MCP Servers (`~/.claude/settings.json`)
 
-### Practical rule
-When a task touches:
-- iOS runtime/UI behavior → use Build iOS Apps capabilities
-- PRs / CI / repo workflows → use GitHub capabilities
-- browser verification / deployment behavior / live docs → use Vercel capabilities
+| Server | Purpose |
+|---|---|
+| **playwright** | Browser automation — used directly by ACGME submission Playwright scripts |
+| **chrome-devtools** | Live DOM inspection via Chrome DevTools protocol — use when debugging ACGME portal HTML/network |
+| **magic** (`@21st-dev/magic`) | UI component generation — use for building polished new UI components |
+| **superpowers** | Local superpowers MCP (`~/.claude/superpowers-mcp/`) |
+| **n8n-mcp** | n8n workflow automation integration |
+| **context-mode** | Manages context/conversation mode settings |
 
-Do not mention skills/plugins performatively.
-Use them because they improve the work.
+### When to use what
+
+- **UI work** → `/ui-ux-pro-max` + `magic` MCP for generation
+- **Long complex sessions** → `/gsd` to manage context and workstreams
+- **ACGME portal debugging** → `chrome-devtools` MCP to inspect live DOM/network
+- **Obsidian notes** → `/obsidian`
+- **Frontend components** → `frontend-design` plugin
 
 ---
 
