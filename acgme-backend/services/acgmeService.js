@@ -1533,6 +1533,7 @@ function scrapeChoiceGroups(html, hidden = {}) {
       key: `field:${name}`,
       name,
       label: explicitGroupLabel || '',
+      groupLabel: explicitGroupLabel || '',
       type,
       required: requiredFlagForChoiceGroup(hidden, name),
       options: [],
@@ -1545,6 +1546,12 @@ function scrapeChoiceGroups(html, hidden = {}) {
       if (existing.options.length === 1 && type === 'checkbox') existing.label = existing.options[0].label || '';
       else if (existing.standardKey) existing.label = humanizeFieldName(name.replace(/\[\d+\]/g, ''));
       else if (/^CaseTypes\[\d+\]$/i.test(name) && type === 'checkbox' && existing.options.length === 1) existing.label = existing.options[0].label || '';
+    }
+    if (!existing.groupLabel) {
+      existing.groupLabel = explicitGroupLabel || humanizeFieldName(name.replace(/\[\d+\]/g, ''));
+    }
+    if (existing.options.length === 1) {
+      existing.optionLabel = existing.options[0].label || '';
     }
     groups.set(name, existing);
   }

@@ -3162,6 +3162,13 @@ function shouldUseChipsForField(field){
   const labels=optionLabelsForField(field);
   return labels.length>0&&labels.length<=6;
 }
+function formatSingleCheckboxQuestion(field){
+  const optionLabel=String(field?.optionLabel||optionLabelsForField(field)[0]||field?.label||'this').replace(/\*+$/,'').trim();
+  const lower=optionLabel.toLowerCase();
+  if(/^involved\s+/.test(lower)) return `Was this case ${lower}?`;
+  if(/^(robotic|laparoscopic|emergent|elective|trauma)\b/.test(lower)) return `Was this case ${lower}?`;
+  return `Does this case include ${lower}?`;
+}
 function syncDynamicAcgmeFields(){
   for(let i=QUESTIONS.length-1;i>=0;i--){if(QUESTIONS[i].isDynamicAcgme)QUESTIONS.splice(i,1);}
   for(let i=SUMMARY_FIELDS.length-1;i>=0;i--){if(SUMMARY_FIELDS[i].isDynamicAcgme)SUMMARY_FIELDS.splice(i,1);}
@@ -3200,18 +3207,19 @@ function syncDynamicAcgmeFields(){
     if(['patientType','patientAge','caseYear'].includes(standardKey||'')) continue;
     if(!standardKey){
       if(singleCheckbox){
-        const optionLabel=labels[0]||field.label||humanizeKey(field.name||field.key);
-        const questionText=/^involved trauma$/i.test(optionLabel)
-          ? 'Did this case involve trauma?'
-          : `Does ${String(optionLabel).replace(/\*+$/,'').trim().toLowerCase()} apply to this case?`;
+        const optionLabel=field.optionLabel||labels[0]||field.label||humanizeKey(field.name||field.key);
+        const groupLabel=field.groupLabel||field.label||humanizeKey(field.name||field.key);
+        const questionText=formatSingleCheckboxQuestion({...field, optionLabel});
         SUMMARY_FIELDS.push({
           key:field.key,
-          label:optionLabel,
+          label:groupLabel,
           type:'boolean',
           isDynamicAcgme:true,
           get:()=>!!getAcgmeFieldValue(field.key,field.name),
           set:v=>setAcgmeFieldValue(field.key,field.name,v),
           fieldName:field.name,
+          optionLabel,
+          groupLabel,
         });
         QUESTIONS.push({
           key:field.key,
@@ -3221,6 +3229,8 @@ function syncDynamicAcgmeFields(){
           type:'chips',
           options:['No','Yes'],
           set:v=>setAcgmeFieldValue(field.key,field.name,v),
+          optionLabel,
+          groupLabel,
         });
         continue;
       }
@@ -4133,7 +4143,7 @@ function renderSummaryCard(){
     }
     const val = f.get();
     const isEditing = summaryEditKey === f.key;
-    const displayVal = f.type==='date' && val ? formatDate(val) : (f.type==='boolean' ? (val===''?'':(val?'Yes':'No')) : (val || ''));
+    const displayVal = f.type==='date' && val ? formatDate(val) : (f.type==='boolean' ? (val===''?'':(val?(f.optionLabel||'Yes'):'No')) : (val || ''));
     html += `<div class="sum-row sum-editable ${isEditing?'sum-editing':''}" onclick="toggleSummaryEdit('${f.key}')">
       <div class="sum-lbl">${f.label}</div>
       <div class="sum-val ${displayVal?'':'empty'}" style="flex:1">${f.type==='boolean'&&displayVal?`<span class="summary-bool-pill ${val?'is-active':''}">${displayVal}</span>`:(displayVal||'&#8212;')}</div>
@@ -4147,7 +4157,7 @@ function renderSummaryCard(){
       } else if(f.type==='boolean'){
         html += `<div class="sum-edit-panel" onclick="event.stopPropagation()">
           <div class="chip-opt sum-chip ${val?'':'selected'}" onclick="saveSummaryChip('${f.key}','No',event)">No</div>
-          <div class="chip-opt sum-chip ${val?'selected':''}" onclick="saveSummaryChip('${f.key}','Yes',event)">Yes</div>
+          <div class="chip-opt sum-chip ${val?'selected':''}" onclick="saveSummaryChip('${f.key}','Yes',event)">${escHtml(f.optionLabel||'Yes')}</div>
         </div>`;
       } else if(f.type==='combo'){
         const w=f.combo;
