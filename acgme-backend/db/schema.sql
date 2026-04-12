@@ -31,6 +31,14 @@ CREATE TABLE IF NOT EXISTS case_submissions (
   selected_codes   TEXT,
   code_description TEXT,
   status           VARCHAR(20) NOT NULL DEFAULT 'pending',
+  role             TEXT,
+  site             TEXT,
+  attending        TEXT,
+  patient_type     TEXT,
+  case_year        TEXT,
+  notes            TEXT,
+  procedures       JSONB,
+  local_id         VARCHAR(50),
   error_message    TEXT,
   submitted_at     TIMESTAMP DEFAULT NOW()
 );

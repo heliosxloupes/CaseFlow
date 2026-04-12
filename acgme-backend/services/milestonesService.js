@@ -238,17 +238,83 @@ function flattenRow(row) {
   return row.map(cleanText).filter(Boolean);
 }
 
-function inferHeaderSpec(rows) {
+function normalizeToken(value) {
+  return cleanText(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function isMinimumHeader(value) {
+  const token = normalizeToken(value);
+  return /\bminimum\b|\brequired\b/.test(token);
+}
+
+function isProgressHeader(value) {
+  const token = normalizeToken(value);
+  return /\bcompleted\b|\bcount\b|\bresident\b|\byour\b|\btotal\b|\bperformed\b|\blogged\b/.test(token);
+}
+
+function isLabelHeader(value) {
+  const token = normalizeToken(value);
+  return /\bcategory\b|\bprocedure\b|\bmilestone\b|\bdefined\b/.test(token);
+}
+
+function tokensOverlap(a, b) {
+  const aParts = new Set(normalizeToken(a).split(' ').filter(Boolean));
+  const bParts = normalizeToken(b).split(' ').filter(Boolean);
+  if (!aParts.size || !bParts.length) return false;
+  return bParts.every(part => aParts.has(part));
+}
+
+function countNumericRows(rows, colIndex, startIndex, maxRows = 6) {
+  if (colIndex < 0) return 0;
+  let count = 0;
+  for (let i = startIndex + 1; i < rows.length && i <= startIndex + maxRows; i++) {
+    if (asNumber(rows[i]?.[colIndex]) != null) count += 1;
+  }
+  return count;
+}
+
+function detectIndentLevel(rawValue) {
+  const text = String(rawValue == null ? '' : rawValue).replace(/\r/g, '');
+  const leadingSpaces = (text.match(/^\s+/)?.[0].length || 0);
+  return leadingSpaces >= 2 ? Math.floor(leadingSpaces / 2) : 0;
+}
+
+function inferHeaderSpec(rows, metadata = {}) {
+  const residentName = cleanText(metadata.residentName || '');
   for (let idx = 0; idx < rows.length; idx++) {
     const cells = rows[idx].map(cleanText);
-    const normalized = cells.map(c => c.toLowerCase());
-    const minimumCol = normalized.findIndex(c => /\bminimum\b|\brequired\b/.test(c));
-    const completedCol = normalized.findIndex(c => /\bcompleted\b|\bcount\b|\bresident\b|\byour\b|\btotal\b/.test(c));
-    if (minimumCol < 0 || completedCol < 0) continue;
-    const labelCandidates = normalized
-      .map((c, i) => ({ c, i }))
-      .filter(({ c, i }) => i !== minimumCol && i !== completedCol && c && !/\bminimum\b|\brequired\b|\bcompleted\b|\bcount\b|\btotal\b/.test(c));
-    const labelCol = labelCandidates.length ? labelCandidates[0].i : 0;
+    if (!cells.some(Boolean)) continue;
+
+    const minimumCol = cells.findIndex(isMinimumHeader);
+    if (minimumCol < 0) continue;
+
+    let completedCol = cells.findIndex(isProgressHeader);
+    if (completedCol < 0 && residentName) {
+      completedCol = cells.findIndex(cell => {
+        const cleaned = cleanText(cell);
+        return cleaned && (normalizeToken(cleaned) === normalizeToken(residentName) || tokensOverlap(cleaned, residentName));
+      });
+    }
+    if (completedCol < 0) {
+      const numericCandidates = cells
+        .map((cell, i) => ({ i, cell }))
+        .filter(({ i, cell }) => i !== minimumCol && cleanText(cell))
+        .map(({ i, cell }) => ({ i, cell, numericRows: countNumericRows(rows, i, idx) }))
+        .filter(candidate => candidate.numericRows >= 2)
+        .sort((a, b) => b.numericRows - a.numericRows || a.i - b.i);
+      completedCol = numericCandidates[0]?.i ?? -1;
+    }
+    if (completedCol < 0) continue;
+
+    let labelCol = cells.findIndex(isLabelHeader);
+    if (labelCol < 0) {
+      const labelCandidates = cells
+        .map((cell, i) => ({ cell, i }))
+        .filter(({ cell, i }) => i !== minimumCol && i !== completedCol && cleanText(cell));
+      labelCol = labelCandidates[0]?.i ?? -1;
+    }
+    if (labelCol < 0) continue;
+
     return { headerRowIndex: idx, labelCol, minimumCol, completedCol };
   }
   return null;
@@ -263,8 +329,8 @@ function parseWorkbookMetadata(rows) {
   const residentName = residentCell.replace(/^resident:\s*/i, '').trim() || 'Resident';
   const asOfCell = allCells.find(c => /^as of /i.test(c)) || '';
   const sourceAsOf = asOfCell.replace(/^as of\s*/i, '').trim();
-  const programCell = allCells.find(c => /program\s*-\s*\d+/i.test(c)) || '';
-  const specialtyCode = cleanText(programCell.match(/program\s*-\s*(\d+)/i)?.[1] || '');
+  const programCell = allCells.find(c => /\bprogram\b[^\d]*\d{5,}/i.test(c)) || '';
+  const specialtyCode = cleanText(programCell.match(/\bprogram\b[^\d]*(\d{5,})/i)?.[1] || '');
   return { reportTitle, residentName, sourceAsOf, specialtyCode };
 }
 
@@ -277,7 +343,7 @@ function parseMilestonesWorkbook(buffer) {
   if (!rows.length) throw new Error('Milestones workbook had no rows');
 
   const metadata = parseWorkbookMetadata(rows);
-  const headerSpec = inferHeaderSpec(rows);
+  const headerSpec = inferHeaderSpec(rows, metadata);
   if (!headerSpec) {
     throw new Error('Milestones workbook did not contain recognizable milestone columns');
   }
@@ -288,7 +354,8 @@ function parseMilestonesWorkbook(buffer) {
 
   for (let i = headerRowIndex + 1; i < rows.length; i++) {
     const row = rows[i];
-    const label = cleanText(row[labelCol]);
+    const rawLabel = row[labelCol];
+    const label = cleanText(rawLabel);
     const minimum = asNumber(row[minimumCol]);
     const completed = asNumber(row[completedCol]);
     const populated = flattenRow(row);
@@ -312,6 +379,7 @@ function parseMilestonesWorkbook(buffer) {
     categories.push({
       section,
       categoryName: label,
+      depth: detectIndentLevel(rawLabel),
       completed: completedVal,
       minimumRequired: minVal,
       remaining,
@@ -377,4 +445,5 @@ module.exports = {
   REPORT_NAME,
   cacheReportNameForSpecialty,
   generateMilestonesReport,
+  parseMilestonesWorkbook,
 };

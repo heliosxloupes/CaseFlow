@@ -2446,6 +2446,21 @@ function resolveSpokenCptHits(text,limit=6){
   }
   return hits.slice(0,limit);
 }
+function normalizeSuggestedCodesForVoice(suggestedCodes, spokenCodeHits){
+  const list=Array.isArray(suggestedCodes)?suggestedCodes.filter(Boolean):[];
+  if(spokenCodeHits?.length){
+    const spokenSet=new Set(spokenCodeHits.map(h=>h.c));
+    const exactSuggested=spokenCodeHits.map(h=>({code:h.c,desc:h.d,area:h.a,primary:true,source:'spoken-cpt'}));
+    const rest=list.filter(s=>!spokenSet.has(s.code)).map(s=>({...s,primary:false}));
+    return [...exactSuggested,...rest];
+  }
+  let keptPrimary=false;
+  return list.map(s=>{
+    if(s.primary===false) return s;
+    if(!keptPrimary){keptPrimary=true;return s;}
+    return {...s,primary:false};
+  });
+}
 function kwMatch(text){
   if(!isStaticCptFallbackAllowed())return[];
   const lo=text.toLowerCase();
@@ -3182,11 +3197,7 @@ async function processDescription(text){
   const parsedDate=normalizeIsoDate(extracted.date);
   caseData.date = parsedDate || localDate || isoToday();
   console.log('[CaseFlow date]',{transcript:text,aiDate:extracted.date||null,localDate,finalDate:caseData.date});
-  if(spokenCodeHits.length){
-    const exactSuggested=spokenCodeHits.map(h=>({code:h.c,desc:h.d,area:h.a,primary:true,source:'spoken-cpt'}));
-    const rest=(extracted.suggestedCodes||[]).filter(s=>!spokenCodeHits.find(h=>h.c===s.code));
-    extracted.suggestedCodes=[...exactSuggested,...rest];
-  }
+  extracted.suggestedCodes=normalizeSuggestedCodesForVoice(extracted.suggestedCodes, spokenCodeHits);
   if(extracted.suggestedCodes&&extracted.suggestedCodes.length){
     // Primary codes go straight into procedures
     const primaries = extracted.suggestedCodes.filter(s=>s.primary!==false);
@@ -3795,11 +3806,7 @@ async function stopAddMoreVoice(){
     }
     return;
   }
-  if(spokenCodeHits.length){
-    const exactSuggested=spokenCodeHits.map(h=>({code:h.c,desc:h.d,area:h.a,primary:true,source:'spoken-cpt'}));
-    const rest=(extracted.suggestedCodes||[]).filter(s=>!spokenCodeHits.find(h=>h.c===s.code));
-    extracted.suggestedCodes=[...exactSuggested,...rest];
-  }
+  extracted.suggestedCodes=normalizeSuggestedCodesForVoice(extracted.suggestedCodes, spokenCodeHits);
 
   // Add new primary codes; merge new alternatives
   if(extracted.suggestedCodes && extracted.suggestedCodes.length){
@@ -4179,9 +4186,10 @@ async function submitCase(){
   };
 
   let status='submitted';
+  let submitMeta=null;
   try{
     try{
-      await callSubmitAcgme(payload);
+      submitMeta=await callSubmitAcgme(payload);
     } catch(e){
       status='pending';
       if(e.mfaRequired){
@@ -4213,6 +4221,9 @@ async function submitCase(){
         'Captured in ACGME',
         'Your case has been captured in ACGME.'
       );
+      if(submitMeta?.warning){
+        setTimeout(()=>showErrBanner(submitMeta.warning+'\n\nYour case was still submitted to ACGME. Tap to dismiss.'),250);
+      }
       orbState='idle';
       await sleep(1500);
       await closeSubmitOverlaySmooth();
@@ -4747,9 +4758,10 @@ async function resubmitCase(){
   const _ceDateEl=document.getElementById('ce-date');
   if(_ceDateEl&&_ceDateEl.value) editingCase.date=_ceDateEl.value;
   let newStatus='submitted';
+  let resubmitMeta=null;
   try{
     try{
-      await callSubmitAcgme({
+      resubmitMeta=await callSubmitAcgme({
         date:editingCase.date,
         procs:editingCase.procs||[],
         role:editingCase.role,
@@ -4790,6 +4802,9 @@ async function resubmitCase(){
         'Captured in ACGME',
         'Your case has been captured in ACGME.'
       );
+      if(resubmitMeta?.warning){
+        setTimeout(()=>showErrBanner(resubmitMeta.warning+'\n\nYour case was still submitted to ACGME. Tap to dismiss.'),250);
+      }
       orbState='idle';
       await sleep(1500);
       await closeSubmitOverlaySmooth();
@@ -5543,6 +5558,7 @@ async function callSubmitAcgme(casePayload){
     }
     throw new Error(data.error||'Submission failed');
   }
+  return data;
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────

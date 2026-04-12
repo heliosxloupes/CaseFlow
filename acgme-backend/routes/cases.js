@@ -4,7 +4,7 @@ const { submitCase } = require('../services/acgmeService');
 const pw = require('../services/playwrightService');
 const sessionCache = require('../services/sessionCache');
 const db = require('../db');
-const { logActivity } = require('../services/logService');
+const { logActivity, logError } = require('../services/logService');
 
 /** One retry after clearing in-memory ACGME cookie cache + forcing refresh (handles flaky / racey sessions). */
 function isRetryableAcgmeSessionError(err) {
@@ -77,20 +77,50 @@ router.post('/submit', async (req, res, next) => {
     }
     if (!result) throw lastErr || new Error('Submit failed');
 
-    await db.query(
-      `INSERT INTO case_submissions (user_id, procedure_date, procedure_year, selected_codes, code_description, status, submitted_at)
-       VALUES ($1, $2, $3, $4, $5, 'success', NOW())`,
-      [req.userId, procedureDate, procedureYear, selectedCodes, codeDescription]
-    );
-    await logActivity({
-      userId: req.userId,
-      userEmail: req.userEmail,
-      eventType: 'case.submit.success',
-      message: 'Case submitted to ACGME',
-      context: { procedureDate, selectedCodes, codeDescription },
-    });
+    let savedLocally = true;
+    let warning = null;
+    try {
+      await db.query(
+        `INSERT INTO case_submissions (user_id, procedure_date, procedure_year, selected_codes, code_description, status, submitted_at)
+         VALUES ($1, $2, $3, $4, $5, 'success', NOW())`,
+        [req.userId, procedureDate, procedureYear, selectedCodes, codeDescription]
+      );
+      await logActivity({
+        userId: req.userId,
+        userEmail: req.userEmail,
+        eventType: 'case.submit.success',
+        message: 'Case submitted to ACGME',
+        context: { procedureDate, selectedCodes, codeDescription },
+      });
+    } catch (persistErr) {
+      savedLocally = false;
+      warning = 'Submitted to ACGME, but CaseArc could not save the local submission record.';
+      await logError({
+        userId: req.userId,
+        userEmail: req.userEmail,
+        source: 'cases.submit.persist',
+        message: persistErr.message,
+        stack: persistErr.stack,
+        route: '/api/cases/submit',
+        method: 'POST',
+        context: {
+          procedureDate,
+          procedureYear,
+          selectedCodesLength: String(selectedCodes || '').length,
+          codeDescriptionLength: String(codeDescription || '').length,
+          selectedCodesPreview: String(selectedCodes || '').slice(0, 200),
+          codeDescriptionPreview: String(codeDescription || '').slice(0, 200),
+        },
+      });
+      console.warn('[cases/submit] ACGME succeeded but local save failed:', persistErr.message);
+    }
 
-    res.json(result);
+    res.json({
+      ...result,
+      submittedToAcgme: true,
+      savedLocally,
+      warning,
+    });
   } catch (err) {
     // Do NOT insert a bare “failed” row with no case data — those polluted history as
     // “No procedures listed / Invalid Date”. Errors are returned to the client; real cases

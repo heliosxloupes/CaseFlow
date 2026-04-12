@@ -38,6 +38,28 @@ function buildQueryPhrases(words) {
   }
   return [...phrases];
 }
+const MAJOR_PROCEDURE_ANCHORS = [
+  'prostatectomy','cystectomy','nephrectomy','colectomy','gastrectomy','hepatectomy',
+  'lobectomy','mastectomy','thyroidectomy','parotidectomy','appendectomy','cholecystectomy',
+  'fundoplication','pancreatectomy','whipple','hysterectomy','oophorectomy','arthroplasty',
+  'laminectomy','fusion','craniotomy','bypass','endarterectomy','radical','perineal','pelvic',
+];
+
+function scoreUnexpectedAnchorPenalty(transcriptText, descText) {
+  let penalty = 0;
+  for (const anchor of MAJOR_PROCEDURE_ANCHORS) {
+    if (descText.includes(anchor) && !transcriptText.includes(anchor)) penalty -= 12;
+  }
+  return penalty;
+}
+
+function scoreLengthPenalty(queryWords, descText) {
+  if (queryWords.length > 6) return 0;
+  const descWords = descText.split(/\W+/).filter(Boolean).length;
+  if (descWords <= queryWords.length + 4) return 0;
+  return -Math.min(10, descWords - queryWords.length - 4);
+}
+
 function scoreSpecialtyRules(queryText, descText, rules = []) {
   let score = 0;
   for (const rule of rules) {
@@ -142,12 +164,13 @@ function findCodes(procedureNames, topPerProc = 3) {
  * Match procedure names against a user's ACGME-synced code set.
  * Same scoring approach as findCodes() but operates on the user's own codes.
  */
-function findCodesFromUserSet(procedureNames, userCodes, specialty = '') {
+function findCodesFromUserSet(procedureNames, userCodes, specialty = '', transcript = '') {
   if (!procedureNames.length || !userCodes.length) return [];
   const results = [];
   const seen = new Set();
   const specialtyMeta = getSpecialty(specialty);
   const rankingRules = specialtyMeta.cptRankingRules || [];
+  const transcriptText = expandSpecialtyVocabulary(transcript, specialty).toLowerCase();
   for (const name of procedureNames) {
     const expandedName = expandSpecialtyVocabulary(name, specialty);
     const normalizedName = expandedName.toLowerCase();
@@ -169,6 +192,8 @@ function findCodesFromUserSet(procedureNames, userCodes, specialty = '') {
       if (desc.includes(normalizedName)) score += 8;
       if (normalizedName.includes(desc) && desc.length > 10) score += 4;
       score += scoreSpecialtyRules(normalizedName, haystack, rankingRules);
+      score += scoreUnexpectedAnchorPenalty(transcriptText, desc);
+      score += scoreLengthPenalty(words, desc);
       if (score > 0) scored.push({ ...entry, score });
     }
     scored.sort((a, b) => b.score - a.score);
@@ -247,6 +272,7 @@ Return ONLY valid JSON, no markdown:
 For attending and site: return the EXACT string from the list above. Use fuzzy/partial matching — if the resident says a last name or partial name, find the best match. Only return null if the attending/site was genuinely not mentioned or cannot be matched.
 
 CRITICAL for procedures: Use SHORT, specific CPT-style names (2-5 words). Match the exact clinical terminology used in CPT code descriptions. Do NOT write verbose sentences.
+Do not infer a larger composite operation that the resident did not explicitly say. If the resident says "lymph node biopsy", do not upgrade that to a prostatectomy or another broader cancer operation.
 Good examples for ${getSpecialty(specialty).label}:
 ${getSpecialty(specialty).parseCaseExamples.map(e => `- "${e}"`).join('\n')}
 Bad: "debridement and wound washout of upper extremity" → use "debridement subcutaneous tissue" instead
@@ -268,7 +294,7 @@ List each procedure separately.`,
     // Map procedure names → CPT codes.
     // Non-plastic specialties must rely on the user's synced CPT universe instead of the plastic legacy corpus.
     const suggestedCodes = userCodes?.length
-      ? findCodesFromUserSet(parsedProcedures, userCodes, specialty)
+      ? findCodesFromUserSet(parsedProcedures, userCodes, specialty, transcript)
       : (shouldUseStaticCatalog(specialty) ? findCodes(parsedProcedures) : []);
 
     return res.status(200).json({
